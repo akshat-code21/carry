@@ -10,38 +10,38 @@ Build a search engine for people involved in financial/stock markets that ingest
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                   FRONTEND (Next.js)                      │
-│  Search UI  │  Video Browser  │  Prediction Dashboard     │
-│  (keyword + semantic)          │  (table + chart)         │
+│                   FRONTEND (Next.js)                     │
+│  Search UI  │  Video Browser  │  Prediction Dashboard    │
+│  (keyword + semantic)         │  (table + chart)         │
 └────────────────────────┬─────────────────────────────────┘
                          │ REST API
 ┌────────────────────────▼─────────────────────────────────┐
-│                API LAYER (FastAPI / Python)               │
+│                API LAYER (FastAPI / Python)              │
 │  Search (hybrid)  │  CRUD  │  Auth (future)              │
 └────────────────────────┬─────────────────────────────────┘
                          │
 ┌────────────────────────▼─────────────────────────────────┐
-│              PROCESSING PIPELINE (Python)                 │
+│              PROCESSING PIPELINE (Python)                │
 │                                                          │
-│  ┌──────────┐  ┌────────────┐  ┌───────────────────┐   │
-│  │ YouTube  │→ │ Transcript │→ │  LLM Analyzer     │   │
-│  │ Fetcher  │  │ Extractor  │  │  (predictions,    │   │
-│  │ (API v3) │  │ (YT API +  │  │   tickers,        │   │
-│  │          │  │  Whisper)  │  │   sentiment,      │   │
-│  │          │  │            │  │   topics)         │   │
-│  └──────────┘  └────────────┘  └────────┬──────────┘   │
-│                                          │               │
-│  ┌──────────┐  ┌────────────┐           │               │
-│  │ Market   │← │ Ticker     │←──────────┘               │
-│  │ Data     │  │ Extractor  │                           │
-│  │ (yfinance│  └────────────┘                           │
-│  │  + more) │                                           │
-│  └────┬─────┘                                           │
-│       │                                                 │
-│  ┌────▼─────┐                                           │
-│  │Perf Calc │  → PostgreSQL + pgvector ──→ API ──→ UI   │
-│  └──────────┘                                           │
-└─────────────────────────────────────────────────────────┘
+│  ┌──────────┐  ┌────────────┐  ┌───────────────────┐     │
+│  │ YouTube  │→ │ Transcript │→ │  LLM Analyzer     │     │
+│  │ Fetcher  │  │ Extractor  │  │  (predictions,    │     │
+│  │ (API v3) │  │ (YT API +  │  │   tickers,        │     │
+│  │          │  │  Whisper)  │  │   sentiment,      │     │
+│  │          │  │            │  │   topics)         │     │
+│  └──────────┘  └────────────┘  └────────┬──────────┘     │
+│                                         │                │
+│  ┌──────────┐  ┌────────────┐           │                │
+│  │ Market   │← │ Ticker     │←──────────┘                │
+│  │ Data     │  │ Extractor  │                            │
+│  │ (yfinance│  └────────────┘                            │
+│  │  + more) │                                            │
+│  └────┬─────┘                                            │
+│       │                                                  │
+│  ┌────▼─────┐                                            │
+│  │Perf Calc │  → PostgreSQL + pgvector ──→ API ──→ UI    │
+│  └──────────┘                                            │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ---
