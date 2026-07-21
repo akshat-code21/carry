@@ -1,7 +1,9 @@
 """YouTube service — channel/video metadata + transcript fetching."""
 
+import asyncio
+import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.config import get_settings
 from src.services.interfaces import (
@@ -17,7 +19,11 @@ settings = get_settings()
 
 
 class YouTubeAPIService(YouTubeService):
-    """YouTube Data API v3 implementation for channel/video metadata."""
+    """YouTube Data API v3 + yt-dlp for channel/video metadata.
+
+    Uses yt-dlp for video listing (robust Shorts detection via ``!is_short``)
+    and YouTube Data API for channel metadata and per-video details.
+    """
 
     def __init__(self) -> None:
         self._api_key = settings.youtube_api_key
@@ -58,94 +64,116 @@ class YouTubeAPIService(YouTubeService):
     async def list_channel_videos(
         self, channel_id: str, max_results: int = 20
     ) -> list[VideoMetadata]:
-        """List videos from a channel using the uploads playlist."""
+        """List videos from a channel, excluding Shorts (via yt-dlp).
+
+        Uses yt-dlp's ``!is_short`` match filter (checks YouTube's internal
+        metadata — more reliable than duration + hashtags). Falls back to the
+        YouTube Data API only for per-video details (duration, view count).
+        """
+        entries = await self._fetch_video_list_ytdlp(channel_id, max_results)
+        if not entries:
+            return []
+
         service = self._get_service()
 
-        # Get the uploads playlist ID
-        channel_response = service.channels().list(part="contentDetails", id=channel_id).execute()
+        # Batch-fetch video details via Data API (duration, view count)
+        batch_ids = [e["id"] for e in entries[:max_results]]
+        details_response = (
+            service.videos()
+            .list(
+                part="contentDetails,statistics",
+                id=",".join(batch_ids),
+            )
+            .execute()
+        )
 
-        if not channel_response.get("items"):
-            raise ValueError(f"Channel not found: {channel_id}")
+        details_map = {}
+        for item in details_response.get("items", []):
+            vid = item["id"]
+            dur = self._parse_iso_duration(item["contentDetails"].get("duration", "PT0S"))
+            views = int(item.get("statistics", {}).get("viewCount", 0))
+            details_map[vid] = (dur, views)
 
-        uploads_playlist_id = channel_response["items"][0]["contentDetails"]["relatedPlaylists"][
-            "uploads"
-        ]
-
-        # Fetch videos from the uploads playlist
         videos: list[VideoMetadata] = []
-        next_page_token = None
+        for entry in entries[:max_results]:
+            vid = entry["id"]
+            details = details_map.get(vid)
+            if details is None:
+                continue  # video deleted or made private between calls
+            dur, views = details
 
-        while len(videos) < max_results:
-            # Request some extra items per page in case there are shorts
-            request = service.playlistItems().list(
-                part="snippet,contentDetails",
-                playlistId=uploads_playlist_id,
-                maxResults=50,
-                pageToken=next_page_token,
-            )
-            response = request.execute()
-            items = response.get("items", [])
+            pub = entry.get("timestamp")
+            if pub:
+                pub = datetime.fromtimestamp(pub, tz=timezone.utc).isoformat()
+            else:
+                pub = ""
 
-            if not items:
-                break
-
-            # Fetch durations and statistics for this batch
-            batch_ids = [item["contentDetails"]["videoId"] for item in items]
-            details_response = (
-                service.videos()
-                .list(
-                    part="contentDetails,statistics",
-                    id=",".join(batch_ids),
+            videos.append(
+                VideoMetadata(
+                    video_id=vid,
+                    title=entry.get("title", ""),
+                    description=entry.get("description", ""),
+                    published_at=pub,
+                    duration_sec=dur,
+                    thumbnail_url=entry.get("thumbnail", ""),
+                    view_count=views,
                 )
-                .execute()
             )
-
-            details_map = {}
-            for detail_item in details_response.get("items", []):
-                vid = detail_item["id"]
-                duration_str = detail_item["contentDetails"].get("duration", "PT0S")
-                duration_sec = self._parse_iso_duration(duration_str)
-                view_count = int(detail_item.get("statistics", {}).get("viewCount", 0))
-                details_map[vid] = (duration_sec, view_count)
-
-            for item in items:
-                if len(videos) >= max_results:
-                    break
-
-                video_id = item["contentDetails"]["videoId"]
-                snippet = item["snippet"]
-
-                dur, views = details_map.get(video_id, (0, 0))
-                title = snippet.get("title", "")
-                description = snippet.get("description", "")
-
-                # Filter out YouTube Shorts: check duration AND #shorts tag
-                # YouTube allows up to 3 min for shorts, so duration alone isn't reliable
-                is_short = dur <= 60
-                is_short = is_short or "#shorts" in title.lower()
-                is_short = is_short or "#short" in title.lower()
-                is_short = is_short or "#shorts" in description.lower()
-                is_short = is_short or "#short" in description.lower()
-                if is_short:
-                    continue
-
-                videos.append(
-                    VideoMetadata(
-                        video_id=video_id,
-                        title=snippet["title"],
-                        description=snippet.get("description", ""),
-                        published_at=snippet["publishedAt"],
-                        duration_sec=dur,
-                        thumbnail_url=snippet.get("thumbnails", {}).get("high", {}).get("url", ""),
-                        view_count=views,
-                    )
-                )
-
-            next_page_token = response.get("nextPageToken")
-            if not next_page_token:
-                break
 
         return videos
+
+    async def _fetch_video_list_ytdlp(self, channel_id: str, max_results: int) -> list[dict]:
+        """Fetch video list from a channel via yt-dlp, filtering out Shorts.
+
+        Uses ``--flat-playlist`` (fast, no per-video extraction) and
+        ``--match-filter "!is_short"`` for robust Shorts detection.
+        """
+        channel_url = f"https://www.youtube.com/channel/{channel_id}/videos"
+
+        # Fetch extra entries to account for Shorts that get filtered out
+        fetch_limit = max(max_results * 3, 50)
+
+        cmd = [
+            "yt-dlp",
+            "--flat-playlist",
+            "--match-filter",
+            "!is_short",
+            "--dump-json",
+            "--no-warnings",
+            "--playlist-end",
+            str(fetch_limit),
+            "--ignore-errors",
+            channel_url,
+        ]
+
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await process.communicate()
+
+            if process.returncode != 0:
+                error_msg = stderr.decode().strip()
+                raise RuntimeError(f"yt-dlp failed (exit {process.returncode}): {error_msg}")
+
+            entries = []
+            for line in stdout.decode().strip().split("\n"):
+                line = line.strip()
+                if line:
+                    try:
+                        entries.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
+
+            return entries
+
+        except FileNotFoundError:
+            raise RuntimeError(
+                "yt-dlp is not installed. Install it with: brew install yt-dlp  "
+                "or: pip install yt-dlp"
+            )
 
     async def get_video_info(self, video_id: str) -> VideoMetadata:
         """Fetch metadata for a single video."""

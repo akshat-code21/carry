@@ -28,3 +28,5 @@ Makefile
 .agents/
 .gemini/
 tests/
+web/
+node_modules/
