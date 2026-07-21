@@ -1,0 +1,284 @@
+{
+  "sectors": [
+    {
+      "name": "Technology",
+      "description": "Technology sector covering semiconductors, big tech, and software",
+      "industries": [
+        {
+          "name": "Semiconductors",
+          "description": "Chip design, manufacturing, and equipment",
+          "themes": [
+            {
+              "name": "AI Chips",
+              "description": "GPU and AI accelerator chips for training and inference",
+              "tickers": ["NVDA", "AMD", "AVGO", "MRVL"]
+            },
+            {
+              "name": "Memory/Storage",
+              "description": "DRAM, NAND flash, and storage solutions",
+              "tickers": ["MU", "WDC", "STX"]
+            },
+            {
+              "name": "Chip Manufacturing Equipment",
+              "description": "Lithography and semiconductor equipment makers",
+              "tickers": ["ASML", "AMAT", "LRCX", "KLAC"]
+            }
+          ]
+        },
+        {
+          "name": "Big Tech / FAANG",
+          "description": "Mega-cap technology and platform companies",
+          "themes": [
+            {
+              "name": "Cloud Computing",
+              "description": "Cloud infrastructure, IaaS, PaaS providers",
+              "tickers": ["AMZN", "MSFT", "GOOGL", "CRM"]
+            },
+            {
+              "name": "Digital Advertising",
+              "description": "Online advertising platforms and ad-tech",
+              "tickers": ["META", "GOOGL", "SNAP", "PINS"]
+            },
+            {
+              "name": "Consumer Hardware",
+              "description": "Consumer electronics and devices",
+              "tickers": ["AAPL"]
+            },
+            {
+              "name": "Streaming",
+              "description": "Video and audio streaming platforms",
+              "tickers": ["NFLX", "DIS", "WBD", "SPOT"]
+            }
+          ]
+        },
+        {
+          "name": "Software & AI",
+          "description": "Enterprise software and artificial intelligence",
+          "themes": [
+            {
+              "name": "Enterprise SaaS",
+              "description": "Cloud-based enterprise software platforms",
+              "tickers": ["CRM", "NOW", "WDAY", "ADBE"]
+            },
+            {
+              "name": "AI/ML Platforms",
+              "description": "AI and machine learning development platforms",
+              "tickers": ["MSFT", "GOOGL", "META", "ORCL"]
+            },
+            {
+              "name": "Cybersecurity",
+              "description": "Cybersecurity platforms and services",
+              "tickers": ["CRWD", "PANW", "ZS", "SENT"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Financials",
+      "description": "Financial services, banking, and fintech",
+      "industries": [
+        {
+          "name": "Banking & Interest Rates",
+          "description": "Banking sector and interest rate sensitivity",
+          "themes": [
+            {
+              "name": "Rate Cuts",
+              "description": "Federal Reserve rate cut expectations and bank impacts",
+              "tickers": ["XLF", "JPM", "GS", "BAC"]
+            },
+            {
+              "name": "Consumer Credit",
+              "description": "Consumer lending, BNPL, and payment platforms",
+              "tickers": ["PYPL", "SQ", "AFRM", "COF"]
+            },
+            {
+              "name": "Asset Management",
+              "description": "Large asset managers and custodians",
+              "tickers": ["BLK", "BK", "STT"]
+            }
+          ]
+        },
+        {
+          "name": "Insurance & Fintech",
+          "description": "Insurance carriers and financial technology",
+          "themes": [
+            {
+              "name": "Insurance",
+              "description": "Life, property, and casualty insurance",
+              "tickers": ["BRK.B", "MET", "PRU", "ALL"]
+            },
+            {
+              "name": "Fintech",
+              "description": "Financial technology disruptors",
+              "tickers": ["SQ", "SHOP", "MELI", "SOFI"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Consumer",
+      "description": "Consumer discretionary and staples",
+      "industries": [
+        {
+          "name": "Retail & Spending",
+          "description": "Retail and consumer spending trends",
+          "themes": [
+            {
+              "name": "Retail",
+              "description": "E-commerce and brick-and-mortar retail",
+              "tickers": ["AMZN", "WMT", "TGT", "COST", "HD", "LOW"]
+            },
+            {
+              "name": "Consumer Spending",
+              "description": "Consumer discretionary spending and brands",
+              "tickers": ["DIS", "MCD", "SBUX", "NKE", "LULU"]
+            },
+            {
+              "name": "Luxury",
+              "description": "Luxury goods and fashion brands",
+              "tickers": ["LVMUY", "TPR", "CPRI"]
+            }
+          ]
+        },
+        {
+          "name": "Travel & Hospitality",
+          "description": "Travel booking, airlines, and hospitality",
+          "themes": [
+            {
+              "name": "Travel & Hospitality",
+              "description": "Online travel agencies, hotels, and short-term rentals",
+              "tickers": ["EXPE", "BKNG", "ABNB", "MAR"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Healthcare",
+      "description": "Pharmaceuticals, biotech, and medical devices",
+      "industries": [
+        {
+          "name": "Pharma & Biotech",
+          "description": "Pharmaceutical and biotechnology companies",
+          "themes": [
+            {
+              "name": "Pharma",
+              "description": "Large-cap pharmaceutical companies",
+              "tickers": ["PFE", "MRK", "ABBV", "LLY", "UNH"]
+            },
+            {
+              "name": "Biotech",
+              "description": "Biotechnology companies focused on drug discovery",
+              "tickers": ["AMGN", "GILD", "REGN", "VRTX"]
+            }
+          ]
+        },
+        {
+          "name": "MedTech & Healthcare AI",
+          "description": "Medical devices and healthcare technology",
+          "themes": [
+            {
+              "name": "MedTech",
+              "description": "Medical devices and surgical robotics",
+              "tickers": ["ISRG", "SYK", "BSX", "MDT"]
+            },
+            {
+              "name": "Healthcare AI",
+              "description": "AI applications in healthcare and telemedicine",
+              "tickers": ["TDOC", "CVS", "UNH", "HUM"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Geopolitics / Macro",
+      "description": "Geopolitical events and macroeconomic themes",
+      "industries": [
+        {
+          "name": "Defense & Security",
+          "description": "Defense contractors and national security",
+          "themes": [
+            {
+              "name": "Defense",
+              "description": "Military and defense contractors",
+              "tickers": ["LMT", "NOC", "RTX", "GD", "LHX"]
+            }
+          ]
+        },
+        {
+          "name": "Energy & Resources",
+          "description": "Oil, gas, and energy markets",
+          "themes": [
+            {
+              "name": "Energy Crisis",
+              "description": "Oil and gas supply disruptions and pricing",
+              "tickers": ["XOM", "CVX", "COP", "OXY", "XLE"]
+            }
+          ]
+        },
+        {
+          "name": "Macro Risks",
+          "description": "Broad macroeconomic risk factors",
+          "themes": [
+            {
+              "name": "China/Taiwan Tensions",
+              "description": "Geopolitical tension impacts on tech supply chain",
+              "tickers": ["TSM", "AAPL", "NVDA", "AMD"]
+            },
+            {
+              "name": "Inflation",
+              "description": "Inflation hedges and impacted assets",
+              "tickers": ["TIPS", "GLD"]
+            },
+            {
+              "name": "Recession Fears",
+              "description": "Defensive positioning during economic downturns",
+              "tickers": ["XLU", "XLP", "GLD"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Industrials",
+      "description": "Industrial, infrastructure, and clean energy sectors",
+      "industries": [
+        {
+          "name": "Infrastructure & Aerospace",
+          "description": "Infrastructure build-out and aerospace manufacturing",
+          "themes": [
+            {
+              "name": "Infrastructure",
+              "description": "Heavy equipment and infrastructure construction",
+              "tickers": ["CAT", "DE", "URI", "PWR"]
+            },
+            {
+              "name": "Aerospace",
+              "description": "Commercial and defense aerospace manufacturers",
+              "tickers": ["BA", "RTX", "GE", "SPR"]
+            }
+          ]
+        },
+        {
+          "name": "Clean Energy & EVs",
+          "description": "Renewable energy and electric vehicles",
+          "themes": [
+            {
+              "name": "Clean Energy",
+              "description": "Solar, wind, and renewable energy companies",
+              "tickers": ["ENPH", "SEDG", "NEE", "ICLN", "TAN"]
+            },
+            {
+              "name": "EVs",
+              "description": "Electric vehicle manufacturers",
+              "tickers": ["TSLA", "RIVN", "LCID", "F", "GM", "NIO"]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

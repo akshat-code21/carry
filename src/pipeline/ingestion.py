@@ -1,0 +1,211 @@
+"""Step 1: YouTube Data Ingestion.
+
+Fetches channel metadata, video list, and transcripts from YouTube.
+Stores everything in the database.
+"""
+
+import logging
+import uuid as uuid_mod
+from datetime import datetime
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.models.channel import Channel
+from src.models.transcript_segment import TranscriptSegment
+from src.models.video import Video
+from src.services.interfaces import TranscriptSource, YouTubeService
+
+logger = logging.getLogger(__name__)
+
+
+class IngestionPipeline:
+    """Pipeline step 1: Fetch and store YouTube data."""
+
+    def __init__(
+        self,
+        db: AsyncSession,
+        youtube_service: YouTubeService,
+        transcript_source: TranscriptSource,
+    ) -> None:
+        self.db = db
+        self.youtube = youtube_service
+        self.transcript_source = transcript_source
+
+    async def ingest_channel(
+        self, youtube_channel_id: str, max_videos: int = 20
+    ) -> Channel:
+        """Ingest a YouTube channel — fetch metadata and store it.
+
+        Returns the Channel ORM object (created or existing).
+        """
+        # Check if channel already exists
+        result = await self.db.execute(
+            select(Channel).where(
+                Channel.youtube_channel_id == youtube_channel_id
+            )
+        )
+        channel = result.scalar_one_or_none()
+
+        if channel:
+            logger.info(f"Channel already exists: {channel.title}")
+            return channel
+
+        # Fetch channel metadata from YouTube
+        channel_meta = await self.youtube.get_channel_info(youtube_channel_id)
+
+        channel = Channel(
+            youtube_channel_id=youtube_channel_id,
+            title=channel_meta.title,
+            description=channel_meta.description,
+            thumbnail_url=channel_meta.thumbnail_url,
+        )
+        self.db.add(channel)
+        await self.db.flush()
+
+        logger.info(f"Ingested channel: {channel.title} ({channel.id})")
+        return channel
+
+    async def backfill_videos(
+        self, channel: Channel, max_videos: int = 20
+    ) -> list[Video]:
+        """Backfill videos for a channel — fetch metadata and store them.
+
+        Skips videos that already exist in the database.
+        """
+        video_metas = await self.youtube.list_channel_videos(
+            channel.youtube_channel_id, max_results=max_videos
+        )
+
+        created_videos: list[Video] = []
+
+        for meta in video_metas:
+            # Check if video already exists
+            existing = await self.db.execute(
+                select(Video).where(
+                    Video.youtube_video_id == meta.video_id
+                )
+            )
+            if existing.scalar_one_or_none():
+                logger.debug(f"Video already exists: {meta.title}")
+                continue
+
+            # Parse published_at
+            published_at = None
+            if meta.published_at:
+                try:
+                    published_at = datetime.fromisoformat(
+                        meta.published_at.replace("Z", "+00:00")
+                    )
+                except ValueError:
+                    pass
+
+            video = Video(
+                channel_id=channel.id,
+                youtube_video_id=meta.video_id,
+                title=meta.title,
+                description=meta.description,
+                published_at=published_at,
+                duration_sec=meta.duration_sec,
+                thumbnail_url=meta.thumbnail_url,
+                view_count=meta.view_count,
+                transcript_status="pending",
+                processed=False,
+            )
+            self.db.add(video)
+            created_videos.append(video)
+
+        await self.db.flush()
+        logger.info(
+            f"Backfilled {len(created_videos)} new videos for {channel.title}"
+        )
+        return created_videos
+
+    async def fetch_transcript(self, video: Video) -> list[TranscriptSegment]:
+        """Fetch and store transcript segments for a video.
+
+        Updates the video's transcript_status accordingly.
+        """
+        try:
+            # Fetch transcript via the pluggable source
+            raw_segments = await self.transcript_source.fetch_transcript(
+                video.youtube_video_id
+            )
+
+            # Store segments in the database
+            db_segments: list[TranscriptSegment] = []
+            for seg in raw_segments:
+                db_seg = TranscriptSegment(
+                    video_id=video.id,
+                    start_sec=seg.start_sec,
+                    end_sec=seg.end_sec,
+                    text=seg.text,
+                )
+                self.db.add(db_seg)
+                db_segments.append(db_seg)
+
+            video.transcript_status = "fetched"
+            await self.db.flush()
+
+            logger.info(
+                f"Fetched {len(db_segments)} transcript segments for: {video.title}"
+            )
+            return db_segments
+
+        except NotImplementedError:
+            video.transcript_status = "failed"
+            await self.db.flush()
+            logger.warning(
+                f"Transcript fetch failed (no fallback) for: {video.title}"
+            )
+            raise
+
+        except Exception as e:
+            video.transcript_status = "failed"
+            await self.db.flush()
+            logger.error(f"Transcript fetch failed for {video.title}: {e}")
+            raise
+
+    async def ingest_and_backfill(
+        self, youtube_channel_id: str, max_videos: int = 20
+    ) -> dict:
+        """Full ingestion pipeline: channel → videos → transcripts.
+
+        Returns a summary dict of what was ingested.
+        """
+        # Step 1a: Ingest channel
+        channel = await self.ingest_channel(youtube_channel_id)
+
+        # Step 1b: Backfill videos
+        videos = await self.backfill_videos(channel, max_videos)
+
+        # Step 1c: Fetch transcripts for all new videos
+        transcript_results = {"fetched": 0, "failed": 0}
+
+        # Also process existing pending videos
+        pending_result = await self.db.execute(
+            select(Video).where(
+                Video.channel_id == channel.id,
+                Video.transcript_status == "pending",
+            )
+        )
+        pending_videos = list(pending_result.scalars().all())
+
+        for video in pending_videos:
+            try:
+                await self.fetch_transcript(video)
+                transcript_results["fetched"] += 1
+            except Exception as e:
+                transcript_results["failed"] += 1
+                logger.warning(f"Skipping transcript for {video.title}: {e}")
+
+        await self.db.commit()
+
+        return {
+            "channel": {
+                "id": str(channel.id),
+                "title": channel.title,
+            },
+            "videos_created": len(videos),
+            "transcripts": transcript_results,
+        }
