@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: yt-chatter-postgres
+    environment:
+      POSTGRES_USER: yt_chatter
+      POSTGRES_PASSWORD: yt_chatter_dev
+      POSTGRES_DB: yt_chatter
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yt_chatter -d yt_chatter"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: yt-chatter-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: yt-chatter-api
+    env_file: .env
+    environment:
+      # Override DB/Redis URLs to use Docker service names
+      DATABASE_URL: postgresql+asyncpg://yt_chatter:yt_chatter_dev@postgres:5432/yt_chatter
+      DATABASE_URL_SYNC: postgresql://yt_chatter:yt_chatter_dev@postgres:5432/yt_chatter
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build: .
+    container_name: yt-chatter-worker
+    command: celery -A src.tasks worker --loglevel=info --concurrency=2
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://yt_chatter:yt_chatter_dev@postgres:5432/yt_chatter
+      DATABASE_URL_SYNC: postgresql://yt_chatter:yt_chatter_dev@postgres:5432/yt_chatter
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

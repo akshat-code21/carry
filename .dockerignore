@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+Dockerfile
+docker-compose.yml
+
+# Misc
+.env
+.env.*
+*.md
+LICENSE
+Makefile
+.agents/
+.gemini/
+tests/
+web/
+node_modules/
