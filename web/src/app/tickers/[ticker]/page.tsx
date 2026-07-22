@@ -9,10 +9,13 @@ import { Loader2, ExternalLink, PlayCircle, Video, TrendingUp, TrendingDown, Min
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
   ReferenceDot,
 } from "recharts";
@@ -23,13 +26,18 @@ export default function TickerPage() {
   const ticker = params.ticker as string;
 
   const [data, setData] = useState<any>(null);
+  const [sentimentTimeline, setSentimentTimeline] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await api.getTicker(ticker);
+        const [res, timelineRes] = await Promise.all([
+          api.getTicker(ticker),
+          api.getTickerSentimentTimeline(ticker),
+        ]);
         setData(res);
+        setSentimentTimeline(timelineRes);
       } catch (err) {
         console.error(err);
       } finally {
@@ -111,6 +119,38 @@ export default function TickerPage() {
                     );
                   })}
                 </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {sentimentTimeline.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Daily Bullish vs Bearish Mentions</CardTitle>
+            <CardDescription>
+              Number of bullish and bearish mentions of {ticker} per day, across predictions and theme mentions
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[350px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={sentimentTimeline.map((d: any) => ({
+                    ...d,
+                    label: new Date(d.date).toLocaleDateString(),
+                  }))}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="label" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="bullish_count" name="Bullish" fill="#22c55e" />
+                  <Bar dataKey="bearish_count" name="Bearish" fill="#ef4444" />
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </CardContent>

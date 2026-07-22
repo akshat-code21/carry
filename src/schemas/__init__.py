@@ -168,6 +168,16 @@ class TickerDetailResponse(TickerResponse):
     themes: list[ThemeResponse] = []
 
 
+class TickerSentimentDailyPoint(BaseModel):
+    """Bullish/bearish/neutral mention counts for a ticker on a single day."""
+
+    date: str
+    bullish_count: int = 0
+    bearish_count: int = 0
+    neutral_count: int = 0
+    total_count: int = 0
+
+
 # --- Search schemas ---
 
 

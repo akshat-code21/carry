@@ -130,8 +130,8 @@ class YouTubeAPIService(YouTubeService):
                 vid = item["id"]
                 dur = self._parse_iso_duration(item["contentDetails"].get("duration", "PT0S"))
                 views = int(item.get("statistics", {}).get("viewCount", 0))
-                pub_at = item.get("snippet", {}).get("publishedAt", "")
-                details_map[vid] = (dur, views, pub_at)
+                api_published_at = item.get("snippet", {}).get("publishedAt", "")
+                details_map[vid] = (dur, views, api_published_at)
 
             for entry in chunk_entries:
                 vid = entry.get("id")
@@ -142,14 +142,17 @@ class YouTubeAPIService(YouTubeService):
                 if details is None:
                     continue  # Video deleted or private
 
-                dur, views, pub_at = details
+                dur, views, api_published_at = details
                 title = entry.get("title", "")
 
                 if self._is_short(duration_sec=dur, title=title, entry=entry):
                     logger.info(f"Skipping YouTube Short: {title} ({vid}) - duration: {dur}s")
                     continue
 
-                pub = pub_at
+                # Prefer the YouTube Data API's snippet.publishedAt (always
+                # present for public videos); fall back to yt-dlp's
+                # flat-playlist timestamp, which is often absent.
+                pub = api_published_at
                 if not pub:
                     ts = entry.get("timestamp")
                     if ts:

@@ -71,6 +71,12 @@ export const api = {
     return res.json();
   },
 
+  async getTickerSentimentTimeline(ticker: string, days?: number) {
+    const qs = days ? `?days=${days}` : "";
+    const res = await fetch(`/api/tickers/${ticker}/sentiment-timeline${qs}`);
+    if (!res.ok) throw new Error("Failed to fetch ticker sentiment timeline");
+    return res.json();
+  },
   async getThemes() {
     const res = await fetch("/api/themes");
     if (!res.ok) throw new Error("Failed to fetch themes");
