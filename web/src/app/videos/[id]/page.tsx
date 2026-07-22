@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 
-export default function VideoPage() {
+function VideoPageContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const id = params.id as string;
+
+  const startTimeParam = searchParams.get("t") || searchParams.get("start");
+  const startTime = startTimeParam ? Math.floor(parseFloat(startTimeParam)) : 0;
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -31,7 +35,7 @@ export default function VideoPage() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex h-full items-center justify-center p-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -39,7 +43,7 @@ export default function VideoPage() {
 
   if (!data) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4">
+      <div className="flex h-full flex-col items-center justify-center gap-4 p-12">
         <h2 className="text-2xl font-bold">Video Not Found</h2>
       </div>
     );
@@ -51,12 +55,16 @@ export default function VideoPage() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const embedUrl = startTime > 0
+    ? `https://www.youtube.com/embed/${data.youtube_video_id}?start=${startTime}&autoplay=1`
+    : `https://www.youtube.com/embed/${data.youtube_video_id}`;
+
   return (
     <div className="flex flex-col gap-6 pb-10">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{data.title}</h1>
         <p className="text-muted-foreground">
-          Published: {new Date(data.published_at).toLocaleDateString()}
+          Published: {data.published_at ? new Date(data.published_at).toLocaleDateString() : "N/A"}
         </p>
       </div>
 
@@ -64,7 +72,7 @@ export default function VideoPage() {
         <iframe
           width="100%"
           height="100%"
-          src={`https://www.youtube.com/embed/${data.youtube_video_id}`}
+          src={embedUrl}
           title="YouTube video player"
           frameBorder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -143,5 +151,19 @@ export default function VideoPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VideoPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-full items-center justify-center p-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <VideoPageContent />
+    </Suspense>
   );
 }

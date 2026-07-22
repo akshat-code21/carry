@@ -4,6 +4,7 @@ import logging
 import uuid as uuid_mod
 
 from sqlalchemy import func, select, text
+from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.prediction import Prediction
@@ -84,6 +85,69 @@ class SearchService:
                 unique_preds.append(pred)
         results["predictions"] = unique_preds[:limit]
 
+        # Fetch Video and Channel metadata for all matched items
+        video_uuid_strings = list(
+            {s["video_id"] for s in results["segments"] if s.get("video_id")}
+            | {p["video_id"] for p in results["predictions"] if p.get("video_id")}
+        )
+
+        videos_map = {}
+        channels_map = {}
+
+        if video_uuid_strings:
+            try:
+                valid_uuids = [uuid_mod.UUID(v_id) for v_id in video_uuid_strings]
+                stmt = (
+                    select(Video)
+                    .options(joinedload(Video.channel))
+                    .where(Video.id.in_(valid_uuids))
+                )
+                res = await self.db.execute(stmt)
+                videos_db = res.scalars().unique().all()
+
+                for v in videos_db:
+                    v_id_str = str(v.id)
+                    c_id_str = str(v.channel_id) if v.channel_id else None
+
+                    if v.channel and c_id_str:
+                        channels_map[c_id_str] = {
+                            "id": c_id_str,
+                            "youtube_channel_id": v.channel.youtube_channel_id,
+                            "title": v.channel.title,
+                            "thumbnail_url": v.channel.thumbnail_url,
+                        }
+
+                    videos_map[v_id_str] = {
+                        "id": v_id_str,
+                        "channel_id": c_id_str,
+                        "youtube_video_id": v.youtube_video_id,
+                        "title": v.title,
+                        "thumbnail_url": v.thumbnail_url,
+                        "published_at": (
+                            v.published_at.isoformat() if v.published_at else None
+                        ),
+                    }
+            except Exception as exc:
+                logger.warning(f"Error loading video metadata for search: {exc}")
+
+        # Attach video & channel titles directly to segments and predictions
+        for seg in results["segments"]:
+            v_info = videos_map.get(seg["video_id"], {})
+            c_info = channels_map.get(v_info.get("channel_id"), {})
+            seg["video_title"] = v_info.get("title")
+            seg["channel_title"] = c_info.get("title")
+            seg["youtube_video_id"] = v_info.get("youtube_video_id")
+            seg["thumbnail_url"] = v_info.get("thumbnail_url")
+
+        for pred in results["predictions"]:
+            v_info = videos_map.get(pred["video_id"], {})
+            c_info = channels_map.get(v_info.get("channel_id"), {})
+            pred["video_title"] = v_info.get("title")
+            pred["channel_title"] = c_info.get("title")
+            pred["youtube_video_id"] = v_info.get("youtube_video_id")
+
+        results["videos"] = videos_map
+        results["channels"] = channels_map
         results["total"] = len(results["segments"]) + len(results["predictions"])
         return results
 

@@ -41,6 +41,8 @@ async def search(
     return SearchResponse(
         segments=[SearchSegmentResult(**s) for s in results["segments"]],
         predictions=[SearchPredictionResult(**p) for p in results["predictions"]],
+        videos=results.get("videos", {}),
+        channels=results.get("channels", {}),
         total=results["total"],
     )
 

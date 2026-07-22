@@ -80,6 +80,17 @@ class IngestionPipeline:
         created_videos: list[Video] = []
 
         for meta in video_metas:
+            # Skip if video is a Short (duration <= 60s or title contains shorts tag)
+            if (
+                (meta.duration_sec is not None and meta.duration_sec <= 60)
+                or "#shorts" in meta.title.lower()
+                or "#short" in meta.title.lower()
+            ):
+                logger.info(
+                    f"Skipping Short video during backfill: '{meta.title}' ({meta.video_id})"
+                )
+                continue
+
             # Check if video already exists
             existing = await self.db.execute(
                 select(Video).where(

@@ -184,6 +184,10 @@ class SearchSegmentResult(BaseModel):
     text: str
     rank: float
     search_type: str
+    video_title: str | None = None
+    channel_title: str | None = None
+    youtube_video_id: str | None = None
+    thumbnail_url: str | None = None
 
 
 class SearchPredictionResult(BaseModel):
@@ -196,11 +200,16 @@ class SearchPredictionResult(BaseModel):
     accurate: bool | None = None
     rank: float
     search_type: str
+    video_title: str | None = None
+    channel_title: str | None = None
+    youtube_video_id: str | None = None
 
 
 class SearchResponse(BaseModel):
     segments: list[SearchSegmentResult] = []
     predictions: list[SearchPredictionResult] = []
+    videos: dict[str, dict] = {}
+    channels: dict[str, dict] = {}
     total: int = 0
 
 

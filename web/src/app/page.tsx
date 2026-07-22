@@ -1,32 +1,71 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api, SearchResult } from "@/lib/api";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, Play, ExternalLink, X, Tv } from "lucide-react";
 import Link from "next/link";
 
-export default function SearchPage() {
-  const [query, setQuery] = useState("");
-  const [type, setType] = useState<"keyword" | "semantic" | "hybrid">("hybrid");
+interface PlaybackModalState {
+  videoId: string;
+  youtubeVideoId?: string;
+  title: string;
+  channelTitle?: string;
+  startSec: number;
+  text: string;
+}
+
+function SearchPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const initialQuery = searchParams.get("q") || "";
+  const initialType = (searchParams.get("type") as "keyword" | "semantic" | "hybrid") || "hybrid";
+
+  const [query, setQuery] = useState(initialQuery);
+  const [type, setType] = useState<"keyword" | "semantic" | "hybrid">(initialType);
   const [results, setResults] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [playbackModal, setPlaybackModal] = useState<PlaybackModalState | null>(null);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
-    
+  // Sync state with URL params & execute search when q is present
+  useEffect(() => {
+    const qParam = searchParams.get("q") || "";
+    const typeParam = (searchParams.get("type") as "keyword" | "semantic" | "hybrid") || "hybrid";
+
+    setQuery(qParam);
+    setType(typeParam);
+
+    if (qParam.trim()) {
+      executeSearch(qParam, typeParam);
+    }
+  }, [searchParams]);
+
+  const executeSearch = async (searchQuery: string, searchType: "keyword" | "semantic" | "hybrid") => {
     setLoading(true);
     try {
-      const data = await api.search(query, type);
+      const data = await api.search(searchQuery, searchType);
       setResults(data);
     } catch (err) {
-      console.error(err);
+      console.error("Search failed:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+    router.push(`/?q=${encodeURIComponent(query.trim())}&type=${type}`);
+  };
+
+  const handleTypeChange = (newType: "keyword" | "semantic" | "hybrid") => {
+    setType(newType);
+    if (query.trim()) {
+      router.push(`/?q=${encodeURIComponent(query.trim())}&type=${newType}`);
     }
   };
 
@@ -47,81 +86,106 @@ export default function SearchPage() {
           </p>
         </div>
 
-        <Card>
-          <CardContent className="pt-6">
-            <form onSubmit={handleSearch} className="flex flex-col gap-4">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Search for 'AI chips', 'inflation', 'Nvidia'..."
-                    className="pl-9"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                  />
-                </div>
-                <Button type="submit" disabled={loading}>
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Search
-                </Button>
+        {/* Search Container Box */}
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 shadow-sm">
+          <form onSubmit={handleSearchSubmit} className="flex flex-col gap-4">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-zinc-400 z-10" />
+                <input
+                  type="text"
+                  placeholder="Search for 'AI chips', 'inflation', 'Nvidia'..."
+                  className="flex h-11 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 pl-10 text-sm text-white placeholder:text-zinc-500 focus:border-zinc-400 focus:outline-none"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
               </div>
-              
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Search Type:</span>
-                <div className="flex gap-1 bg-muted p-1 rounded-md">
-                  {(["keyword", "semantic", "hybrid"] as const).map((t) => (
-                    <Button
-                      key={t}
-                      type="button"
-                      variant={type === t ? "default" : "ghost"}
-                      size="sm"
-                      className="capitalize h-7"
-                      onClick={() => setType(t)}
-                    >
-                      {t}
-                    </Button>
-                  ))}
-                </div>
+              <Button type="submit" disabled={loading} className="h-11 px-6 font-semibold bg-indigo-600 hover:bg-indigo-500 text-white">
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Search
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-3 pt-1">
+              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Search Type:</span>
+              <div className="flex gap-1 bg-zinc-950 p-1 rounded-md border border-zinc-800">
+                {(["keyword", "semantic", "hybrid"] as const).map((t) => (
+                  <Button
+                    key={t}
+                    type="button"
+                    variant={type === t ? "default" : "ghost"}
+                    size="sm"
+                    className="capitalize h-7 text-xs font-medium"
+                    onClick={() => handleTypeChange(t)}
+                  >
+                    {t}
+                  </Button>
+                ))}
               </div>
-            </form>
-          </CardContent>
-        </Card>
+            </div>
+          </form>
+        </div>
 
         {results && (
           <div className="flex flex-col gap-4 pb-10">
-            <h2 className="text-xl font-semibold">
-              Results ({results.segments?.length || 0})
-            </h2>
-            
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-zinc-100">
+                Results ({results.segments?.length || 0})
+              </h2>
+              {query && (
+                <span className="text-xs text-zinc-400">
+                  Showing matches for "{query}"
+                </span>
+              )}
+            </div>
+
             <div className="grid gap-4">
               {results.segments?.map((seg) => {
-                const video = results.videos[seg.video_id];
-                const channel = video ? results.channels[video.channel_id] : null;
-                
+                const video = results.videos?.[seg.video_id];
+                const channel = results.channels?.[video?.channel_id] || (seg.channel_title ? { title: seg.channel_title } : null);
+
+                const videoTitle = seg.video_title || video?.title || `Video Segment (${seg.video_id.slice(0, 8)}...)`;
+                const channelTitle = seg.channel_title || channel?.title;
+                const youtubeVideoId = seg.youtube_video_id || video?.youtube_video_id;
+
                 return (
-                  <Card key={seg.id}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">
-                          {channel?.title} • {video?.title}
-                        </CardTitle>
-                        <Badge variant="outline" className="capitalize">
-                          {seg.search_type}
-                        </Badge>
+                  <Card key={seg.id} className="border-zinc-800/80 bg-zinc-900/40 hover:border-zinc-700 transition-all duration-150">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex flex-col gap-1.5 flex-1">
+                          {channelTitle && (
+                            <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+                              <Tv className="h-3.5 w-3.5 text-indigo-400" />
+                              <span className="font-medium text-zinc-300">{channelTitle}</span>
+                            </div>
+                          )}
+                          <Link href={`/videos/${seg.video_id}?t=${Math.floor(seg.start_sec)}`} className="group">
+                            <CardTitle className="text-base font-semibold text-zinc-100 group-hover:text-indigo-400 transition-colors leading-snug">
+                              {videoTitle}
+                            </CardTitle>
+                          </Link>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-mono">
+                            {(seg.rank * 100).toFixed(1)}% match
+                          </Badge>
+                          <Badge variant="outline" className="capitalize text-xs text-zinc-400 border-zinc-800">
+                            {seg.search_type}
+                          </Badge>
+                        </div>
                       </div>
-                      <CardDescription>
-                        Match Score: {(seg.rank * 100).toFixed(1)}%
-                      </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <p className="border-l-2 border-primary pl-4 italic text-muted-foreground">
-                        "{seg.text}"
-                      </p>
-                      <div className="mt-4 flex items-center gap-4">
-                        <Link href={`/videos/${seg.video_id}`}>
-                          <Button variant="secondary" size="sm">
-                            View Video @ {formatTime(seg.start_sec)}
+                    <CardContent className="flex flex-col gap-4">
+                      <div className="border-l-2 border-indigo-500/80 bg-zinc-950/50 py-3 px-4 rounded-r-lg">
+                        <p className="text-sm text-zinc-300 italic leading-relaxed">
+                          "{seg.text}"
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Link href={`/videos/${seg.video_id}?t=${Math.floor(seg.start_sec)}`}>
+                          <Button variant="outline" size="sm" className="border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white h-8 text-xs gap-1.5">
+                            <Play className="h-3.5 w-3.5" />
+                            Play @ {formatTime(seg.start_sec)}
                           </Button>
                         </Link>
                       </div>
@@ -129,6 +193,12 @@ export default function SearchPage() {
                   </Card>
                 );
               })}
+
+              {(!results.segments || results.segments.length === 0) && (
+                <div className="rounded-xl border border-dashed border-zinc-800 p-8 text-center text-zinc-500">
+                  No matching transcript segments found. Try adjusting your query or search type.
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -136,10 +206,10 @@ export default function SearchPage() {
 
       {/* Right Sidebar - Dynamic Top Stocks */}
       <div className="w-80 flex-shrink-0 flex flex-col gap-4">
-        <Card>
+        <Card className="border-zinc-800 bg-zinc-900/40">
           <CardHeader>
-            <CardTitle>Stocks Mentioned</CardTitle>
-            <CardDescription>Relevant to your search</CardDescription>
+            <CardTitle className="text-base font-semibold">Stocks Mentioned</CardTitle>
+            <CardDescription className="text-xs">Relevant to your search query</CardDescription>
           </CardHeader>
           <CardContent>
             {results && results.predictions?.length > 0 ? (
@@ -147,29 +217,111 @@ export default function SearchPage() {
                 {results.predictions
                   .filter((p: any) => p.ticker)
                   .map((p: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
-                      <div className="flex flex-col">
-                        <Link href={`/tickers/${p.ticker}`} className="font-bold hover:underline">
-                          {p.ticker}
+                    <div key={i} className="flex items-center justify-between border-b border-zinc-800/60 pb-2.5 last:border-0 last:pb-0">
+                      <div className="flex flex-col gap-0.5 max-w-[190px]">
+                        <Link href={`/tickers/${p.ticker}`} className="font-bold text-sm text-zinc-200 hover:text-indigo-400 hover:underline">
+                          ${p.ticker}
                         </Link>
-                        <span className="text-xs text-muted-foreground line-clamp-1">
+                        <span className="text-xs text-zinc-400 line-clamp-1">
                           {p.prediction_text}
                         </span>
                       </div>
-                      <Badge variant={p.direction === "bullish" ? "default" : p.direction === "bearish" ? "destructive" : "secondary"}>
+                      <Badge
+                        variant={p.direction === "bullish" ? "default" : p.direction === "bearish" ? "destructive" : "secondary"}
+                        className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5"
+                      >
                         {p.direction}
                       </Badge>
                     </div>
                   ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                No explicit stocks found in these results.
+              <p className="text-xs text-zinc-500">
+                No explicit stocks found in these search results.
               </p>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Timestamp Playback Modal */}
+      {playbackModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="relative w-full max-w-3xl rounded-xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl flex flex-col gap-4">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col gap-1 pr-6">
+                {playbackModal.channelTitle && (
+                  <span className="text-xs font-semibold text-indigo-400 uppercase tracking-wider">
+                    {playbackModal.channelTitle}
+                  </span>
+                )}
+                <h2 className="text-lg font-bold text-zinc-100 leading-snug">
+                  {playbackModal.title}
+                </h2>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="font-mono text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+                    Playing @ {formatTime(playbackModal.startSec)}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setPlaybackModal(null)}
+                className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Video Player Embed */}
+            {playbackModal.youtubeVideoId ? (
+              <div className="aspect-video w-full overflow-hidden rounded-lg border border-zinc-800 bg-black shadow-lg">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src={`https://www.youtube.com/embed/${playbackModal.youtubeVideoId}?start=${Math.floor(playbackModal.startSec)}&autoplay=1`}
+                  title={playbackModal.title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+            ) : (
+              <div className="aspect-video w-full flex flex-col items-center justify-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-400 text-sm">
+                <p>YouTube ID not found for this video segment.</p>
+                <Link href={`/videos/${playbackModal.videoId}`}>
+                  <Button variant="secondary" size="sm">Go to Video Page</Button>
+                </Link>
+              </div>
+            )}
+
+            {/* Transcript Snippet & Direct Link */}
+            <div className="flex items-center justify-between gap-4 bg-zinc-900/80 p-3.5 rounded-lg border border-zinc-800">
+              <p className="text-xs text-zinc-300 italic line-clamp-2 flex-1">
+                "{playbackModal.text}"
+              </p>
+              <Link href={`/videos/${playbackModal.videoId}?t=${Math.floor(playbackModal.startSec)}`}>
+                <Button variant="outline" size="sm" className="whitespace-nowrap text-xs gap-1 border-zinc-700 text-zinc-200">
+                  <ExternalLink className="h-3.5 w-3.5" /> Full Video Page
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-full items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <SearchPageContent />
+    </Suspense>
   );
 }

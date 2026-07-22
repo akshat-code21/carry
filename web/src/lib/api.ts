@@ -2,6 +2,10 @@ export interface SearchResult {
   segments: {
     id: string;
     video_id: string;
+    video_title?: string;
+    channel_title?: string;
+    youtube_video_id?: string;
+    thumbnail_url?: string;
     start_sec: number;
     end_sec: number;
     text: string;

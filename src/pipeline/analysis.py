@@ -80,32 +80,45 @@ class AnalysisPipeline:
                     chunk_segments, video.title
                 )
 
+                first_matched_theme_id = None
+
                 # Process extracted themes
                 for extracted_theme in result.themes:
                     matched_theme = await self.theme_service.match_theme(
                         extracted_theme
                     )
-                    if matched_theme and chunk_db_segments:
-                        # Use the first segment in the chunk for the mention
-                        await self.theme_service.create_theme_mention(
-                            video_id=video.id,
-                            segment_id=chunk_db_segments[0].id,
-                            theme_id=matched_theme.id,
-                            sentiment=extracted_theme.sentiment,
-                            relevance_score=extracted_theme.confidence,
-                            mention_text=chunk_db_segments[0].text[:500],
-                            narrative=extracted_theme.narrative,
-                        )
-                        total_themes += 1
+                    if matched_theme:
+                        if not first_matched_theme_id:
+                            first_matched_theme_id = matched_theme.id
+                        if chunk_db_segments:
+                            # Use the first segment in the chunk for the mention
+                            await self.theme_service.create_theme_mention(
+                                video_id=video.id,
+                                segment_id=chunk_db_segments[0].id,
+                                theme_id=matched_theme.id,
+                                sentiment=extracted_theme.sentiment,
+                                relevance_score=extracted_theme.confidence,
+                                mention_text=chunk_db_segments[0].text[:500],
+                                narrative=extracted_theme.narrative,
+                            )
+                            total_themes += 1
 
                 # Process extracted predictions
                 for extracted_pred in result.predictions:
+                    ticker_symbol = self._resolve_ticker(
+                        extracted_pred.ticker,
+                        extracted_pred.text,
+                        result.explicit_tickers,
+                        result.implicit_tickers,
+                    )
+
                     prediction = Prediction(
                         video_id=video.id,
                         segment_id=(
                             chunk_db_segments[0].id if chunk_db_segments else None
                         ),
-                        ticker=extracted_pred.ticker,
+                        theme_id=first_matched_theme_id,
+                        ticker=ticker_symbol,
                         prediction_text=extracted_pred.text,
                         direction=extracted_pred.direction,
                         confidence=extracted_pred.confidence,
@@ -201,3 +214,66 @@ class AnalysisPipeline:
                 )
 
         return summaries
+
+    @staticmethod
+    def _resolve_ticker(
+        raw_ticker: str | None,
+        prediction_text: str = "",
+        explicit_tickers: list[str] | None = None,
+        implicit_tickers: list[str] | None = None,
+    ) -> str | None:
+        """Resolve company names or raw text into clean stock ticker symbols."""
+        company_map = {
+            "APPLE": "AAPL",
+            "NVIDIA": "NVDA",
+            "MICROSOFT": "MSFT",
+            "OPENAI": "MSFT",
+            "ANTHROPIC": "AMZN",
+            "AMAZON": "AMZN",
+            "GOOGLE": "GOOGL",
+            "ALPHABET": "GOOGL",
+            "TESLA": "TSLA",
+            "META": "META",
+            "FACEBOOK": "META",
+            "AMD": "AMD",
+            "INTEL": "INTC",
+            "TAIWAN SEMI": "TSM",
+            "TSMC": "TSM",
+            "DEEPSEEK": "NVDA",
+            "OIL": "XOM",
+            "GAS": "XOM",
+            "DIESEL": "XOM",
+        }
+
+        if raw_ticker:
+            t_upper = raw_ticker.strip().upper()
+            if t_upper in company_map:
+                return company_map[t_upper]
+            if len(t_upper) <= 5 and t_upper.isalpha():
+                return t_upper
+
+        # Check prediction text for company names
+        text_upper = prediction_text.upper()
+        for name, symbol in company_map.items():
+            if name in text_upper:
+                return symbol
+
+        # Check explicit tickers
+        if explicit_tickers:
+            for et in explicit_tickers:
+                et_upper = et.strip().upper()
+                if et_upper in company_map:
+                    return company_map[et_upper]
+                if len(et_upper) <= 5 and et_upper.isalpha():
+                    return et_upper
+
+        # Check implicit tickers
+        if implicit_tickers:
+            for it in implicit_tickers:
+                it_upper = it.strip().upper()
+                if it_upper in company_map:
+                    return company_map[it_upper]
+                if len(it_upper) <= 5 and it_upper.isalpha():
+                    return it_upper
+
+        return None

@@ -36,7 +36,7 @@ For the given transcript chunk, extract ALL of the following:
 
 4. **Predictions**: Concrete, testable predictions or calls. For each:
    - text: What was predicted, in plain English
-   - ticker: The ticker if one was mentioned (null if thematic/macro)
+   - ticker: The stock ticker symbol (e.g. "NVDA", "AAPL", "MSFT", "TSLA", "AMZN", "GOOGL", "XOM") corresponding to the company, stock, or commodity being discussed. If a company name (e.g. "Apple", "Nvidia") is mentioned, convert it to its official stock ticker symbol (e.g. "AAPL", "NVDA"). If a private company backed by a major public company is mentioned (e.g. "OpenAI" -> "MSFT", "Anthropic" -> "AMZN"), use the primary public ticker symbol. Use null ONLY for purely macro/non-company calls.
    - direction: "bullish", "bearish", or "neutral"
    - timeframe: The timeframe if mentioned (e.g., "by end of year", "next quarter")
    - confidence: 0.0 to 1.0

@@ -3,7 +3,7 @@
 import asyncio
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from src.config import get_settings
 from src.services.interfaces import (
@@ -61,83 +61,216 @@ class YouTubeAPIService(YouTubeService):
             thumbnail_url=snippet.get("thumbnails", {}).get("high", {}).get("url", ""),
         )
 
+    @staticmethod
+    def _is_short(duration_sec: int, title: str = "", entry: dict | None = None) -> bool:
+        """Check if a video is a YouTube Short.
+
+        A video is considered a Short if:
+        - duration_sec <= 60 (standard YouTube Shorts duration threshold)
+        - title contains '#shorts' or '#short'
+        - entry dict metadata explicitly marks it as short (is_short=True or /shorts/ in URL)
+        """
+        if duration_sec > 0 and duration_sec <= 60:
+            return True
+
+        title_lower = title.lower()
+        if "#shorts" in title_lower or "#short" in title_lower:
+            return True
+
+        if entry:
+            if entry.get("is_short") is True:
+                return True
+            url = entry.get("url", "") or entry.get("webpage_url", "")
+            if "/shorts/" in url:
+                return True
+
+        return False
+
     async def list_channel_videos(
         self, channel_id: str, max_results: int = 20
     ) -> list[VideoMetadata]:
-        """List videos from a channel, excluding Shorts (via yt-dlp).
+        """List long-form videos from a channel, explicitly excluding Shorts.
 
-        Uses yt-dlp's ``!is_short`` match filter (checks YouTube's internal
-        metadata — more reliable than duration + hashtags). Falls back to the
-        YouTube Data API only for per-video details (duration, view count).
+        Fetches video metadata and filters out any videos with duration <= 60 seconds
+        or Shorts flags/hashtags until up to `max_results` long-form videos are obtained.
         """
-        entries = await self._fetch_video_list_ytdlp(channel_id, max_results)
+        entries = []
+        try:
+            entries = await self._fetch_video_list_ytdlp(channel_id, max_results)
+        except Exception as e:
+            logger.warning(
+                f"yt-dlp video list fetch failed ({e}), falling back to YouTube Data API"
+            )
+
         if not entries:
-            return []
+            return await self._list_channel_videos_api(channel_id, max_results)
 
         service = self._get_service()
+        videos: list[VideoMetadata] = []
 
-        # Batch-fetch video details via Data API (duration, view count)
-        batch_ids = [e["id"] for e in entries[:max_results]]
-        details_response = (
-            service.videos()
-            .list(
-                part="contentDetails,statistics",
-                id=",".join(batch_ids),
+        # Process entries in batches of 50 (YouTube Data API max batch size)
+        chunk_size = 50
+        for i in range(0, len(entries), chunk_size):
+            chunk_entries = entries[i : i + chunk_size]
+            batch_ids = [e["id"] for e in chunk_entries if e.get("id")]
+            if not batch_ids:
+                continue
+
+            details_response = (
+                service.videos()
+                .list(
+                    part="contentDetails,statistics",
+                    id=",".join(batch_ids),
+                )
+                .execute()
             )
-            .execute()
-        )
 
-        details_map = {}
-        for item in details_response.get("items", []):
-            vid = item["id"]
-            dur = self._parse_iso_duration(item["contentDetails"].get("duration", "PT0S"))
-            views = int(item.get("statistics", {}).get("viewCount", 0))
-            details_map[vid] = (dur, views)
+            details_map = {}
+            for item in details_response.get("items", []):
+                vid = item["id"]
+                dur = self._parse_iso_duration(item["contentDetails"].get("duration", "PT0S"))
+                views = int(item.get("statistics", {}).get("viewCount", 0))
+                details_map[vid] = (dur, views)
+
+            for entry in chunk_entries:
+                vid = entry.get("id")
+                if not vid:
+                    continue
+
+                details = details_map.get(vid)
+                if details is None:
+                    continue  # Video deleted or private
+
+                dur, views = details
+                title = entry.get("title", "")
+
+                if self._is_short(duration_sec=dur, title=title, entry=entry):
+                    logger.info(f"Skipping YouTube Short: {title} ({vid}) - duration: {dur}s")
+                    continue
+
+                pub = entry.get("timestamp")
+                if pub:
+                    pub = datetime.fromtimestamp(pub, tz=UTC).isoformat()
+                else:
+                    pub = ""
+
+                videos.append(
+                    VideoMetadata(
+                        video_id=vid,
+                        title=title,
+                        description=entry.get("description", ""),
+                        published_at=pub,
+                        duration_sec=dur,
+                        thumbnail_url=entry.get("thumbnail", ""),
+                        view_count=views,
+                    )
+                )
+
+                if len(videos) >= max_results:
+                    return videos
+
+        return videos
+
+    async def _list_channel_videos_api(
+        self, channel_id: str, max_results: int = 20
+    ) -> list[VideoMetadata]:
+        """Fallback to list channel videos using YouTube Data API v3 directly."""
+        service = self._get_service()
+
+        # Step 1: Get channel's uploads playlist ID
+        channel_req = service.channels().list(part="contentDetails", id=channel_id)
+        channel_res = channel_req.execute()
+        items = channel_res.get("items", [])
+
+        if not items and channel_id.startswith("@"):
+            channel_req = service.channels().list(part="contentDetails", forHandle=channel_id)
+            channel_res = channel_req.execute()
+            items = channel_res.get("items", [])
+
+        if not items:
+            logger.warning(f"Could not find channel via Data API: {channel_id}")
+            return []
+
+        uploads_id = items[0]["contentDetails"]["relatedPlaylists"]["uploads"]
 
         videos: list[VideoMetadata] = []
-        for entry in entries[:max_results]:
-            vid = entry["id"]
-            details = details_map.get(vid)
-            if details is None:
-                continue  # video deleted or made private between calls
-            dur, views = details
+        next_page_token = None
 
-            pub = entry.get("timestamp")
-            if pub:
-                pub = datetime.fromtimestamp(pub, tz=timezone.utc).isoformat()
-            else:
-                pub = ""
-
-            videos.append(
-                VideoMetadata(
-                    video_id=vid,
-                    title=entry.get("title", ""),
-                    description=entry.get("description", ""),
-                    published_at=pub,
-                    duration_sec=dur,
-                    thumbnail_url=entry.get("thumbnail", ""),
-                    view_count=views,
-                )
+        while len(videos) < max_results:
+            playlist_req = service.playlistItems().list(
+                part="snippet",
+                playlistId=uploads_id,
+                maxResults=min(50, (max_results - len(videos)) * 3),
+                pageToken=next_page_token,
             )
+            playlist_res = playlist_req.execute()
+            playlist_items = playlist_res.get("items", [])
+
+            if not playlist_items:
+                break
+
+            video_ids = [
+                item["snippet"]["resourceId"]["videoId"]
+                for item in playlist_items
+                if item.get("snippet", {}).get("resourceId", {}).get("videoId")
+            ]
+
+            if not video_ids:
+                break
+
+            details_req = service.videos().list(
+                part="snippet,contentDetails,statistics",
+                id=",".join(video_ids),
+            )
+            details_res = details_req.execute()
+
+            for item in details_res.get("items", []):
+                vid = item["id"]
+                snippet = item["snippet"]
+                dur = self._parse_iso_duration(item["contentDetails"].get("duration", "PT0S"))
+                title = snippet.get("title", "")
+
+                if self._is_short(duration_sec=dur, title=title):
+                    logger.info(f"Skipping YouTube Short (API): {title} ({vid}) - duration: {dur}s")
+                    continue
+
+                views = int(item.get("statistics", {}).get("viewCount", 0))
+                pub = snippet.get("publishedAt", "")
+
+                videos.append(
+                    VideoMetadata(
+                        video_id=vid,
+                        title=title,
+                        description=snippet.get("description", ""),
+                        published_at=pub,
+                        duration_sec=dur,
+                        thumbnail_url=snippet.get("thumbnails", {}).get("high", {}).get("url", ""),
+                        view_count=views,
+                    )
+                )
+
+                if len(videos) >= max_results:
+                    break
+
+            next_page_token = playlist_res.get("nextPageToken")
+            if not next_page_token:
+                break
 
         return videos
 
     async def _fetch_video_list_ytdlp(self, channel_id: str, max_results: int) -> list[dict]:
-        """Fetch video list from a channel via yt-dlp, filtering out Shorts.
+        """Fetch video list from a channel via yt-dlp.
 
-        Uses ``--flat-playlist`` (fast, no per-video extraction) and
-        ``--match-filter "!is_short"`` for robust Shorts detection.
+        Uses ``--flat-playlist`` (fast, no per-video extraction).
         """
         channel_url = f"https://www.youtube.com/channel/{channel_id}/videos"
 
         # Fetch extra entries to account for Shorts that get filtered out
-        fetch_limit = max(max_results * 3, 50)
+        fetch_limit = max(max_results * 5, 100)
 
         cmd = [
             "yt-dlp",
             "--flat-playlist",
-            "--match-filter",
-            "!is_short",
             "--dump-json",
             "--no-warnings",
             "--playlist-end",
