@@ -59,6 +59,10 @@ class PredictionResponse(BaseModel):
     extracted_by: str | None = None
     accurate: bool | None = None
     created_at: datetime
+    video_title: str | None = None
+    youtube_video_id: str | None = None
+    published_at: datetime | None = None
+    channel_title: str | None = None
 
     model_config = {"from_attributes": True}
 

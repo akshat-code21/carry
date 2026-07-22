@@ -24,7 +24,7 @@ export const api = {
     if (!res.ok) throw new Error("Search failed");
     return res.json();
   },
-  
+
   async getVideos() {
     const res = await fetch("/api/videos");
     if (!res.ok) throw new Error("Failed to fetch videos");
@@ -42,16 +42,16 @@ export const api = {
     if (!res.ok) throw new Error("Failed to fetch channels");
     return res.json();
   },
-  
+
   async getChannel(id: string) {
     const [channelRes, videosRes, stocksRes] = await Promise.all([
       fetch(`/api/channels/${id}`),
       fetch(`/api/videos?channel_id=${id}`),
       fetch(`/api/channels/${id}/top-stocks`)
     ]);
-    
+
     if (!channelRes.ok) throw new Error("Failed to fetch channel");
-    
+
     const channel = await channelRes.json();
     const videos = videosRes.ok ? await videosRes.json() : [];
     const top_stocks = stocksRes.ok ? await stocksRes.json() : [];
@@ -70,7 +70,7 @@ export const api = {
     if (!res.ok) throw new Error("Failed to fetch ticker");
     return res.json();
   },
-  
+
   async getThemes() {
     const res = await fetch("/api/themes");
     if (!res.ok) throw new Error("Failed to fetch themes");
