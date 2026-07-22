@@ -2,10 +2,16 @@
 
 from fastapi import APIRouter
 
-from src.schemas import BackfillRequest, PipelineStatusResponse, ProcessVideoRequest
+from src.schemas import (
+    BackfillRequest,
+    IngestSingleVideoRequest,
+    PipelineStatusResponse,
+    ProcessVideoRequest,
+)
 from src.tasks.pipeline_tasks import (
     backfill_channel_task,
     generate_embeddings_task,
+    ingest_single_video_task,
     process_video_task,
     update_performance_task,
 )
@@ -20,6 +26,17 @@ async def trigger_process_video(request: ProcessVideoRequest) -> PipelineStatusR
     Queues a Celery task that runs: LLM analysis → theme mapping → embeddings → market tracking.
     """
     task = process_video_task.delay(str(request.video_id))
+    return PipelineStatusResponse(task_id=task.id, status="queued")
+
+
+@router.post("/ingest-single-video", response_model=PipelineStatusResponse)
+async def trigger_ingest_single_video(
+    request: IngestSingleVideoRequest,
+) -> PipelineStatusResponse:
+    """Ingest a single YouTube video for an existing channel and trigger its processing pipeline."""
+    task = ingest_single_video_task.delay(
+        str(request.channel_id), request.youtube_video_id
+    )
     return PipelineStatusResponse(task_id=task.id, status="queued")
 
 

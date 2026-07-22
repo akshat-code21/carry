@@ -230,6 +230,11 @@ class ProcessVideoRequest(BaseModel):
     video_id: UUID
 
 
+class IngestSingleVideoRequest(BaseModel):
+    channel_id: UUID = Field(..., description="Database Channel UUID")
+    youtube_video_id: str = Field(..., description="YouTube Video ID (e.g. _RXAoo-V9Nw)")
+
+
 class BackfillRequest(BaseModel):
     youtube_channel_id: str
     max_videos: int = Field(default=20, ge=1, le=500)

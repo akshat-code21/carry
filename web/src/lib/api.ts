@@ -82,4 +82,24 @@ export const api = {
     if (!res.ok) throw new Error("Failed to fetch theme");
     return res.json();
   },
+
+  async ingestSingleVideo(channelId: string, youtubeVideoId: string) {
+    const res = await fetch("/api/pipeline/ingest-single-video", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel_id: channelId, youtube_video_id: youtubeVideoId }),
+    });
+    if (!res.ok) throw new Error("Failed to ingest single video");
+    return res.json();
+  },
+
+  async processVideo(videoId: string) {
+    const res = await fetch("/api/pipeline/process-video", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ video_id: videoId }),
+    });
+    if (!res.ok) throw new Error("Failed to process video");
+    return res.json();
+  },
 };
