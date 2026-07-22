@@ -2,7 +2,7 @@
 
 import logging
 import uuid as uuid_mod
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -243,6 +243,74 @@ class AggregationService:
 
         results.sort(key=lambda x: x["mentions"], reverse=True)
         return results[:limit]
+
+    async def get_ticker_daily_sentiment(
+        self, ticker: str, days: int | None = None
+    ) -> list[dict]:
+        """Get daily bullish/bearish/neutral mention counts for a ticker.
+
+        Combines explicit mentions (Prediction.direction, tied directly to
+        the ticker) and implicit mentions (ThemeMention.sentiment, tied to
+        the ticker via ThemeTickerMapping), grouped by the calendar date of
+        the mentioning video's published_at.
+        """
+        ticker = ticker.upper()
+        daily_counts: dict[date, dict[str, int]] = {}
+
+        def _bump(day: date | None, sentiment: str | None) -> None:
+            if day is None:
+                return
+            bucket = daily_counts.setdefault(
+                day, {"bullish": 0, "bearish": 0, "neutral": 0}
+            )
+            key = (sentiment or "neutral").lower()
+            if key not in bucket:
+                key = "neutral"
+            bucket[key] += 1
+
+        # Explicit mentions: predictions directly tagged with this ticker
+        pred_result = await self.db.execute(
+            select(Prediction, Video.published_at)
+            .join(Video, Prediction.video_id == Video.id)
+            .where(Prediction.ticker == ticker)
+        )
+        for pred, published_at in pred_result.all():
+            _bump(published_at.date() if published_at else None, pred.direction)
+
+        # Implicit mentions: theme mentions mapped to this ticker
+        mapping_result = await self.db.execute(
+            select(ThemeTickerMapping.theme_id).where(
+                ThemeTickerMapping.ticker == ticker
+            )
+        )
+        theme_ids = [row[0] for row in mapping_result.all()]
+
+        if theme_ids:
+            mention_result = await self.db.execute(
+                select(ThemeMention, Video.published_at)
+                .join(Video, ThemeMention.video_id == Video.id)
+                .where(ThemeMention.theme_id.in_(theme_ids))
+            )
+            for mention, published_at in mention_result.all():
+                _bump(
+                    published_at.date() if published_at else None,
+                    mention.sentiment,
+                )
+
+        if days is not None:
+            cutoff = datetime.utcnow().date() - timedelta(days=days)
+            daily_counts = {d: c for d, c in daily_counts.items() if d >= cutoff}
+
+        return [
+            {
+                "date": d.isoformat(),
+                "bullish_count": counts["bullish"],
+                "bearish_count": counts["bearish"],
+                "neutral_count": counts["neutral"],
+                "total_count": counts["bullish"] + counts["bearish"] + counts["neutral"],
+            }
+            for d, counts in sorted(daily_counts.items())
+        ]
 
     @staticmethod
     def _compute_avg_sentiment(sentiments: list[str]) -> float:

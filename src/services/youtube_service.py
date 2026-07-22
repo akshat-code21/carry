@@ -119,7 +119,7 @@ class YouTubeAPIService(YouTubeService):
             details_response = (
                 service.videos()
                 .list(
-                    part="contentDetails,statistics",
+                    part="snippet,contentDetails,statistics",
                     id=",".join(batch_ids),
                 )
                 .execute()
@@ -130,7 +130,8 @@ class YouTubeAPIService(YouTubeService):
                 vid = item["id"]
                 dur = self._parse_iso_duration(item["contentDetails"].get("duration", "PT0S"))
                 views = int(item.get("statistics", {}).get("viewCount", 0))
-                details_map[vid] = (dur, views)
+                api_published_at = item.get("snippet", {}).get("publishedAt", "")
+                details_map[vid] = (dur, views, api_published_at)
 
             for entry in chunk_entries:
                 vid = entry.get("id")
@@ -141,18 +142,23 @@ class YouTubeAPIService(YouTubeService):
                 if details is None:
                     continue  # Video deleted or private
 
-                dur, views = details
+                dur, views, api_published_at = details
                 title = entry.get("title", "")
 
                 if self._is_short(duration_sec=dur, title=title, entry=entry):
                     logger.info(f"Skipping YouTube Short: {title} ({vid}) - duration: {dur}s")
                     continue
 
-                pub = entry.get("timestamp")
-                if pub:
-                    pub = datetime.fromtimestamp(pub, tz=UTC).isoformat()
-                else:
-                    pub = ""
+                # Prefer the YouTube Data API's snippet.publishedAt (always
+                # present for public videos); fall back to yt-dlp's
+                # flat-playlist timestamp, which is often absent.
+                pub = api_published_at
+                if not pub:
+                    ts = entry.get("timestamp")
+                    if ts:
+                        pub = datetime.fromtimestamp(ts, tz=UTC).isoformat()
+                    else:
+                        pub = ""
 
                 videos.append(
                     VideoMetadata(
