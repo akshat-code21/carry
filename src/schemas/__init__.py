@@ -164,6 +164,27 @@ class TickerDetailResponse(TickerResponse):
     themes: list[ThemeResponse] = []
 
 
+class TickerSentimentDailyPoint(BaseModel):
+    """Bullish/bearish/neutral mention counts for a ticker on a single day."""
+
+    date: str
+    bullish_count: int = 0
+    bearish_count: int = 0
+    neutral_count: int = 0
+    total_count: int = 0
+
+
+class PricePointResponse(BaseModel):
+    """A single day's OHLCV price data for a ticker."""
+
+    date: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int
+
+
 # --- Search schemas ---
 
 

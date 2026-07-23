@@ -9,9 +9,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  turbopack: {
-    root: "/Users/akshatsipany/Work/yt-chatter/web"
-  }
 };
 
 export default nextConfig;
