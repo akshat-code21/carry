@@ -132,6 +132,58 @@ class IngestionPipeline:
         )
         return created_videos
 
+    async def ingest_single_video(
+        self, channel_id: uuid_mod.UUID, youtube_video_id: str
+    ) -> Video:
+        """Ingest a single video for a channel by YouTube Video ID.
+
+        If video already exists, fetches transcript if needed and returns Video.
+        Otherwise fetches metadata & transcript, stores in DB, and returns Video.
+        """
+        # Check if video already exists
+        existing = await self.db.execute(
+            select(Video).where(Video.youtube_video_id == youtube_video_id)
+        )
+        video = existing.scalar_one_or_none()
+
+        if video:
+            logger.info(f"Video already exists in database: {video.title} ({video.id})")
+            if video.transcript_status == "pending":
+                await self.fetch_transcript(video)
+            return video
+
+        # Fetch video metadata from YouTube
+        meta = await self.youtube.get_video_info(youtube_video_id)
+
+        published_at = None
+        if meta.published_at:
+            try:
+                published_at = datetime.fromisoformat(
+                    meta.published_at.replace("Z", "+00:00")
+                )
+            except ValueError:
+                pass
+
+        video = Video(
+            channel_id=channel_id,
+            youtube_video_id=youtube_video_id,
+            title=meta.title,
+            description=meta.description,
+            published_at=published_at,
+            duration_sec=meta.duration_sec,
+            thumbnail_url=meta.thumbnail_url,
+            view_count=meta.view_count,
+            transcript_status="pending",
+            processed=False,
+        )
+        self.db.add(video)
+        await self.db.flush()
+
+        # Fetch transcript
+        await self.fetch_transcript(video)
+
+        return video
+
     async def fetch_transcript(self, video: Video) -> list[TranscriptSegment]:
         """Fetch and store transcript segments for a video.
 

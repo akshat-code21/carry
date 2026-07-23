@@ -154,6 +154,35 @@ def backfill_channel_task(self, youtube_channel_id: str, max_videos: int = 20) -
     return asyncio.run(_run_and_cleanup(_run()))
 
 
+@celery_app.task(bind=True, name="pipeline.ingest_single_video")
+def ingest_single_video_task(self, channel_id: str, youtube_video_id: str) -> dict:
+    """Ingest a single video for a channel, fetch transcript, and queue for processing."""
+
+    async def _run():
+        services = _get_services()
+        async with _get_db_session() as db:
+            from src.pipeline.ingestion import IngestionPipeline
+
+            ingestion = IngestionPipeline(
+                db, services["youtube"], services["transcript"]
+            )
+            c_uuid = uuid.UUID(channel_id)
+            video = await ingestion.ingest_single_video(c_uuid, youtube_video_id)
+            await db.commit()
+            video_id_str = str(video.id)
+
+        # Trigger single-video processing pipeline (LLM analysis, themes, market tracking)
+        process_video_task.delay(video_id_str)
+
+        return {
+            "video_id": video_id_str,
+            "youtube_video_id": youtube_video_id,
+            "status": "queued_for_processing",
+        }
+
+    return asyncio.run(_run_and_cleanup(_run()))
+
+
 @celery_app.task(bind=True, name="pipeline.update_performance")
 def update_performance_task(self) -> dict:
     """Periodic task: update performance metrics for all pending predictions."""

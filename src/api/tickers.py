@@ -6,11 +6,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.api.deps import get_aggregation_service, get_market_data
 from src.database import get_db
 from src.models.performance import PerformanceRecord
 from src.models.prediction import Prediction
+from src.models.video import Video
 from src.models.speaker_ticker import SpeakerTickerAggregation
 from src.models.theme import ThemeHierarchy, ThemeTickerMapping
 from src.schemas import (
@@ -63,9 +65,10 @@ async def get_ticker_detail(
     # Use first match (could be from multiple channels)
     agg = agg_result.scalars().first()
 
-    # Get predictions for this ticker
+    # Get predictions for this ticker with video and channel info
     pred_result = await db.execute(
         select(Prediction)
+        .options(selectinload(Prediction.video).selectinload(Video.channel))
         .where(Prediction.ticker == ticker)
         .order_by(Prediction.created_at.desc())
     )
@@ -75,6 +78,13 @@ async def get_ticker_detail(
     preds_with_perf = []
     for pred in predictions:
         pwp = PredictionWithPerformance.model_validate(pred)
+        if pred.video:
+            pwp.video_title = pred.video.title
+            pwp.youtube_video_id = pred.video.youtube_video_id
+            pwp.published_at = pred.video.published_at
+            if pred.video.channel:
+                pwp.channel_title = pred.video.channel.title
+
         perf_result = await db.execute(
             select(PerformanceRecord).where(
                 PerformanceRecord.prediction_id == pred.id

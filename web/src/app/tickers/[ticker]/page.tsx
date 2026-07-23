@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, ExternalLink, PlayCircle, Video, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -20,6 +20,7 @@ import {
   ResponsiveContainer,
   ReferenceDot,
 } from "recharts";
+import { PredictionSentimentChart } from "@/components/PredictionSentimentChart";
 
 function SignalMarker({
   cx,
@@ -91,10 +92,10 @@ export default function TickerPage() {
       try {
         const [res, timelineRes] = await Promise.all([
           api.getTicker(ticker),
-          api.getTickerSentimentTimeline(ticker),
+          api.getTickerSentimentTimeline(ticker).catch(() => []),
         ]);
         setData(res);
-        setSentimentTimeline(timelineRes);
+        setSentimentTimeline(timelineRes || []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -107,8 +108,8 @@ export default function TickerPage() {
   useEffect(() => {
     async function loadPriceHistory() {
       try {
-        const priceRes = await api.getTickerPriceHistory(ticker, priceRangeDays);
-        setPriceHistory(priceRes);
+        const priceRes = await api.getTickerPriceHistory(ticker, priceRangeDays).catch(() => []);
+        setPriceHistory(priceRes || []);
       } catch (err) {
         console.error(err);
       }
@@ -118,7 +119,7 @@ export default function TickerPage() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex h-full items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -126,7 +127,7 @@ export default function TickerPage() {
 
   if (!data) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4">
+      <div className="flex h-full flex-col items-center justify-center gap-4 py-20">
         <h2 className="text-2xl font-bold">Ticker Not Found</h2>
         <p className="text-muted-foreground">No data found for {ticker}</p>
       </div>
@@ -160,15 +161,28 @@ export default function TickerPage() {
     })
     .filter((m): m is { label: string; price: number; signal: "B" | "S" } => m !== null);
 
+  // Construct performance chart data if present
+  const perfChartData = data.performance?.map((p: any) => ({
+    name: new Date(p.created_at || Date.now()).toLocaleDateString(),
+    price: p.price_at_video,
+    price_1w: p.price_1w,
+  })) || [];
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight uppercase">{ticker}</h1>
         <p className="text-muted-foreground">
-          Market Intelligence & Predictions for {ticker}
+          Market Intelligence & Video Predictions for {ticker}
         </p>
       </div>
 
+      {/* Video Level Prediction Trajectory Chart */}
+      {data.predictions && data.predictions.length > 0 && (
+        <PredictionSentimentChart predictions={data.predictions} ticker={ticker} />
+      )}
+
+      {/* Real Stock Price Chart with Bullish/Bearish Signal Markers */}
       {priceChartData.length > 0 && (
         <Card>
           <CardHeader className="flex flex-row items-start justify-between gap-4">
@@ -196,11 +210,11 @@ export default function TickerPage() {
             <div className="h-[420px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={priceChartData} margin={{ top: 30, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                   <XAxis dataKey="label" />
                   <YAxis domain={["auto", "auto"]} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="close" stroke="#8884d8" dot={false} name="Close Price" />
+                  <Line type="monotone" dataKey="close" stroke="#8884d8" dot={false} name="Close Price" strokeWidth={2} />
                   {signalMarkers.map((m, i) => (
                     <ReferenceDot
                       key={i}
@@ -217,6 +231,48 @@ export default function TickerPage() {
         </Card>
       )}
 
+      {/* Historical Stock Price & Prediction Performance Chart */}
+      {perfChartData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Price Chart & Predictions Performance</CardTitle>
+            <CardDescription>Historical stock price performance aligned with prediction timestamps</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[400px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={perfChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                  <XAxis dataKey="name" />
+                  <YAxis domain={["auto", "auto"]} />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="price" stroke="#8884d8" name="Price at Prediction" strokeWidth={2} />
+                  <Line type="monotone" dataKey="price_1w" stroke="#82ca9d" name="Price 1W Later" strokeWidth={2} />
+                  {data.predictions?.map((pred: any, i: number) => {
+                    const perf = data.performance?.find((p: any) => p.prediction_id === pred.id);
+                    if (!perf) return null;
+                    const dateStr = new Date(perf.created_at || Date.now()).toLocaleDateString();
+                    return (
+                      <ReferenceDot
+                        key={i}
+                        x={dateStr}
+                        y={perf.price_at_video}
+                        r={7}
+                        fill={pred.direction === "bullish" ? "#22c55e" : pred.direction === "bearish" ? "#ef4444" : "#64748b"}
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                      />
+                    );
+                  })}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Daily Bullish vs Bearish Mentions Bar Chart */}
       {sentimentTimeline.length > 0 && (
         <Card>
           <CardHeader>
@@ -249,32 +305,78 @@ export default function TickerPage() {
         </Card>
       )}
 
+      {/* Video Level Predictions & Associated Themes */}
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Recent Predictions</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Video className="h-5 w-5 text-primary" />
+              Video Level Predictions
+            </CardTitle>
+            <CardDescription>All extracted video predictions for {ticker}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            {data.predictions?.map((p: any) => (
-              <div key={p.id} className="flex flex-col gap-2 rounded-lg border p-4">
-                <div className="flex items-center justify-between">
-                  <Badge variant={p.direction === "bullish" ? "default" : p.direction === "bearish" ? "destructive" : "secondary"}>
-                    {p.direction}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    Confidence: {(p.confidence * 100).toFixed(0)}%
-                  </span>
+            {data.predictions?.map((p: any) => {
+              const dir = (p.direction || "neutral").toLowerCase();
+              return (
+                <div key={p.id} className="flex flex-col gap-2.5 rounded-lg border p-4 hover:border-primary/50 transition-colors">
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge
+                      variant={
+                        dir === "bullish"
+                          ? "default"
+                          : dir === "bearish"
+                          ? "destructive"
+                          : "secondary"
+                      }
+                      className="capitalize"
+                    >
+                      {dir === "bullish" && <TrendingUp className="mr-1 h-3 w-3 inline" />}
+                      {dir === "bearish" && <TrendingDown className="mr-1 h-3 w-3 inline" />}
+                      {dir === "neutral" && <Minus className="mr-1 h-3 w-3 inline" />}
+                      {dir}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground font-medium">
+                      Confidence: {((p.confidence ?? 0.75) * 100).toFixed(0)}%
+                    </span>
+                  </div>
+
+                  {p.video_title && (
+                    <div>
+                      <p className="text-xs font-semibold text-foreground line-clamp-1">{p.video_title}</p>
+                      {p.channel_title && <p className="text-[11px] text-muted-foreground">{p.channel_title}</p>}
+                    </div>
+                  )}
+
+                  <p className="text-sm italic text-muted-foreground bg-muted/30 p-2.5 rounded border border-muted/50">
+                    &ldquo;{p.prediction_text}&rdquo;
+                  </p>
+
+                  <div className="flex items-center justify-between pt-1">
+                    {p.accurate !== null && p.accurate !== undefined ? (
+                      <Badge variant="outline" className={p.accurate ? "border-green-500 text-green-500 bg-green-500/10 text-xs" : "border-red-500 text-red-500 bg-red-500/10 text-xs"}>
+                        {p.accurate ? "Accurate ✅" : "Inaccurate ❌"}
+                      </Badge>
+                    ) : <div />}
+
+                    {p.youtube_video_id && (
+                      <a
+                        href={`https://www.youtube.com/watch?v=${p.youtube_video_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                      >
+                        <PlayCircle className="h-3.5 w-3.5" />
+                        Watch Video
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
                 </div>
-                <p className="text-sm">{p.prediction_text}</p>
-                {p.accurate !== null && (
-                  <Badge variant="outline" className={p.accurate ? "text-green-500 w-fit" : "text-red-500 w-fit"}>
-                    {p.accurate ? "Accurate ✅" : "Inaccurate ❌"}
-                  </Badge>
-                )}
-              </div>
-            ))}
+              );
+            })}
             {(!data.predictions || data.predictions.length === 0) && (
-              <p className="text-sm text-muted-foreground">No explicit predictions found.</p>
+              <p className="text-sm text-muted-foreground">No explicit predictions found for {ticker}.</p>
             )}
           </CardContent>
         </Card>
@@ -282,12 +384,14 @@ export default function TickerPage() {
         <Card>
           <CardHeader>
             <CardTitle>Associated Themes</CardTitle>
+            <CardDescription>Market themes mapped to {ticker}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             {data.themes?.map((t: any) => (
-              <div key={t.id} className="flex flex-col gap-1 border-b pb-2 last:border-0 last:pb-0">
+              <div key={t.id} className="flex flex-col gap-1 border-b pb-3 last:border-0 last:pb-0">
                 <span className="font-medium">{t.name}</span>
                 <span className="text-xs text-muted-foreground capitalize">{t.level}</span>
+                {t.description && <p className="text-xs text-muted-foreground mt-0.5">{t.description}</p>}
               </div>
             ))}
             {(!data.themes || data.themes.length === 0) && (
