@@ -77,6 +77,12 @@ export const api = {
     if (!res.ok) throw new Error("Failed to fetch ticker sentiment timeline");
     return res.json();
   },
+  async getTickerPriceHistory(ticker: string, days?: number) {
+    const qs = days ? `?days=${days}` : "";
+    const res = await fetch(`/api/tickers/${ticker}/price-history${qs}`);
+    if (!res.ok) throw new Error("Failed to fetch ticker price history");
+    return res.json();
+  },
   async getThemes() {
     const res = await fetch("/api/themes");
     if (!res.ok) throw new Error("Failed to fetch themes");

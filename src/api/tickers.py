@@ -1,5 +1,6 @@
 """Tickers API endpoints."""
 
+from datetime import date, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -7,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.api.deps import get_aggregation_service
+from src.api.deps import get_aggregation_service, get_market_data
 from src.database import get_db
 from src.models.performance import PerformanceRecord
 from src.models.prediction import Prediction
@@ -18,12 +19,14 @@ from src.schemas import (
     PerformanceResponse,
     PredictionResponse,
     PredictionWithPerformance,
+    PricePointResponse,
     ThemeResponse,
     TickerDetailResponse,
     TickerResponse,
     TickerSentimentDailyPoint,
 )
 from src.services.aggregation_service import AggregationService
+from src.services.interfaces import MarketDataSource
 
 router = APIRouter(prefix="/api/tickers", tags=["Tickers"])
 
@@ -137,3 +140,33 @@ async def get_ticker_sentiment_timeline(
     """
     data = await agg_service.get_ticker_daily_sentiment(ticker, days=days)
     return [TickerSentimentDailyPoint(**point) for point in data]
+
+
+@router.get(
+    "/{ticker}/price-history",
+    response_model=list[PricePointResponse],
+)
+async def get_ticker_price_history(
+    ticker: str,
+    days: int = Query(default=180, ge=1, le=3650),
+    market_data: MarketDataSource = Depends(get_market_data),
+) -> list[PricePointResponse]:
+    """Get daily OHLCV price history for a ticker over the trailing `days`.
+
+    Used to overlay bullish/bearish mention markers on a real price chart.
+    """
+    ticker = ticker.upper()
+    end = date.today()
+    start = end - timedelta(days=days)
+    points = await market_data.get_price_history(ticker, start, end)
+    return [
+        PricePointResponse(
+            date=p.date.isoformat(),
+            open=p.open,
+            high=p.high,
+            low=p.low,
+            close=p.close,
+            volume=p.volume,
+        )
+        for p in points
+    ]
