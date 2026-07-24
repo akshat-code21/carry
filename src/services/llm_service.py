@@ -30,13 +30,13 @@ For the given transcript chunk, extract ALL of the following:
    - sentiment: "bullish", "bearish", or "neutral"
    - confidence: 0.0 to 1.0 — how confident the speaker seemed
 
-2. **Explicit Tickers**: Stock tickers explicitly mentioned by name (e.g., speaker says "Nvidia" or "NVDA")
+2. **Explicit Tickers**: Stock tickers explicitly mentioned by name or company name by the speaker (e.g., speaker says "Nvidia" or "NVDA"). Do NOT include competitor tickers here unless they were explicitly named by the speaker.
 
-3. **Implicit Tickers**: Stock tickers implicitly relevant based on the themes discussed (e.g., discussing "AI chips" implies NVDA, AMD, etc.)
+3. **Implicit Tickers**: Stock tickers implicitly relevant based on the general sector topic discussed (e.g., discussing "AI chips" implies NVDA, AMD, etc.). These are background sector context only.
 
 4. **Predictions**: Concrete, testable predictions or calls. For each:
    - text: What was predicted, in plain English
-   - ticker: The stock ticker symbol (e.g. "NVDA", "AAPL", "MSFT", "TSLA", "AMZN", "GOOGL", "XOM") corresponding to the company, stock, or commodity being discussed. If a company name (e.g. "Apple", "Nvidia") is mentioned, convert it to its official stock ticker symbol (e.g. "AAPL", "NVDA"). If a private company backed by a major public company is mentioned (e.g. "OpenAI" -> "MSFT", "Anthropic" -> "AMZN"), use the primary public ticker symbol. Use null ONLY for purely macro/non-company calls.
+   - ticker: The stock ticker symbol (e.g. "NVDA", "AAPL", "MSFT", "TSLA", "AMZN", "GOOGL", "XOM") corresponding ONLY to the specific company being predicted. If a company name (e.g. "Apple", "Nvidia") is mentioned in relation to the prediction, convert it to its official stock ticker symbol. If a private company backed by a major public company is mentioned (e.g. "OpenAI" -> "MSFT", "Anthropic" -> "AMZN"), use the primary public ticker symbol. Use null for macro calls or when no specific company was target of the call.
    - direction: "bullish", "bearish", or "neutral"
    - timeframe: The timeframe if mentioned (e.g., "by end of year", "next quarter")
    - confidence: 0.0 to 1.0
@@ -58,6 +58,7 @@ Return ONLY valid JSON matching this exact schema:
 Rules:
 - Skip generic banter, intros, ads, and non-financial discussion
 - Be conservative with predictions — only extract clear, testable calls
+- Never assign a competitor stock ticker to a prediction unless that company was specifically discussed for that prediction call
 - Never invent tickers or timeframes not mentioned in the transcript
 - If a chunk has no financial content, return empty arrays
 """
@@ -66,13 +67,13 @@ THEME_TICKER_ENRICHMENT_PROMPT = """You are a financial market expert. Given a t
 
 For each ticker, provide:
 - ticker: The stock symbol
-- relevance_score: 0.0 to 1.0 (how core this ticker is to the theme)
+- relevance_score: 0.0 to 1.0 (how core and directly relevant this ticker is to the theme — assign >= 0.85 only for essential core tickers)
 - reason: A brief explanation of why this ticker maps to this theme
 
 Return ONLY valid JSON as an array:
 [{"ticker": "SYMBOL", "relevance_score": 0.85, "reason": "..."}]
 
-Only suggest tickers that are directly relevant. Quality over quantity — 3-5 highly relevant tickers is better than 10 loosely related ones.
+Only suggest tickers that are directly relevant. Quality over quantity — 2-3 highly core tickers is better than loosely related ones.
 """
 
 

@@ -213,7 +213,7 @@ export default function TickerPage() {
                   <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                   <XAxis dataKey="label" />
                   <YAxis domain={["auto", "auto"]} />
-                  <Tooltip />
+                  <Tooltip labelStyle={{ color: "#000000", fontWeight: 600 }} />
                   <Line type="monotone" dataKey="close" stroke="#8884d8" dot={false} name="Close Price" strokeWidth={2} />
                   {signalMarkers.map((m, i) => (
                     <ReferenceDot
@@ -245,7 +245,7 @@ export default function TickerPage() {
                   <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                   <XAxis dataKey="name" />
                   <YAxis domain={["auto", "auto"]} />
-                  <Tooltip />
+                  <Tooltip labelStyle={{ color: "#000000", fontWeight: 600 }} />
                   <Legend />
                   <Line type="monotone" dataKey="price" stroke="#8884d8" name="Price at Prediction" strokeWidth={2} />
                   <Line type="monotone" dataKey="price_1w" stroke="#82ca9d" name="Price 1W Later" strokeWidth={2} />
@@ -294,7 +294,7 @@ export default function TickerPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="label" />
                   <YAxis allowDecimals={false} />
-                  <Tooltip />
+                  <Tooltip labelStyle={{ color: "#000000", fontWeight: 600 }} />
                   <Legend />
                   <Bar dataKey="bullish_count" name="Bullish" fill="#22c55e" />
                   <Bar dataKey="bearish_count" name="Bearish" fill="#ef4444" />

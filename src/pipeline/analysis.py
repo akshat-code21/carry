@@ -109,7 +109,6 @@ class AnalysisPipeline:
                         extracted_pred.ticker,
                         extracted_pred.text,
                         result.explicit_tickers,
-                        result.implicit_tickers,
                     )
 
                     prediction = Prediction(
@@ -220,9 +219,13 @@ class AnalysisPipeline:
         raw_ticker: str | None,
         prediction_text: str = "",
         explicit_tickers: list[str] | None = None,
-        implicit_tickers: list[str] | None = None,
     ) -> str | None:
-        """Resolve company names or raw text into clean stock ticker symbols."""
+        """Resolve company names or raw text into clean stock ticker symbols.
+
+        Only explicitly mentioned tickers, company names in prediction text,
+        or explicit chunk tickers are used. Implicit sector tickers are strictly ignored
+        to prevent competitor ticker attribution.
+        """
         company_map = {
             "APPLE": "AAPL",
             "NVIDIA": "NVDA",
@@ -266,14 +269,5 @@ class AnalysisPipeline:
                     return company_map[et_upper]
                 if len(et_upper) <= 5 and et_upper.isalpha():
                     return et_upper
-
-        # Check implicit tickers
-        if implicit_tickers:
-            for it in implicit_tickers:
-                it_upper = it.strip().upper()
-                if it_upper in company_map:
-                    return company_map[it_upper]
-                if len(it_upper) <= 5 and it_upper.isalpha():
-                    return it_upper
 
         return None

@@ -19,6 +19,9 @@ from src.services.theme_service import ThemeService
 logger = logging.getLogger(__name__)
 
 
+MIN_THEME_TICKER_RELEVANCE_SCORE = 0.85
+
+
 class ThemeMappingPipeline:
     """Pipeline step 3: Enrich theme→ticker mappings and update aggregation."""
 
@@ -85,6 +88,13 @@ class ThemeMappingPipeline:
                 )
 
                 for suggestion in suggested_tickers:
+                    if suggestion.relevance_score < MIN_THEME_TICKER_RELEVANCE_SCORE:
+                        logger.debug(
+                            f"Skipping suggested ticker {suggestion.ticker} for theme '{theme.name}' "
+                            f"due to low relevance score ({suggestion.relevance_score} < {MIN_THEME_TICKER_RELEVANCE_SCORE})"
+                        )
+                        continue
+
                     ticker = suggestion.ticker.upper()
                     if ticker not in existing_tickers:
                         await self.theme_service.add_ticker_mapping(
@@ -135,6 +145,9 @@ class ThemeMappingPipeline:
                     existing_tickers = {m.ticker.upper() for m in existing}
 
                     for suggestion in suggested:
+                        if suggestion.relevance_score < MIN_THEME_TICKER_RELEVANCE_SCORE:
+                            continue
+
                         ticker = suggestion.ticker.upper()
                         if ticker not in existing_tickers:
                             await self.theme_service.add_ticker_mapping(
