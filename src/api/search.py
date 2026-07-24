@@ -3,13 +3,15 @@
 from fastapi import APIRouter, Depends, Query
 from uuid import UUID
 
-from src.api.deps import get_search_service
+from src.api.deps import get_search_service, get_query_router
 from src.schemas import (
     SearchResponse,
     SearchSegmentResult,
     SearchPredictionResult,
+    StockDiscoveryResult,
     StockSearchResult,
 )
+from src.services.query_router import QueryRouter
 from src.services.search_service import SearchService
 
 router = APIRouter(prefix="/api", tags=["Search"])
@@ -24,16 +26,46 @@ async def search(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     search_service: SearchService = Depends(get_search_service),
+    query_router: QueryRouter = Depends(get_query_router),
 ) -> SearchResponse:
-    """Hybrid search across transcript segments and predictions.
+    """Smart search with query intent classification.
 
-    Supports keyword (tsvector), semantic (pgvector), or hybrid search.
+    Classifies the query into an intent and routes to the appropriate search strategy:
+    - sector_discovery: aggregated stock search across themes
+    - ticker_narrative: direct narrative intelligence for a specific ticker
+    - entity_lookup / factual_search: hybrid transcript segment search
     """
+    # Step 1: Classify query intent
+    intent = await query_router.classify(q)
+
+    # Step 2: Route to appropriate search strategy
+    stocks = []
+
+    if intent.intent == "sector_discovery":
+        stock_results = await search_service.search_stocks_for_query(
+            query=q,
+            sector_hint=intent.sector_hint,
+            limit=10,
+        )
+        stocks = [StockDiscoveryResult(**s) for s in stock_results]
+
+    elif intent.intent == "ticker_narrative" and intent.ticker_hint:
+        # Direct ticker narrative — bypass text search, go straight to structured data
+        stock_results = await search_service.search_ticker_narrative(intent.ticker_hint)
+        stocks = [StockDiscoveryResult(**s) for s in stock_results]
+
+    # Step 3: Run hybrid search for segments + predictions
+    # For ticker queries, also search using the company name / ticker for better segment recall
+    search_query = q
+    search_ticker = ticker
+    if intent.ticker_hint and not ticker:
+        search_ticker = intent.ticker_hint
+
     results = await search_service.hybrid_search(
-        query=q,
+        query=search_query,
         search_type=type,
         channel_id=channel,
-        ticker=ticker,
+        ticker=search_ticker,
         limit=limit,
         offset=offset,
     )
@@ -41,9 +73,11 @@ async def search(
     return SearchResponse(
         segments=[SearchSegmentResult(**s) for s in results["segments"]],
         predictions=[SearchPredictionResult(**p) for p in results["predictions"]],
+        stocks=stocks,
         videos=results.get("videos", {}),
         channels=results.get("channels", {}),
         total=results["total"],
+        query_intent=intent.intent,
     )
 
 
@@ -57,5 +91,14 @@ async def search_stocks(
 
     Returns top tickers implied by the search query's themes.
     """
-    results = await search_service.search_stocks_for_query(q, limit)
-    return [StockSearchResult(**r) for r in results]
+    results = await search_service.search_stocks_for_query(q, limit=limit)
+    # Map to legacy StockSearchResult format
+    return [
+        StockSearchResult(
+            ticker=r["ticker"],
+            total_relevance=r.get("composite_score", r.get("total_relevance", 0.0)),
+            themes=r.get("themes", []),
+        )
+        for r in results
+    ]
+

@@ -1,3 +1,24 @@
+export interface SamplePrediction {
+  text: string;
+  direction?: string;
+  confidence?: number;
+}
+
+export interface StockDiscoveryResult {
+  ticker: string;
+  composite_score: number;
+  theme_relevance: number;
+  themes: string[];
+  mention_count: number;
+  avg_sentiment: number;
+  prediction_count: number;
+  avg_confidence: number;
+  bullish_pct: number;
+  bearish_pct: number;
+  sample_predictions: SamplePrediction[];
+  last_mentioned_at?: string;
+}
+
 export interface SearchResult {
   segments: {
     id: string;
@@ -13,9 +34,11 @@ export interface SearchResult {
     search_type: string;
   }[];
   predictions: any[];
+  stocks: StockDiscoveryResult[];
   themes: any[];
   videos: Record<string, any>;
   channels: Record<string, any>;
+  query_intent: string;
 }
 
 export const api = {

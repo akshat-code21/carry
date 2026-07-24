@@ -230,17 +230,43 @@ class SearchPredictionResult(BaseModel):
     youtube_video_id: str | None = None
 
 
+class SamplePrediction(BaseModel):
+    text: str
+    direction: str | None = None
+    confidence: float | None = None
+
+
+class StockDiscoveryResult(BaseModel):
+    """Rich stock discovery result with multi-signal scoring."""
+
+    ticker: str
+    composite_score: float = 0.0
+    theme_relevance: float = 0.0
+    themes: list[str] = []
+    mention_count: int = 0
+    avg_sentiment: float = 0.0
+    prediction_count: int = 0
+    avg_confidence: float = 0.0
+    bullish_pct: float = 0.0
+    bearish_pct: float = 0.0
+    sample_predictions: list[SamplePrediction] = []
+    last_mentioned_at: str | None = None
+
+
 class SearchResponse(BaseModel):
     segments: list[SearchSegmentResult] = []
     predictions: list[SearchPredictionResult] = []
+    stocks: list[StockDiscoveryResult] = []
     videos: dict[str, dict] = {}
     channels: dict[str, dict] = {}
     total: int = 0
+    query_intent: str = "factual_search"
 
 
+# Legacy alias for the /api/search/stocks endpoint
 class StockSearchResult(BaseModel):
     ticker: str
-    total_relevance: float
+    total_relevance: float = 0.0
     themes: list[str] = []
 
 

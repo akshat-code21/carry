@@ -12,6 +12,7 @@ from src.services.interfaces import EmbeddingProvider, LLMProvider, MarketDataSo
 from src.services.llm_service import AnthropicLLMService
 from src.services.llm_service import OpenAILLMService
 from src.services.market_data_service import YFinanceMarketDataService
+from src.services.query_router import QueryRouter
 from src.services.search_service import SearchService
 from src.services.theme_service import ThemeService
 
@@ -25,6 +26,7 @@ settings = get_settings()
 _llm_provider: LLMProvider | None = None
 _embedding_provider: EmbeddingProvider | None = None
 _market_data: MarketDataSource | None = None
+_query_router: QueryRouter | None = None
 
 
 def get_llm_provider() -> LLMProvider:
@@ -51,6 +53,13 @@ def get_market_data() -> MarketDataSource:
     return _market_data
 
 
+def get_query_router() -> QueryRouter:
+    global _query_router
+    if _query_router is None:
+        _query_router = QueryRouter()
+    return _query_router
+
+
 # --- Per-request dependencies ---
 
 
@@ -69,3 +78,4 @@ def get_aggregation_service(
     db: AsyncSession = Depends(get_db),
 ) -> AggregationService:
     return AggregationService(db)
+
