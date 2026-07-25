@@ -118,4 +118,36 @@ export const api = {
     if (!res.ok) throw new Error("Failed to fetch theme");
     return res.json();
   },
+
+  async backfillChannel(youtubeChannelId: string, maxVideos: number = 20) {
+    const res = await fetch("/api/pipeline/backfill", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        youtube_channel_id: youtubeChannelId,
+        max_videos: maxVideos,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Failed to trigger backfill");
+    }
+    return res.json();
+  },
+
+  async ingestSingleVideo(channelId: string, youtubeVideoId: string) {
+    const res = await fetch("/api/pipeline/ingest-single-video", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        channel_id: channelId,
+        youtube_video_id: youtubeVideoId,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Failed to trigger video ingestion");
+    }
+    return res.json();
+  },
 };
