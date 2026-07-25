@@ -138,7 +138,7 @@ export default function TickerPage() {
   const priceChartData = priceHistory.map((p: any) => ({
     date: p.date,
     label: new Date(p.date).toLocaleDateString(),
-    close: p.close,
+    close: p.close.toFixed(2),
   }));
 
   // For each day with a clear bullish/bearish lean, place a B/S marker at
@@ -326,8 +326,8 @@ export default function TickerPage() {
                         dir === "bullish"
                           ? "default"
                           : dir === "bearish"
-                          ? "destructive"
-                          : "secondary"
+                            ? "destructive"
+                            : "secondary"
                       }
                       className="capitalize"
                     >
