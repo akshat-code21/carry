@@ -24,6 +24,7 @@ def _get_services():
     """Instantiate all services needed by the pipeline."""
     from src.config import get_settings
     from src.services.embedding_service import OpenAIEmbeddingService
+    from src.services.finbert_service import FinBertService
     from src.services.llm_service import AnthropicLLMService, OpenAILLMService
     from src.services.market_data_service import YFinanceMarketDataService
     from src.services.youtube_service import YouTubeAPIService, YouTubeTranscriptFetcher
@@ -42,6 +43,7 @@ def _get_services():
         "llm": llm_provider,
         "embedding": OpenAIEmbeddingService(),
         "market_data": YFinanceMarketDataService(),
+        "finbert": FinBertService(),
     }
 
 
@@ -82,7 +84,7 @@ def process_video_task(self, video_id: str) -> dict:
 
             # Step 2: LLM Analysis
             theme_service = ThemeService(db)
-            analysis = AnalysisPipeline(db, services["llm"], theme_service)
+            analysis = AnalysisPipeline(db, services["llm"], theme_service, services["finbert"])
             results["analysis"] = await analysis.analyze_video(vid)
 
             # Step 3: Theme→Ticker Mapping

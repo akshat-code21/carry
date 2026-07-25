@@ -33,3 +33,6 @@ htmlcov/
 # Docker volumes
 postgres_data/
 redis_data/
+
+# FinBERT ONNX model (generated via scripts/export_finbert_onnx.py)
+data/models/finbert/

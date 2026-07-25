@@ -98,6 +98,8 @@ class ThemeService:
         relevance_score: float,
         mention_text: str | None,
         narrative: str | None,
+        llm_sentiment: str | None = None,
+        finbert_confidence: float | None = None,
     ) -> ThemeMention:
         """Record a theme mention in a video segment."""
         mention = ThemeMention(
@@ -105,6 +107,8 @@ class ThemeService:
             segment_id=segment_id,
             theme_id=theme_id,
             sentiment=sentiment,
+            llm_sentiment=llm_sentiment,
+            finbert_confidence=finbert_confidence,
             relevance_score=relevance_score,
             mention_text=mention_text,
             narrative=narrative,

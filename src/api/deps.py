@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_db
 from src.services.aggregation_service import AggregationService
 from src.services.embedding_service import OpenAIEmbeddingService
+from src.services.finbert_service import FinBertService
 from src.services.interfaces import EmbeddingProvider, LLMProvider, MarketDataSource
 from src.services.llm_service import AnthropicLLMService
 from src.services.llm_service import OpenAILLMService
@@ -27,6 +28,7 @@ _llm_provider: LLMProvider | None = None
 _embedding_provider: EmbeddingProvider | None = None
 _market_data: MarketDataSource | None = None
 _query_router: QueryRouter | None = None
+_finbert_service: FinBertService | None = None
 
 
 def get_llm_provider() -> LLMProvider:
@@ -58,6 +60,13 @@ def get_query_router() -> QueryRouter:
     if _query_router is None:
         _query_router = QueryRouter()
     return _query_router
+
+
+def get_finbert_service() -> FinBertService:
+    global _finbert_service
+    if _finbert_service is None:
+        _finbert_service = FinBertService()
+    return _finbert_service
 
 
 # --- Per-request dependencies ---

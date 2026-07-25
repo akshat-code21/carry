@@ -65,7 +65,11 @@ class ThemeMention(Base):
     )
     sentiment: Mapped[str | None] = mapped_column(
         String(50)
-    )  # bullish | bearish | neutral
+    )  # bullish | bearish | neutral (FinBERT-overridden)
+    llm_sentiment: Mapped[str | None] = mapped_column(
+        String(50)
+    )  # Original LLM output (audit trail)
+    finbert_confidence: Mapped[float | None] = mapped_column(Float)  # FinBERT max(P), 0-1
     relevance_score: Mapped[float | None] = mapped_column(Float)  # 0-1
     mention_text: Mapped[str | None] = mapped_column(Text)  # Exact quote
     narrative: Mapped[str | None] = mapped_column(Text)  # Free-form description

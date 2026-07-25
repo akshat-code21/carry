@@ -36,7 +36,11 @@ class Prediction(Base):
     prediction_text: Mapped[str] = mapped_column(Text, nullable=False)
     direction: Mapped[str | None] = mapped_column(
         String(50)
-    )  # bullish | bearish | neutral
+    )  # bullish | bearish | neutral (FinBERT-overridden)
+    llm_direction: Mapped[str | None] = mapped_column(
+        String(50)
+    )  # Original LLM output (audit trail)
+    finbert_confidence: Mapped[float | None] = mapped_column(Float)  # FinBERT max(P), 0-1
     confidence: Mapped[float | None] = mapped_column(Float)  # 0-1
     timeframe_hint: Mapped[str | None] = mapped_column(
         String(100)

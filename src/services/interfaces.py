@@ -30,8 +30,10 @@ class ExtractedTheme:
     industry: str
     theme: str
     narrative: str
-    sentiment: str  # bullish | bearish | neutral
+    sentiment: str  # bullish | bearish | neutral (overridden by FinBERT)
     confidence: float  # 0-1
+    llm_sentiment: str | None = None  # Original LLM output (set by pipeline)
+    finbert_confidence: float | None = None  # FinBERT max(P) (set by pipeline)
 
 
 @dataclass
@@ -40,9 +42,11 @@ class ExtractedPrediction:
 
     text: str
     ticker: str | None = None
-    direction: str | None = None  # bullish | bearish | neutral
+    direction: str | None = None  # bullish | bearish | neutral (overridden by FinBERT)
     timeframe: str | None = None
     confidence: float | None = None
+    llm_direction: str | None = None  # Original LLM output (set by pipeline)
+    finbert_confidence: float | None = None  # FinBERT max(P) (set by pipeline)
 
 
 @dataclass
@@ -72,6 +76,15 @@ class TickerMapping:
     ticker: str
     relevance_score: float  # 0-1
     reason: str
+
+
+@dataclass
+class FinBertResult:
+    """Result of FinBERT sentiment classification on a text."""
+
+    sentiment: str  # bullish | bearish | neutral
+    confidence: float  # max(softmax probabilities), 0.0-1.0
+    probabilities: dict  # {"positive": 0.85, "negative": 0.10, "neutral": 0.05}
 
 
 @dataclass

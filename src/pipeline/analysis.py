@@ -1,7 +1,8 @@
-"""Step 2: LLM-Powered Content Analysis.
+"""Step 2: LLM-Powered Content Analysis + FinBERT Sentiment Calibration.
 
-Splits transcripts into chunks, sends them to the LLM for analysis,
-and stores extracted themes, predictions, and entity data.
+Splits transcripts into chunks, sends them to the LLM for structural
+extraction, then runs FinBERT to override sentiment/direction labels
+with deterministic, calibrated financial sentiment classification.
 """
 
 import logging
@@ -13,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.prediction import Prediction
 from src.models.transcript_segment import TranscriptSegment
 from src.models.video import Video
+from src.services.finbert_service import FinBertService
 from src.services.interfaces import LLMProvider, TranscriptSegmentDTO
 from src.services.theme_service import ThemeService
 
@@ -30,10 +32,12 @@ class AnalysisPipeline:
         db: AsyncSession,
         llm_provider: LLMProvider,
         theme_service: ThemeService,
+        finbert_service: FinBertService,
     ) -> None:
         self.db = db
         self.llm = llm_provider
         self.theme_service = theme_service
+        self.finbert = finbert_service
 
     async def analyze_video(self, video_id: uuid_mod.UUID) -> dict:
         """Run LLM analysis on all transcript segments for a video.
@@ -82,6 +86,47 @@ class AnalysisPipeline:
 
                 first_matched_theme_id = None
 
+                # --- FinBERT batch scoring ---
+                # Collect all narrative + prediction texts for batch inference
+                texts_to_score = []
+                text_sources = []  # ("theme", idx) or ("prediction", idx)
+
+                for i, theme in enumerate(result.themes):
+                    if theme.narrative:
+                        texts_to_score.append(theme.narrative)
+                        text_sources.append(("theme", i))
+
+                for i, pred in enumerate(result.predictions):
+                    if pred.text:
+                        texts_to_score.append(pred.text)
+                        text_sources.append(("prediction", i))
+
+                # Run FinBERT on all texts in one batch
+                finbert_results = []
+                if texts_to_score:
+                    try:
+                        finbert_results = self.finbert.analyze_texts(texts_to_score)
+                    except Exception as fb_err:
+                        logger.warning(
+                            f"FinBERT scoring failed, falling back to LLM sentiment: {fb_err}"
+                        )
+                        finbert_results = [None] * len(texts_to_score)
+
+                # Apply FinBERT overrides
+                for (source_type, idx), fb_result in zip(text_sources, finbert_results):
+                    if fb_result is None:
+                        continue  # FinBERT failed, keep LLM values
+                    if source_type == "theme":
+                        theme = result.themes[idx]
+                        theme.llm_sentiment = theme.sentiment  # preserve original
+                        theme.sentiment = fb_result.sentiment  # OVERRIDE
+                        theme.finbert_confidence = fb_result.confidence
+                    elif source_type == "prediction":
+                        pred = result.predictions[idx]
+                        pred.llm_direction = pred.direction  # preserve original
+                        pred.direction = fb_result.sentiment  # OVERRIDE
+                        pred.finbert_confidence = fb_result.confidence
+
                 # Process extracted themes
                 for extracted_theme in result.themes:
                     matched_theme = await self.theme_service.match_theme(
@@ -100,6 +145,8 @@ class AnalysisPipeline:
                                 relevance_score=extracted_theme.confidence,
                                 mention_text=chunk_db_segments[0].text[:500],
                                 narrative=extracted_theme.narrative,
+                                llm_sentiment=extracted_theme.llm_sentiment,
+                                finbert_confidence=extracted_theme.finbert_confidence,
                             )
                             total_themes += 1
 
@@ -120,9 +167,11 @@ class AnalysisPipeline:
                         ticker=ticker_symbol,
                         prediction_text=extracted_pred.text,
                         direction=extracted_pred.direction,
+                        llm_direction=extracted_pred.llm_direction,
+                        finbert_confidence=extracted_pred.finbert_confidence,
                         confidence=extracted_pred.confidence,
                         timeframe_hint=extracted_pred.timeframe,
-                        extracted_by="claude-sonnet-4",
+                        extracted_by="claude-sonnet-4+finbert",
                     )
                     self.db.add(prediction)
                     total_predictions += 1
