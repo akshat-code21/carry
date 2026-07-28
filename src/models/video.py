@@ -33,6 +33,13 @@ class Video(Base):
         String(50), default="pending"
     )  # pending | fetched | failed
     processed: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Auto-ingest pipeline state machine
+    ingest_status: Mapped[str] = mapped_column(
+        String(50), default="discovered", server_default="discovered"
+    )  # discovered | awaiting_transcript | ready_for_analysis | processing | completed | failed
+    transcript_attempts: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -46,4 +53,7 @@ class Video(Base):
     predictions = relationship("Prediction", back_populates="video", lazy="selectin")
     performance_records = relationship(
         "PerformanceRecord", back_populates="video", lazy="selectin"
+    )
+    activity_events = relationship(
+        "ActivityEvent", back_populates="video", lazy="noload"
     )

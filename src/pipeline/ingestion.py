@@ -4,6 +4,7 @@ Fetches channel metadata, video list, and transcripts from YouTube.
 Stores everything in the database.
 """
 
+import json
 import logging
 import uuid as uuid_mod
 from datetime import datetime
@@ -11,12 +12,24 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import get_settings
 from src.models.channel import Channel
 from src.models.transcript_segment import TranscriptSegment
 from src.models.video import Video
 from src.services.interfaces import TranscriptSource, YouTubeService
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
+
+CHANNEL_CLASSIFICATION_PROMPT = """Classify this YouTube channel as either "individual" or "institutional".
+
+- "institutional": Financial institutions, banks, brokerages, research firms, hedge funds, asset managers, financial news networks, or any channel representing a company/organization rather than a person. Examples: Fundstrat, Morgan Stanley, Goldman Sachs, JP Morgan, BlackRock, Bloomberg, CNBC, Barclays, UBS, Deutsche Bank, BofA Securities, Citi, Wells Fargo, Jefferies.
+- "individual": Personal channels run by individual traders, analysts, influencers, or content creators. The channel is clearly associated with one person or a small team creating personal content. Examples: ProfGMarkets, Meet Kevin, Stock Moe, Andrei Jikh, Graham Stephan.
+
+Channel Title: "{title}"
+Channel Description: "{description}"
+
+Return ONLY valid JSON: {{"channel_type": "individual" or "institutional"}}"""
 
 
 class IngestionPipeline:
@@ -54,17 +67,79 @@ class IngestionPipeline:
         # Fetch channel metadata from YouTube
         channel_meta = await self.youtube.get_channel_info(youtube_channel_id)
 
+        # Classify channel type via lightweight LLM call
+        channel_type = await self._classify_channel_type(
+            channel_meta.title, channel_meta.description or ""
+        )
+
         channel = Channel(
             youtube_channel_id=youtube_channel_id,
             title=channel_meta.title,
             description=channel_meta.description,
             thumbnail_url=channel_meta.thumbnail_url,
+            channel_type=channel_type,
         )
         self.db.add(channel)
         await self.db.flush()
 
-        logger.info(f"Ingested channel: {channel.title} ({channel.id})")
+        logger.info(
+            f"Ingested channel: {channel.title} ({channel.id}) "
+            f"[type={channel_type}]"
+        )
         return channel
+
+    async def _classify_channel_type(self, title: str, description: str) -> str:
+        """Classify a channel as 'individual' or 'institutional' using a lightweight LLM call.
+
+        Falls back to 'individual' if classification fails.
+        """
+        try:
+            if not settings.openai_api_key:
+                logger.warning("No OpenAI API key — defaulting channel_type to 'individual'")
+                return "individual"
+
+            from openai import OpenAI
+
+            client = OpenAI(api_key=settings.openai_api_key)
+
+            # Truncate description to avoid token waste
+            desc_truncated = description[:500] if description else ""
+
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                response_format={"type": "json_object"},
+                messages=[
+                    {
+                        "role": "user",
+                        "content": CHANNEL_CLASSIFICATION_PROMPT.format(
+                            title=title, description=desc_truncated
+                        ),
+                    },
+                ],
+                temperature=0.0,
+                max_completion_tokens=50,
+            )
+
+            content = response.choices[0].message.content
+            data = json.loads(content)
+            channel_type = data.get("channel_type", "individual")
+
+            if channel_type not in ("individual", "institutional"):
+                logger.warning(
+                    f"Unexpected channel_type '{channel_type}' from LLM, "
+                    f"defaulting to 'individual'"
+                )
+                return "individual"
+
+            logger.info(f"Channel '{title}' classified as: {channel_type}")
+            return channel_type
+
+        except Exception as e:
+            logger.warning(
+                f"Channel classification failed for '{title}', "
+                f"defaulting to 'individual': {e}"
+            )
+            return "individual"
 
     async def backfill_videos(
         self, channel: Channel, max_videos: int = 20

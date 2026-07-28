@@ -5,7 +5,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-
 # --- Channel schemas ---
 
 
@@ -15,6 +14,11 @@ class ChannelResponse(BaseModel):
     title: str
     description: str | None = None
     thumbnail_url: str | None = None
+    channel_type: str = "individual"  # individual | institutional
+    last_checked_at: datetime | None = None
+    websub_subscribed_at: datetime | None = None
+    websub_lease_expires_at: datetime | None = None
+    websub_status: str = "pending"
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -35,6 +39,8 @@ class VideoResponse(BaseModel):
     view_count: int | None = None
     transcript_status: str
     processed: bool
+    ingest_status: str = "discovered"
+    transcript_attempts: int = 0
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -159,6 +165,7 @@ class TickerResponse(BaseModel):
     avg_sentiment: float | None = None
     weighted_relevance: float | None = None
     last_mentioned_at: datetime | None = None
+    is_etf: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -251,6 +258,7 @@ class StockDiscoveryResult(BaseModel):
     bearish_pct: float = 0.0
     sample_predictions: list[SamplePrediction] = []
     last_mentioned_at: str | None = None
+    is_etf: bool = False
 
 
 class SearchResponse(BaseModel):
@@ -261,6 +269,8 @@ class SearchResponse(BaseModel):
     channels: dict[str, dict] = {}
     total: int = 0
     query_intent: str = "factual_search"
+    # stocks | etfs — instrument class inferred for discovery results
+    instrument_type: str = "stocks"
 
 
 # Legacy alias for the /api/search/stocks endpoint
@@ -290,6 +300,70 @@ class BackfillRequest(BaseModel):
 class PipelineStatusResponse(BaseModel):
     task_id: str
     status: str
+
+
+class SimulateWebSubRequest(BaseModel):
+    """Fake a YouTube WebSub push for local testing (no real channel upload)."""
+
+    youtube_channel_id: str | None = Field(
+        default=None,
+        description="YouTube channel id (UC...). Provide this or channel_id.",
+    )
+    channel_id: UUID | None = Field(
+        default=None,
+        description="Internal channel UUID. Provide this or youtube_channel_id.",
+    )
+    youtube_video_id: str = Field(
+        ...,
+        description=(
+            "YouTube video id to pretend was just uploaded. "
+            "Use a real video id not yet in the DB for full ingest, "
+            "or any unused id to only test detection."
+        ),
+    )
+    title: str = Field(
+        default="Simulated new upload",
+        description="Title shown in the Atom payload / activity feed",
+    )
+    mode: str = Field(
+        default="full",
+        description=(
+            "'full' = discovery + auto-ingest/process (like a real push). "
+            "'discovery_only' = create video + video_detected only (no LLM)."
+        ),
+    )
+
+
+class SimulateWebSubResponse(BaseModel):
+    task_id: str
+    status: str
+    mode: str
+    youtube_channel_id: str
+    youtube_video_id: str
+    title: str
+    message: str
+
+
+# --- Activity schemas ---
+
+
+class ActivityEventResponse(BaseModel):
+    id: UUID
+    event_type: str
+    channel_id: UUID
+    video_id: UUID | None = None
+    youtube_video_id: str
+    title: str
+    message: str
+    payload: dict | None = None
+    read_at: datetime | None = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ActivityUnreadCountResponse(BaseModel):
+    count: int
 
 
 # Resolve forward references

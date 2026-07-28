@@ -3,7 +3,12 @@
 from fastapi import APIRouter, Depends, Query
 from uuid import UUID
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.api.deps import get_search_service, get_query_router
+from src.database import get_db
+from src.models.channel import Channel
 from src.schemas import (
     SearchResponse,
     SearchSegmentResult,
@@ -27,6 +32,7 @@ async def search(
     offset: int = Query(default=0, ge=0),
     search_service: SearchService = Depends(get_search_service),
     query_router: QueryRouter = Depends(get_query_router),
+    db: AsyncSession = Depends(get_db),
 ) -> SearchResponse:
     """Smart search with query intent classification.
 
@@ -38,14 +44,28 @@ async def search(
     # Step 1: Classify query intent
     intent = await query_router.classify(q)
 
+    # Step 1.5: Look up channel_type if a channel filter is applied
+    channel_type: str | None = None
+    if channel:
+        ch_result = await db.execute(
+            select(Channel.channel_type).where(Channel.id == channel)
+        )
+        row = ch_result.scalar_one_or_none()
+        if row:
+            channel_type = row
+
     # Step 2: Route to appropriate search strategy
     stocks = []
 
     if intent.intent == "sector_discovery":
+        # Global search: instrument_type from query (stocks vs ETFs).
+        # Channel filter still wins inside search_stocks_for_query.
         stock_results = await search_service.search_stocks_for_query(
             query=q,
             sector_hint=intent.sector_hint,
             limit=10,
+            channel_type=channel_type,
+            instrument_type=intent.instrument_type,
         )
         stocks = [StockDiscoveryResult(**s) for s in stock_results]
 
@@ -70,6 +90,14 @@ async def search(
         offset=offset,
     )
 
+    # Effective instrument class for UI labels (channel scope can override query)
+    if channel_type == "institutional":
+        effective_instrument = "etfs"
+    elif channel_type == "individual":
+        effective_instrument = "stocks"
+    else:
+        effective_instrument = intent.instrument_type or "stocks"
+
     return SearchResponse(
         segments=[SearchSegmentResult(**s) for s in results["segments"]],
         predictions=[SearchPredictionResult(**p) for p in results["predictions"]],
@@ -78,6 +106,7 @@ async def search(
         channels=results.get("channels", {}),
         total=results["total"],
         query_intent=intent.intent,
+        instrument_type=effective_instrument,
     )
 
 
@@ -86,12 +115,19 @@ async def search_stocks(
     q: str = Query(..., min_length=1, description="Search query"),
     limit: int = Query(default=10, ge=1, le=50),
     search_service: SearchService = Depends(get_search_service),
+    query_router: QueryRouter = Depends(get_query_router),
 ) -> list[StockSearchResult]:
-    """Search for stocks relevant to a query based on theme matching.
+    """Search for stocks or ETFs relevant to a query based on theme matching.
 
-    Returns top tickers implied by the search query's themes.
+    Uses query understanding to decide instrument class (stocks vs ETFs).
     """
-    results = await search_service.search_stocks_for_query(q, limit=limit)
+    intent = await query_router.classify(q)
+    results = await search_service.search_stocks_for_query(
+        q,
+        sector_hint=intent.sector_hint,
+        limit=limit,
+        instrument_type=intent.instrument_type,
+    )
     # Map to legacy StockSearchResult format
     return [
         StockSearchResult(

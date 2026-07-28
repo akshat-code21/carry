@@ -5,6 +5,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.api.activity import router as activity_router
 from src.api.channels import router as channels_router
 from src.api.pipeline import router as pipeline_router
 from src.api.predictions import router as predictions_router
@@ -12,6 +13,7 @@ from src.api.search import router as search_router
 from src.api.themes import router as themes_router
 from src.api.tickers import router as tickers_router
 from src.api.videos import router as videos_router
+from src.api.websub import router as websub_router
 from src.config import get_settings
 
 settings = get_settings()
@@ -51,6 +53,8 @@ app.include_router(channels_router)
 app.include_router(tickers_router)
 app.include_router(themes_router)
 app.include_router(pipeline_router)
+app.include_router(websub_router)
+app.include_router(activity_router)
 
 
 @app.get("/", tags=["Health"])
@@ -74,5 +78,7 @@ async def health():
             "anthropic": bool(settings.anthropic_api_key),
             "openai": bool(settings.openai_api_key),
             "fred": bool(settings.fred_api_key),
+            "websub": settings.websub_enabled,
+            "public_base_url": settings.public_base_url or None,
         },
     }

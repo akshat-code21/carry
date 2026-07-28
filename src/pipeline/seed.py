@@ -76,11 +76,22 @@ async def seed_taxonomy() -> None:
                     await session.flush()
                     stats["themes"] += 1
 
-                    # Create ticker mappings for this theme
+                    # Create equity ticker mappings only (never seed ETFs here —
+                    # institutional ETFs live in data/etf_mappings.json).
+                    from src.services.etf_mapping_service import ETFMappingService
+
+                    etf_service = ETFMappingService()
                     for ticker in theme_data.get("tickers", []):
+                        clean = str(ticker).strip().upper()
+                        if not clean or etf_service.is_etf(clean):
+                            logger.info(
+                                f"Skipping ETF/empty ticker '{ticker}' when seeding "
+                                f"theme '{theme_data['name']}'"
+                            )
+                            continue
                         mapping = ThemeTickerMapping(
                             theme_id=theme.id,
-                            ticker=ticker,
+                            ticker=clean,
                             relevance_score=1.0,  # Curated = max relevance
                             source="curated",
                             notes=f"Seeded from taxonomy for theme: {theme_data['name']}",

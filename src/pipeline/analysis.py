@@ -71,11 +71,26 @@ class AnalysisPipeline:
             logger.warning(f"No transcript segments found for video: {video.title}")
             return {"themes": 0, "predictions": 0}
 
+        # Channel type controls which instruments may be recorded as tickers:
+        # individual → stocks only; institutional → ETFs only.
+        from src.models.channel import Channel
+        from src.services.etf_mapping_service import ETFMappingService
+
+        etf_service = ETFMappingService()
+        channel_type = "individual"
+        if video.channel_id:
+            ch_result = await self.db.execute(
+                select(Channel.channel_type).where(Channel.id == video.channel_id)
+            )
+            channel_type = ch_result.scalar_one_or_none() or "individual"
+
         # Chunk segments into ~30-second windows
         chunks = self._chunk_segments(segments)
 
         total_themes = 0
         total_predictions = 0
+        skipped_etf_tickers = 0
+        skipped_stock_tickers = 0
 
         for chunk_segments, chunk_db_segments in chunks:
             try:
@@ -158,6 +173,28 @@ class AnalysisPipeline:
                         result.explicit_tickers,
                     )
 
+                    # Enforce instrument policy at write time so ETFs are never
+                    # recorded for individual channels (and stocks not for institutional).
+                    if ticker_symbol:
+                        if channel_type == "individual" and etf_service.is_etf(
+                            ticker_symbol
+                        ):
+                            logger.debug(
+                                f"Dropping ETF ticker {ticker_symbol} for individual "
+                                f"channel video '{video.title}'"
+                            )
+                            ticker_symbol = None
+                            skipped_etf_tickers += 1
+                        elif channel_type == "institutional" and not etf_service.is_etf(
+                            ticker_symbol
+                        ):
+                            logger.debug(
+                                f"Dropping stock ticker {ticker_symbol} for institutional "
+                                f"channel video '{video.title}'"
+                            )
+                            ticker_symbol = None
+                            skipped_stock_tickers += 1
+
                     prediction = Prediction(
                         video_id=video.id,
                         segment_id=(
@@ -188,12 +225,16 @@ class AnalysisPipeline:
 
         logger.info(
             f"Analysis complete for '{video.title}': "
-            f"{total_themes} themes, {total_predictions} predictions"
+            f"{total_themes} themes, {total_predictions} predictions "
+            f"(dropped {skipped_etf_tickers} ETF / {skipped_stock_tickers} stock "
+            f"tickers for channel_type={channel_type})"
         )
 
         return {
             "themes": total_themes,
             "predictions": total_predictions,
+            "skipped_etf_tickers": skipped_etf_tickers,
+            "skipped_stock_tickers": skipped_stock_tickers,
         }
 
     def _chunk_segments(

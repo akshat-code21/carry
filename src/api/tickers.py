@@ -37,15 +37,58 @@ async def list_tickers(
     offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
 ) -> list[TickerResponse]:
-    """List all tracked tickers with aggregate stats."""
-    result = await db.execute(
-        select(SpeakerTickerAggregation)
-        .order_by(SpeakerTickerAggregation.total_mentions.desc())
+    """List all tracked tickers with aggregate stats.
+
+    Aggregates across all channels so each ticker appears only once,
+    with summed mentions and weighted average sentiment.
+    """
+    from sqlalchemy import func as sqlfunc
+
+    from src.services.etf_mapping_service import ETFMappingService
+
+    etf_service = ETFMappingService()
+
+    # Group by ticker across all channels to produce one row per ticker
+    stmt = (
+        select(
+            SpeakerTickerAggregation.ticker,
+            sqlfunc.sum(SpeakerTickerAggregation.total_mentions).label("total_mentions"),
+            sqlfunc.sum(SpeakerTickerAggregation.explicit_mentions).label("explicit_mentions"),
+            sqlfunc.sum(SpeakerTickerAggregation.implicit_mentions).label("implicit_mentions"),
+            sqlfunc.avg(SpeakerTickerAggregation.avg_sentiment).label("avg_sentiment"),
+            sqlfunc.avg(SpeakerTickerAggregation.weighted_relevance).label("weighted_relevance"),
+            sqlfunc.max(SpeakerTickerAggregation.last_mentioned_at).label("last_mentioned_at"),
+        )
+        .group_by(SpeakerTickerAggregation.ticker)
+        .order_by(sqlfunc.sum(SpeakerTickerAggregation.total_mentions).desc())
         .limit(limit)
         .offset(offset)
     )
-    aggregations = result.scalars().all()
-    return [TickerResponse.model_validate(a) for a in aggregations]
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    return [
+        TickerResponse(
+            ticker=row.ticker,
+            total_mentions=row.total_mentions or 0,
+            explicit_mentions=row.explicit_mentions or 0,
+            implicit_mentions=row.implicit_mentions or 0,
+            avg_sentiment=row.avg_sentiment,
+            weighted_relevance=row.weighted_relevance,
+            last_mentioned_at=row.last_mentioned_at,
+            is_etf=etf_service.is_etf(row.ticker),
+        )
+        for row in rows
+    ]
+
+
+@router.get("/top-etfs")
+async def get_top_etfs(
+    limit: int = Query(default=10, ge=1, le=50),
+    aggregation: AggregationService = Depends(get_aggregation_service),
+) -> list[dict]:
+    """Get top sector/industry ETFs mentioned across processed videos."""
+    return await aggregation.get_top_etfs(limit=limit)
 
 
 @router.get("/{ticker}", response_model=TickerDetailResponse)
@@ -53,8 +96,21 @@ async def get_ticker_detail(
     ticker: str,
     db: AsyncSession = Depends(get_db),
 ) -> TickerDetailResponse:
-    """Get detailed info for a ticker: predictions, themes, performance."""
+    """Get detailed info for a ticker: predictions, themes, performance.
+
+    For ETF tickers (e.g., SMH), reverse-looks up the related themes and
+    pulls predictions from the constituent stocks of those themes.
+    """
+    from src.services.etf_mapping_service import ETFMappingService
+
     ticker = ticker.upper()
+    etf_service = ETFMappingService()
+    is_etf = etf_service.is_etf(ticker)
+
+    if is_etf:
+        return await _get_etf_ticker_detail(ticker, db, etf_service)
+
+    # --- Standard stock detail (existing logic) ---
 
     # Get aggregation stats
     agg_result = await db.execute(
@@ -117,6 +173,102 @@ async def get_ticker_detail(
         avg_sentiment=agg.avg_sentiment if agg else None,
         weighted_relevance=agg.weighted_relevance if agg else None,
         last_mentioned_at=agg.last_mentioned_at if agg else None,
+        predictions=preds_with_perf,
+        themes=themes,
+    )
+
+
+async def _get_etf_ticker_detail(
+    etf_ticker: str,
+    db: AsyncSession,
+    etf_service: "ETFMappingService",
+) -> TickerDetailResponse:
+    """Build ticker detail for an ETF by aggregating data from constituent stocks."""
+    from sqlalchemy import func
+
+    # Reverse lookup: which themes map to this ETF?
+    related_theme_names = etf_service.get_themes_for_etf(etf_ticker)
+
+    # Find those themes in the DB
+    themes = []
+    constituent_tickers: list[str] = []
+    if related_theme_names:
+        theme_result = await db.execute(
+            select(ThemeHierarchy).where(
+                func.lower(ThemeHierarchy.name).in_(
+                    [n.lower() for n in related_theme_names]
+                )
+            )
+        )
+        themes_db = theme_result.scalars().all()
+        themes = [ThemeResponse.model_validate(t) for t in themes_db]
+        theme_ids = [t.id for t in themes_db]
+
+        # Get constituent tickers from these themes
+        if theme_ids:
+            ticker_result = await db.execute(
+                select(ThemeTickerMapping.ticker)
+                .where(ThemeTickerMapping.theme_id.in_(theme_ids))
+                .distinct()
+            )
+            constituent_tickers = [row[0].upper() for row in ticker_result.all()]
+
+    # Get predictions for all constituent tickers
+    preds_with_perf = []
+    if constituent_tickers:
+        pred_result = await db.execute(
+            select(Prediction)
+            .options(selectinload(Prediction.video).selectinload(Video.channel))
+            .where(Prediction.ticker.in_(constituent_tickers))
+            .order_by(Prediction.created_at.desc())
+        )
+        predictions = pred_result.scalars().all()
+
+        for pred in predictions:
+            pwp = PredictionWithPerformance.model_validate(pred)
+            if pred.video:
+                pwp.video_title = pred.video.title
+                pwp.youtube_video_id = pred.video.youtube_video_id
+                pwp.published_at = pred.video.published_at
+                if pred.video.channel:
+                    pwp.channel_title = pred.video.channel.title
+
+            perf_result = await db.execute(
+                select(PerformanceRecord).where(
+                    PerformanceRecord.prediction_id == pred.id
+                )
+            )
+            perf = perf_result.scalar_one_or_none()
+            if perf:
+                pwp.performance = PerformanceResponse.model_validate(perf)
+            preds_with_perf.append(pwp)
+
+    # Get aggregation stats for constituent tickers
+    total_mentions = 0
+    avg_sentiment = None
+    if constituent_tickers:
+        agg_result = await db.execute(
+            select(SpeakerTickerAggregation).where(
+                SpeakerTickerAggregation.ticker.in_(constituent_tickers)
+            )
+        )
+        aggregations = agg_result.scalars().all()
+        total_mentions = sum(a.total_mentions or 0 for a in aggregations)
+        sentiments = [
+            a.avg_sentiment for a in aggregations if a.avg_sentiment is not None
+        ]
+        avg_sentiment = (
+            sum(sentiments) / len(sentiments) if sentiments else None
+        )
+
+    return TickerDetailResponse(
+        ticker=etf_ticker,
+        total_mentions=total_mentions,
+        explicit_mentions=0,
+        implicit_mentions=total_mentions,
+        avg_sentiment=avg_sentiment,
+        weighted_relevance=None,
+        last_mentioned_at=None,
         predictions=preds_with_perf,
         themes=themes,
     )

@@ -4,7 +4,7 @@ import logging
 import uuid as uuid_mod
 from datetime import date, datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.prediction import Prediction
@@ -24,10 +24,29 @@ class AggregationService:
     async def update_channel_aggregation(self, channel_id: uuid_mod.UUID) -> None:
         """Recompute the speaker_ticker_aggregation table for a channel.
 
-        Aggregates across all processed videos for the channel, counting both
-        explicit ticker mentions (from predictions) and implicit mentions
-        (from theme→ticker mappings).
+        Individual channels: stock mentions + theme-ticker mappings (no ETFs).
+        Institutional channels: sector/industry ETFs from theme mentions (no stocks).
         """
+        from src.models.channel import Channel
+        from src.services.etf_mapping_service import ETFMappingService
+
+        # Serialize recompute per channel so concurrent process_video workers
+        # (e.g. backfilling multiple videos of the same channel) cannot race
+        # on wipe+insert and hit the unique (channel_id, ticker) constraint.
+        # pg_advisory_xact_lock is released automatically at transaction end.
+        lock_key = channel_id.int % (2**63)
+        await self.db.execute(
+            text("SELECT pg_advisory_xact_lock(:k)"), {"k": lock_key}
+        )
+
+        # Look up channel type
+        ch_result = await self.db.execute(
+            select(Channel.channel_type).where(Channel.id == channel_id)
+        )
+        channel_type = ch_result.scalar_one_or_none() or "individual"
+
+        etf_service = ETFMappingService()
+
         # Get all processed videos for this channel
         video_result = await self.db.execute(
             select(Video).where(
@@ -38,7 +57,17 @@ class AggregationService:
         videos = video_result.scalars().all()
         video_ids = [v.id for v in videos]
 
+        # Full recompute: wipe then insert. Combined with the unique constraint
+        # and advisory lock this replaces the old per-ticker scalar_one_or_none
+        # upsert that failed when duplicate rows already existed.
+        await self.db.execute(
+            delete(SpeakerTickerAggregation).where(
+                SpeakerTickerAggregation.channel_id == channel_id
+            )
+        )
+
         if not video_ids:
+            await self.db.flush()
             return
 
         # Count explicit mentions (tickers mentioned in predictions)
@@ -51,6 +80,13 @@ class AggregationService:
         )
         for pred in pred_result.scalars().all():
             ticker = pred.ticker.upper()
+            # For institutional channels, only track explicit predictions if they are ETFs
+            if channel_type == "institutional" and not etf_service.is_etf(ticker):
+                continue
+            # For individual channels, skip ETF tickers (stocks only)
+            if channel_type == "individual" and etf_service.is_etf(ticker):
+                continue
+
             if ticker not in explicit_counts:
                 explicit_counts[ticker] = {
                     "count": 0,
@@ -66,41 +102,64 @@ class AggregationService:
                 if current_last is None or video.published_at > current_last:
                     explicit_counts[ticker]["last_mentioned"] = video.published_at
 
-        # Count implicit mentions (from theme_mentions → theme_ticker_mappings)
+        # Count implicit mentions
         implicit_counts: dict[str, dict] = {}
         mention_result = await self.db.execute(
             select(ThemeMention).where(ThemeMention.video_id.in_(video_ids))
         )
         mentions = mention_result.scalars().all()
 
-        for mention in mentions:
-            # Get ticker mappings for this theme
-            ticker_result = await self.db.execute(
-                select(ThemeTickerMapping).where(
-                    ThemeTickerMapping.theme_id == mention.theme_id
+        if channel_type == "institutional":
+            # For institutional channels, resolve ETFs directly from theme mention text & narratives
+            for mention in mentions:
+                text_content = f"{mention.narrative or ''} {mention.mention_text or ''}"
+                resolved_etfs = etf_service.resolve_etfs_for_text(text_content)
+                for ticker in resolved_etfs:
+                    if ticker not in implicit_counts:
+                        implicit_counts[ticker] = {
+                            "count": 0,
+                            "relevance_sum": 0.0,
+                            "sentiments": [],
+                        }
+                    implicit_counts[ticker]["count"] += 1
+                    implicit_counts[ticker]["relevance_sum"] += 1.0
+                    if mention.sentiment:
+                        implicit_counts[ticker]["sentiments"].append(mention.sentiment)
+        else:
+            # For individual creator channels, map theme_mentions → theme_ticker_mappings
+            for mention in mentions:
+                ticker_result = await self.db.execute(
+                    select(ThemeTickerMapping).where(
+                        ThemeTickerMapping.theme_id == mention.theme_id
+                    )
                 )
-            )
-            for mapping in ticker_result.scalars().all():
-                ticker = mapping.ticker.upper()
-                if ticker not in implicit_counts:
-                    implicit_counts[ticker] = {
-                        "count": 0,
-                        "relevance_sum": 0.0,
-                        "sentiments": [],
-                    }
-                implicit_counts[ticker]["count"] += 1
-                implicit_counts[ticker]["relevance_sum"] += (
-                    mapping.relevance_score or 0.5
-                )
-                if mention.sentiment:
-                    implicit_counts[ticker]["sentiments"].append(mention.sentiment)
+                for mapping in ticker_result.scalars().all():
+                    ticker = mapping.ticker.upper()
+                    # Individual channels: skip ETF tickers (stocks only)
+                    if etf_service.is_etf(ticker):
+                        continue
+                    if ticker not in implicit_counts:
+                        implicit_counts[ticker] = {
+                            "count": 0,
+                            "relevance_sum": 0.0,
+                            "sentiments": [],
+                        }
+                    implicit_counts[ticker]["count"] += 1
+                    implicit_counts[ticker]["relevance_sum"] += (
+                        mapping.relevance_score or 0.5
+                    )
+                    if mention.sentiment:
+                        implicit_counts[ticker]["sentiments"].append(mention.sentiment)
 
-        # Merge and upsert aggregations
         all_tickers = set(explicit_counts.keys()) | set(implicit_counts.keys())
 
         for ticker in all_tickers:
-            explicit = explicit_counts.get(ticker, {"count": 0, "sentiments": [], "last_mentioned": None})
-            implicit = implicit_counts.get(ticker, {"count": 0, "relevance_sum": 0.0, "sentiments": []})
+            explicit = explicit_counts.get(
+                ticker, {"count": 0, "sentiments": [], "last_mentioned": None}
+            )
+            implicit = implicit_counts.get(
+                ticker, {"count": 0, "relevance_sum": 0.0, "sentiments": []}
+            )
 
             total = explicit["count"] + implicit["count"]
             all_sentiments = explicit["sentiments"] + implicit["sentiments"]
@@ -111,24 +170,8 @@ class AggregationService:
                 else 0.5
             )
 
-            # Upsert
-            existing_result = await self.db.execute(
-                select(SpeakerTickerAggregation).where(
-                    SpeakerTickerAggregation.channel_id == channel_id,
-                    SpeakerTickerAggregation.ticker == ticker,
-                )
-            )
-            existing = existing_result.scalar_one_or_none()
-
-            if existing:
-                existing.total_mentions = total
-                existing.explicit_mentions = explicit["count"]
-                existing.implicit_mentions = implicit["count"]
-                existing.avg_sentiment = avg_sentiment
-                existing.weighted_relevance = weighted_relevance
-                existing.last_mentioned_at = explicit.get("last_mentioned")
-            else:
-                agg = SpeakerTickerAggregation(
+            self.db.add(
+                SpeakerTickerAggregation(
                     channel_id=channel_id,
                     ticker=ticker,
                     total_mentions=total,
@@ -138,28 +181,48 @@ class AggregationService:
                     weighted_relevance=weighted_relevance,
                     last_mentioned_at=explicit.get("last_mentioned"),
                 )
-                self.db.add(agg)
+            )
 
         await self.db.flush()
 
     async def get_channel_top_stocks(
         self, channel_id: uuid_mod.UUID, limit: int = 20
     ) -> list[dict]:
-        """Get top stocks for a channel ranked by weighted_relevance × total_mentions × |avg_sentiment|."""
+        """Get top stocks/ETFs for a channel, ranked by mentions and relevance.
+
+        Individual channels return stocks only; institutional channels return ETFs.
+        """
+        from src.models.channel import Channel
+        from src.services.etf_mapping_service import ETFMappingService
+
+        etf_service = ETFMappingService()
+
+        # Look up channel type for read-time filtering
+        ch_result = await self.db.execute(
+            select(Channel.channel_type).where(Channel.id == channel_id)
+        )
+        channel_type = ch_result.scalar_one_or_none() or "individual"
+
         result = await self.db.execute(
             select(SpeakerTickerAggregation).where(
                 SpeakerTickerAggregation.channel_id == channel_id
             )
         )
-        aggregations = result.scalars().all()
+        aggregations = list(result.scalars().all())
 
-        # Rank by the formula from plan_1.md
+        # Filter based on channel type (safety net for stale data)
+        if channel_type == "individual":
+            aggregations = [a for a in aggregations if not etf_service.is_etf(a.ticker)]
+        elif channel_type == "institutional":
+            aggregations = [a for a in aggregations if etf_service.is_etf(a.ticker)]
+
+        # Rank by total mentions and weighted relevance
         ranked = sorted(
             aggregations,
             key=lambda a: (
-                (a.weighted_relevance or 0)
-                * (a.total_mentions or 0)
-                * abs(a.avg_sentiment or 0)
+                (a.total_mentions or 0)
+                * (a.weighted_relevance or 0.5)
+                * (1.0 + abs(a.avg_sentiment or 0))
             ),
             reverse=True,
         )
@@ -175,15 +238,44 @@ class AggregationService:
                 "last_mentioned_at": (
                     a.last_mentioned_at.isoformat() if a.last_mentioned_at else None
                 ),
+                "is_etf": etf_service.is_etf(a.ticker),
             }
             for a in ranked[:limit]
-        ]
+        ][:limit]
 
     async def get_video_top_stocks(
         self, video_id: uuid_mod.UUID, limit: int = 10
     ) -> list[dict]:
-        """Get top stocks for a specific video based on theme mentions and predictions."""
+        """Get top stocks for a specific video based on theme mentions and predictions.
+
+        Respects the parent channel's type: individual channels get stocks only,
+        institutional channels get ETFs only.
+        """
+        from src.models.channel import Channel
+        from src.services.etf_mapping_service import ETFMappingService
+
+        etf_service = ETFMappingService()
         ticker_scores: dict[str, dict] = {}
+
+        # Look up channel type via the video's parent channel
+        video_ch_result = await self.db.execute(
+            select(Video.channel_id).where(Video.id == video_id)
+        )
+        channel_id = video_ch_result.scalar_one_or_none()
+        channel_type = "individual"
+        if channel_id:
+            ch_result = await self.db.execute(
+                select(Channel.channel_type).where(Channel.id == channel_id)
+            )
+            channel_type = ch_result.scalar_one_or_none() or "individual"
+
+        def _should_skip(ticker: str) -> bool:
+            """Return True if this ticker should be excluded for the channel type."""
+            if channel_type == "individual" and etf_service.is_etf(ticker):
+                return True
+            if channel_type == "institutional" and not etf_service.is_etf(ticker):
+                return True
+            return False
 
         # From predictions
         pred_result = await self.db.execute(
@@ -194,6 +286,8 @@ class AggregationService:
         )
         for pred in pred_result.scalars().all():
             ticker = pred.ticker.upper()
+            if _should_skip(ticker):
+                continue
             if ticker not in ticker_scores:
                 ticker_scores[ticker] = {
                     "ticker": ticker,
@@ -217,6 +311,8 @@ class AggregationService:
             )
             for mapping in ticker_result.scalars().all():
                 ticker = mapping.ticker.upper()
+                if _should_skip(ticker):
+                    continue
                 if ticker not in ticker_scores:
                     ticker_scores[ticker] = {
                         "ticker": ticker,
@@ -325,3 +421,64 @@ class AggregationService:
         sentiment_map = {"bullish": 1.0, "bearish": -1.0, "neutral": 0.0}
         values = [sentiment_map.get(s.lower(), 0.0) for s in sentiments]
         return sum(values) / len(values)
+
+    async def get_top_etfs(self, limit: int = 10) -> list[dict]:
+        """Get top sector/industry ETFs from institutional channels only.
+
+        Used by the Dashboard "Top Sector ETFs" panel.
+
+        Rules (strict):
+        - Only institutional channels contribute.
+        - If there are zero institutional channels, return [] — never fall back
+          to individual-creator videos (that previously invented ETFs from
+          theme keywords like "infrastructure" → PAVE/IFRA).
+        - Counts come from speaker_ticker_aggregation rows that are known ETFs,
+          not from free-text keyword matching.
+        """
+        from src.models.channel import Channel
+        from src.services.etf_mapping_service import ETFMappingService
+
+        etf_service = ETFMappingService()
+
+        inst_ch_result = await self.db.execute(
+            select(Channel.id).where(Channel.channel_type == "institutional")
+        )
+        inst_channel_ids = [row[0] for row in inst_ch_result.all()]
+
+        # No institutional content → no sector ETF panel. Do NOT mine individual channels.
+        if not inst_channel_ids:
+            return []
+
+        agg_result = await self.db.execute(
+            select(SpeakerTickerAggregation).where(
+                SpeakerTickerAggregation.channel_id.in_(inst_channel_ids)
+            )
+        )
+        aggregations = list(agg_result.scalars().all())
+
+        # Keep only known ETF tickers; rank by real mention counts
+        etf_rows: list[SpeakerTickerAggregation] = [
+            a for a in aggregations if etf_service.is_etf(a.ticker)
+        ]
+        if not etf_rows:
+            return []
+
+        # Merge same ticker across multiple institutional channels
+        merged: dict[str, dict] = {}
+        for a in etf_rows:
+            t = a.ticker.upper()
+            if t not in merged:
+                merged[t] = {
+                    "ticker": t,
+                    "total_mentions": 0,
+                    "themes": etf_service.get_themes_for_etf(t)[:3],
+                    "is_etf": True,
+                }
+            merged[t]["total_mentions"] += a.total_mentions or 0
+
+        ranked = sorted(
+            merged.values(),
+            key=lambda x: x["total_mentions"],
+            reverse=True,
+        )
+        return ranked[:limit]

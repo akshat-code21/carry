@@ -97,15 +97,17 @@ class ThemeMappingPipeline:
 
                     ticker = suggestion.ticker.upper()
                     if ticker not in existing_tickers:
-                        await self.theme_service.add_ticker_mapping(
+                        mapping = await self.theme_service.add_ticker_mapping(
                             theme_id=theme_id,
                             ticker=ticker,
                             relevance_score=suggestion.relevance_score,
                             source="llm",
                             notes=suggestion.reason,
                         )
-                        existing_tickers.add(ticker)
-                        new_mappings_count += 1
+                        # None when rejected as ETF / invalid
+                        if mapping is not None:
+                            existing_tickers.add(ticker)
+                            new_mappings_count += 1
 
             except Exception as e:
                 logger.warning(
@@ -150,14 +152,16 @@ class ThemeMappingPipeline:
 
                         ticker = suggestion.ticker.upper()
                         if ticker not in existing_tickers:
-                            await self.theme_service.add_ticker_mapping(
+                            mapping = await self.theme_service.add_ticker_mapping(
                                 theme_id=theme.id,
                                 ticker=ticker,
                                 relevance_score=suggestion.relevance_score,
                                 source="llm",
                                 notes=suggestion.reason,
                             )
-                            total_new += 1
+                            if mapping is not None:
+                                existing_tickers.add(ticker)
+                                total_new += 1
                 except Exception as e:
                     logger.warning(
                         f"Enrichment failed for theme '{theme.name}': {e}"
