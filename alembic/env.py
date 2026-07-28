@@ -16,6 +16,7 @@ from src.database import Base
 
 # Import all models so Alembic can detect them for autogenerate
 from src.models import (  # noqa: F401
+    ActivityEvent,
     Channel,
     PerformanceRecord,
     Prediction,

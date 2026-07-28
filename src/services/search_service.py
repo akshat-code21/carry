@@ -12,6 +12,7 @@ from src.models.speaker_ticker import SpeakerTickerAggregation
 from src.models.theme import ThemeHierarchy, ThemeMention, ThemeTickerMapping
 from src.models.transcript_segment import TranscriptSegment
 from src.models.video import Video
+from src.services.etf_mapping_service import ETFMappingService
 from src.services.interfaces import EmbeddingProvider
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,7 @@ class SearchService:
     def __init__(self, db: AsyncSession, embedding_provider: EmbeddingProvider) -> None:
         self.db = db
         self.embedding_provider = embedding_provider
+        self.etf_service = ETFMappingService()
 
     async def hybrid_search(
         self,
@@ -303,11 +305,16 @@ class SearchService:
         rather than doing text search. Returns a single-item list with the
         StockDiscoveryResult-compatible dict for the ticker.
 
-        This solves the problem where "Microsoft narrative" fails text search
-        because predictions are tagged with ticker "MSFT", not the word "Microsoft".
+        For ETF tickers (e.g., SMH), performs a reverse lookup to find related
+        themes and aggregates predictions from the constituent stocks.
         """
         ticker = ticker.upper()
+        is_etf = self.etf_service.is_etf(ticker)
 
+        if is_etf:
+            return await self._search_etf_narrative(ticker)
+
+        # --- Standard stock narrative (existing logic) ---
         # --- Get predictions for this ticker ---
         pred_stmt = select(Prediction).where(
             Prediction.ticker == ticker
@@ -396,12 +403,262 @@ class SearchService:
             "bearish_pct": bearish_pct,
             "sample_predictions": sample_predictions,
             "last_mentioned_at": last_mentioned.isoformat() if last_mentioned else None,
+            "is_etf": False,
         }]
 
-    async def search_stocks_for_query(
-        self, query: str, sector_hint: str | None = None, limit: int = 10
+    async def _search_etf_narrative(self, etf_ticker: str) -> list[dict]:
+        """Build narrative intelligence for an ETF by aggregating its underlying themes.
+
+        Reverse-lookups which themes/industries/sectors map to this ETF, then
+        pulls all predictions from the constituent stocks of those themes.
+        """
+        import math
+        from datetime import datetime, timezone
+
+        related_theme_names = self.etf_service.get_themes_for_etf(etf_ticker)
+        if not related_theme_names:
+            # No mapping found — return a minimal result
+            return [{
+                "ticker": etf_ticker,
+                "composite_score": 0.0,
+                "theme_relevance": 0.0,
+                "themes": [],
+                "mention_count": 0,
+                "avg_sentiment": 0.0,
+                "prediction_count": 0,
+                "avg_confidence": 0.0,
+                "bullish_pct": 0.0,
+                "bearish_pct": 0.0,
+                "sample_predictions": [],
+                "last_mentioned_at": None,
+                "is_etf": True,
+            }]
+
+        # Find theme IDs matching the related theme names
+        theme_stmt = select(ThemeHierarchy).where(
+            func.lower(ThemeHierarchy.name).in_([n.lower() for n in related_theme_names])
+        )
+        theme_result = await self.db.execute(theme_stmt)
+        themes_db = theme_result.scalars().all()
+        theme_ids = [t.id for t in themes_db]
+        theme_names = [t.name for t in themes_db]
+
+        if not theme_ids:
+            return [{
+                "ticker": etf_ticker,
+                "composite_score": 0.1,
+                "theme_relevance": len(related_theme_names) * 0.5,
+                "themes": related_theme_names,
+                "mention_count": 0,
+                "avg_sentiment": 0.0,
+                "prediction_count": 0,
+                "avg_confidence": 0.0,
+                "bullish_pct": 0.0,
+                "bearish_pct": 0.0,
+                "sample_predictions": [],
+                "last_mentioned_at": None,
+                "is_etf": True,
+            }]
+
+        # Get all tickers mapped to these themes
+        ticker_stmt = select(ThemeTickerMapping.ticker).where(
+            ThemeTickerMapping.theme_id.in_(theme_ids)
+        ).distinct()
+        ticker_result = await self.db.execute(ticker_stmt)
+        constituent_tickers = [row[0].upper() for row in ticker_result.all()]
+
+        # Get predictions for all constituent tickers
+        predictions = []
+        if constituent_tickers:
+            pred_stmt = select(Prediction).where(
+                Prediction.ticker.in_(constituent_tickers)
+            ).order_by(Prediction.created_at.desc())
+            pred_result = await self.db.execute(pred_stmt)
+            predictions = pred_result.scalars().all()
+
+        # Get aggregation stats for constituent tickers
+        total_mentions = 0
+        avg_sentiment = 0.0
+        last_mentioned = None
+        if constituent_tickers:
+            agg_stmt = select(SpeakerTickerAggregation).where(
+                SpeakerTickerAggregation.ticker.in_(constituent_tickers)
+            )
+            agg_result = await self.db.execute(agg_stmt)
+            aggregations = agg_result.scalars().all()
+            total_mentions = sum(a.total_mentions or 0 for a in aggregations)
+            sentiments = [a.avg_sentiment for a in aggregations if a.avg_sentiment is not None]
+            avg_sentiment = sum(sentiments) / len(sentiments) if sentiments else 0.0
+            dates = [a.last_mentioned_at for a in aggregations if a.last_mentioned_at]
+            last_mentioned = max(dates) if dates else None
+
+        # Compute stats from predictions
+        sample_predictions = []
+        for pred in predictions[:3]:
+            sample_predictions.append({
+                "text": pred.prediction_text[:200],
+                "direction": pred.direction,
+                "confidence": pred.confidence,
+            })
+
+        prediction_count = len(predictions)
+        confidences = [p.confidence for p in predictions if p.confidence is not None]
+        avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+
+        directions = [p.direction for p in predictions if p.direction]
+        bullish_pct = 0.0
+        bearish_pct = 0.0
+        if directions:
+            bullish_pct = round(sum(1 for d in directions if d == "bullish") / len(directions) * 100)
+            bearish_pct = round(sum(1 for d in directions if d == "bearish") / len(directions) * 100)
+
+        # Composite score
+        now = datetime.now(timezone.utc)
+        mention_score = min(math.log1p(total_mentions) / 5.0, 1.0)
+        sentiment_score = abs(avg_sentiment)
+        confidence_score = avg_confidence
+        recency_score = 0.3
+        if last_mentioned:
+            days_ago = (now - last_mentioned.replace(tzinfo=timezone.utc)).days
+            recency_score = max(0.1, 1.0 - (days_ago / 90.0))
+
+        composite_score = round(
+            (mention_score * 0.30)
+            + (sentiment_score * 0.20)
+            + (confidence_score * 0.20)
+            + (recency_score * 0.15)
+            + (0.15 if prediction_count > 0 else 0.0),
+            4,
+        )
+
+        return [{
+            "ticker": etf_ticker,
+            "composite_score": composite_score,
+            "theme_relevance": len(theme_names) * 0.5,
+            "themes": theme_names,
+            "mention_count": total_mentions,
+            "avg_sentiment": avg_sentiment,
+            "prediction_count": prediction_count,
+            "avg_confidence": avg_confidence,
+            "bullish_pct": bullish_pct,
+            "bearish_pct": bearish_pct,
+            "sample_predictions": sample_predictions,
+            "last_mentioned_at": last_mentioned.isoformat() if last_mentioned else None,
+            "is_etf": True,
+        }]
+
+    @staticmethod
+    def resolve_discovery_mode(
+        channel_type: str | None = None,
+        instrument_type: str | None = None,
+    ) -> str:
+        """Decide whether discovery should return stocks or ETFs.
+
+        Precedence:
+        1. Channel scope wins when set (individual → stocks, institutional → etfs)
+        2. Otherwise use query instrument_type from the router
+        3. Default to stocks
+        """
+        if channel_type == "institutional":
+            return "etfs"
+        if channel_type == "individual":
+            return "stocks"
+        if instrument_type == "etfs":
+            return "etfs"
+        return "stocks"
+
+    async def _build_etf_discovery_results(
+        self,
+        matched_themes: list[dict],
+        limit: int = 10,
     ) -> list[dict]:
-        """Aggregated stock discovery search — finds top tickers for a sector/theme query.
+        """Resolve sector/industry/theme ETFs for discovery results."""
+        if not matched_themes:
+            return []
+
+        etf_tickers = self.etf_service.resolve_etfs_for_themes(
+            [{"name": t["name"], "level": "theme"} for t in matched_themes]
+        )
+
+        # Also try resolving at industry/sector level from theme hierarchy
+        for t in matched_themes:
+            theme_obj_result = await self.db.execute(
+                select(ThemeHierarchy).where(ThemeHierarchy.id == t["id"])
+            )
+            theme_obj = theme_obj_result.scalar_one_or_none()
+            if not theme_obj:
+                continue
+
+            # Theme itself may be industry/sector level
+            if theme_obj.level == "industry":
+                etf_tickers.extend(
+                    e
+                    for e in self.etf_service.resolve_etfs(industry=theme_obj.name)
+                    if e not in etf_tickers
+                )
+            elif theme_obj.level == "sector":
+                etf_tickers.extend(
+                    e
+                    for e in self.etf_service.resolve_etfs(sector=theme_obj.name)
+                    if e not in etf_tickers
+                )
+
+            if theme_obj.parent_id:
+                parent_result = await self.db.execute(
+                    select(ThemeHierarchy).where(
+                        ThemeHierarchy.id == theme_obj.parent_id
+                    )
+                )
+                parent = parent_result.scalar_one_or_none()
+                if parent:
+                    parent_etfs = self.etf_service.resolve_etfs(
+                        industry=parent.name if parent.level == "industry" else None,
+                        sector=parent.name if parent.level == "sector" else None,
+                    )
+                    etf_tickers.extend(e for e in parent_etfs if e not in etf_tickers)
+
+        # Fallback: also match unstructured query theme names against mapping keys
+        if not etf_tickers:
+            for t in matched_themes:
+                etf_tickers.extend(
+                    e
+                    for e in self.etf_service.resolve_etfs(
+                        theme=t["name"], industry=t["name"], sector=t["name"]
+                    )
+                    if e not in etf_tickers
+                )
+
+        related_themes = [t["name"] for t in matched_themes]
+        results: list[dict] = []
+        for i, etf_ticker in enumerate(etf_tickers[:limit]):
+            results.append(
+                {
+                    "ticker": etf_ticker,
+                    "composite_score": round(1.0 - (i * 0.02), 4),
+                    "theme_relevance": len(related_themes) * 0.8,
+                    "themes": related_themes,
+                    "mention_count": 0,
+                    "avg_sentiment": 0.0,
+                    "prediction_count": 0,
+                    "avg_confidence": 0.0,
+                    "bullish_pct": 0.0,
+                    "bearish_pct": 0.0,
+                    "sample_predictions": [],
+                    "last_mentioned_at": None,
+                    "is_etf": True,
+                }
+            )
+        return results
+
+    async def search_stocks_for_query(
+        self,
+        query: str,
+        sector_hint: str | None = None,
+        limit: int = 10,
+        channel_type: str | None = None,
+        instrument_type: str | None = None,
+    ) -> list[dict]:
+        """Aggregated stock/ETF discovery search for a sector/theme query.
 
         Multi-signal scoring combines:
         1. Theme relevance (keyword + semantic matching against theme taxonomy)
@@ -410,12 +667,19 @@ class SearchService:
         4. Prediction confidence (average confidence of predictions for this ticker)
         5. Recency (more recently discussed tickers get a boost)
 
+        Result instrument class is controlled by:
+        - channel_type: individual → stocks only, institutional → ETFs only
+        - instrument_type (global search): "stocks" or "etfs" from query understanding
+
         Args:
             query: The user's search query
             sector_hint: Optional sector/industry/theme hint from query router
             limit: Max results to return
+            channel_type: Optional channel type ("individual" or "institutional")
+            instrument_type: Optional query instrument class ("stocks" or "etfs")
         """
         search_text = sector_hint or query
+        mode = self.resolve_discovery_mode(channel_type, instrument_type)
 
         # --- Step 1: Find matching themes (keyword + semantic) ---
         matched_themes = await self._match_themes(search_text)
@@ -424,6 +688,18 @@ class SearchService:
             logger.info(f"No themes matched for stock discovery query: '{query}'")
             return []
 
+        # --- ETF discovery path (institutional channel or ETF-intent global query) ---
+        if mode == "etfs":
+            etf_results = await self._build_etf_discovery_results(
+                matched_themes, limit=limit
+            )
+            logger.info(
+                f"ETF discovery for '{query}' returned {len(etf_results)} results "
+                f"(channel_type={channel_type}, instrument_type={instrument_type})"
+            )
+            return etf_results
+
+        # --- Stock discovery path ---
         theme_ids = [t["id"] for t in matched_themes]
         theme_names_map = {t["id"]: t["name"] for t in matched_themes}
 
@@ -435,13 +711,16 @@ class SearchService:
         mappings = ticker_result.scalars().all()
 
         if not mappings:
-            logger.info(f"No ticker mappings found for matched themes")
+            logger.info("No ticker mappings found for matched themes")
             return []
 
-        # Build initial ticker data from theme mappings
+        # Build initial ticker data from theme mappings (stocks only)
         ticker_data: dict[str, dict] = {}
         for mapping in mappings:
             ticker = mapping.ticker.upper()
+            # Never surface ETFs on the stock discovery path
+            if self.etf_service.is_etf(ticker):
+                continue
             if ticker not in ticker_data:
                 ticker_data[ticker] = {
                     "ticker": ticker,
@@ -455,11 +734,18 @@ class SearchService:
                     "bearish_pct": 0.0,
                     "sample_predictions": [],
                     "last_mentioned_at": None,
+                    "is_etf": False,
                 }
             ticker_data[ticker]["theme_relevance"] += mapping.relevance_score or 0.5
             theme_name = theme_names_map.get(mapping.theme_id)
             if theme_name and theme_name not in ticker_data[ticker]["themes"]:
                 ticker_data[ticker]["themes"].append(theme_name)
+
+        if not ticker_data:
+            logger.info(
+                f"No non-ETF ticker mappings for stock discovery query: '{query}'"
+            )
+            return []
 
         # --- Step 3: Enrich with aggregation stats (mentions, sentiment, recency) ---
         all_tickers = list(ticker_data.keys())
@@ -548,6 +834,7 @@ class SearchService:
             td["last_mentioned_at"] = (
                 td["last_mentioned_at"].isoformat() if td["last_mentioned_at"] else None
             )
+            td["is_etf"] = False
 
         # Sort by composite score and return top N
         sorted_tickers = sorted(
@@ -555,6 +842,7 @@ class SearchService:
             key=lambda x: x["composite_score"],
             reverse=True,
         )
+
         return sorted_tickers[:limit]
 
     async def _match_themes(self, search_text: str) -> list[dict]:

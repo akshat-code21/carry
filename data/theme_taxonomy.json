@@ -85,7 +85,7 @@
             {
               "name": "Rate Cuts",
               "description": "Federal Reserve rate cut expectations and bank impacts",
-              "tickers": ["XLF", "JPM", "GS", "BAC"]
+              "tickers": ["JPM", "GS", "BAC", "MS"]
             },
             {
               "name": "Consumer Credit",
@@ -215,7 +215,7 @@
             {
               "name": "Energy Crisis",
               "description": "Oil and gas supply disruptions and pricing",
-              "tickers": ["XOM", "CVX", "COP", "OXY", "XLE"]
+              "tickers": ["XOM", "CVX", "COP", "OXY"]
             }
           ]
         },
@@ -231,12 +231,12 @@
             {
               "name": "Inflation",
               "description": "Inflation hedges and impacted assets",
-              "tickers": ["TIPS", "GLD"]
+              "tickers": ["NEM", "GOLD", "FCX"]
             },
             {
               "name": "Recession Fears",
               "description": "Defensive positioning during economic downturns",
-              "tickers": ["XLU", "XLP", "GLD"]
+              "tickers": ["NEE", "DUK", "PG", "KO"]
             }
           ]
         }
@@ -269,7 +269,7 @@
             {
               "name": "Clean Energy",
               "description": "Solar, wind, and renewable energy companies",
-              "tickers": ["ENPH", "SEDG", "NEE", "ICLN", "TAN"]
+              "tickers": ["ENPH", "SEDG", "NEE", "FSLR"]
             },
             {
               "name": "EVs",

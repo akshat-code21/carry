@@ -63,17 +63,20 @@ Rules:
 - If a chunk has no financial content, return empty arrays
 """
 
-THEME_TICKER_ENRICHMENT_PROMPT = """You are a financial market expert. Given a theme and its narrative context from a financial commentary, suggest additional stock tickers that are most relevant to this theme.
+THEME_TICKER_ENRICHMENT_PROMPT = """You are a financial market expert. Given a theme and its narrative context from a financial commentary, suggest additional single-name stock (equity) tickers that are most relevant to this theme.
 
 For each ticker, provide:
-- ticker: The stock symbol
+- ticker: The stock symbol of a public company (NOT an ETF, index fund, or bond fund)
 - relevance_score: 0.0 to 1.0 (how core and directly relevant this ticker is to the theme — assign >= 0.85 only for essential core tickers)
 - reason: A brief explanation of why this ticker maps to this theme
 
 Return ONLY valid JSON as an array:
 [{"ticker": "SYMBOL", "relevance_score": 0.85, "reason": "..."}]
 
-Only suggest tickers that are directly relevant. Quality over quantity — 2-3 highly core tickers is better than loosely related ones.
+Rules:
+- Only suggest individual company equities (e.g. NVDA, JPM, XOM).
+- Do NOT suggest ETFs or funds (e.g. no QQQ, SPY, SMH, XLK, XLF, HYG, IWM, ARKK, ICLN, GLD, TLT).
+- Quality over quantity — 2-3 highly core tickers is better than loosely related ones.
 """
 
 

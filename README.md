@@ -14,6 +14,7 @@ YT Chatter is an end-to-end platform that ingests YouTube financial commentary, 
 - **Hybrid Search Engine**: Combines PostgreSQL full-text keyword search (`tsvector`) with semantic vector search (`pgvector` 384-dim embeddings).
 - **Market Performance Evaluation**: Matches video release dates against historical stock price movements using `yfinance` (1-day, 1-week, 1-month returns) to evaluate prediction accuracy.
 - **Interactive Next.js Dashboard**: Search interface, video breakdowns, prediction accuracy tracking, ticker performance charts (Recharts), and theme explorers.
+- **Automatic New-Video Detection (WebSub)**: Tracks every ingested channel via YouTube’s free PubSubHubbub hub; new uploads are discovered near real-time, processed through the pipeline, and surfaced in an in-app activity feed.
 
 ---
 
@@ -195,6 +196,8 @@ The project includes a `Makefile` with convenience shortcuts for common developm
 | `make seed` | Seed the database with default theme taxonomy from `data/theme_taxonomy.json` |
 | `make run` | Launch FastAPI app locally with hot reloading (`http://localhost:8000`) |
 | `make worker` | Launch Celery task worker for background video processing |
+| `make beat` | Launch Celery Beat scheduler (WebSub renewals, RSS fallback, daily performance) |
+| `make subscribe-websub` | Queue WebSub subscribe for all channels (needs `PUBLIC_BASE_URL`) |
 | `make test` | Run test suite via `pytest` |
 | `make lint` | Run code quality & formatting checks via `ruff` |
 | `make format` | Automatically fix formatting issues via `ruff format` |
@@ -247,6 +250,77 @@ When a video is processed by the pipeline:
 3. **Theme & Ticker Mapping (`src/pipeline/theme_mapping.py`)**: Links extracted claims to the hierarchical theme taxonomy and maps implicit stock tickers.
 4. **Embedding Generation (`src/pipeline/embeddings.py`)**: Embeds text segments into 384-dimensional vectors stored in PostgreSQL `pgvector`.
 5. **Market Tracking (`src/pipeline/market_tracking.py`)**: Queries `yfinance` for historical prices post-publish date to evaluate return accuracy.
+
+---
+
+## 🔔 Automatic channel monitoring (WebSub)
+
+Once a channel is backfilled, future uploads are discovered automatically via **YouTube WebSub** (Google’s free PubSubHubbub hub at `pubsubhubbub.appspot.com`). No YouTube API quota is used for the push itself.
+
+### Flow
+
+1. App subscribes each channel’s Atom feed topic to the hub with callback `{PUBLIC_BASE_URL}/api/websub/callback`.
+2. On new upload, the hub POSTs Atom XML → API verifies signature → Celery discovers the video → activity `video_detected`.
+3. `auto_ingest_video` fetches captions with retries (captions often lag after publish), then runs the normal process pipeline → activity `video_processed` (or `video_failed`).
+4. Celery Beat renews WebSub leases and optionally runs a rare RSS fallback poll.
+
+### Local testing with ngrok
+
+```bash
+# terminal 1 — API + worker + beat (or: make up)
+make up-db && make migrate
+make run          # :8000
+make worker       # separate terminal
+make beat         # separate terminal
+
+# terminal 2 — public HTTPS tunnel to the API
+ngrok http 8000
+# copy the https URL, e.g. https://abc123.ngrok-free.app
+```
+
+Add to `.env` (no trailing slash):
+
+```env
+PUBLIC_BASE_URL=https://abc123.ngrok-free.app
+WEBSUB_SECRET=some-long-random-string
+```
+
+Restart the API, then:
+
+```bash
+make subscribe-websub
+```
+
+Watch API logs for a hub **GET** verification on `/api/websub/callback`. New uploads on subscribed channels should appear under **Activity** in the UI (bell icon).
+
+**Note:** Free ngrok URLs change on restart — update `PUBLIC_BASE_URL` and run `make subscribe-websub` again.
+
+### Test “new upload” without waiting for a real publish
+
+You do **not** need to wait for Prof G (or any channel) to upload. Simulate the same Atom push the Google hub would send:
+
+```bash
+# discovery only → Activity "Detected" (no LLM)
+make simulate-websub channel=UCp4CBeq4nzeg9smAvdjPrig video=SOME_UNUSED_ID mode=discovery_only
+
+# full path → Detected → process → Ready
+# Prefer a REAL YouTube video id that is NOT already in your DB
+# (e.g. an older episode you never backfilled):
+make simulate-websub channel=UCp4CBeq4nzeg9smAvdjPrig video=REAL_YOUTUBE_VIDEO_ID mode=full
+```
+
+Or `POST /api/websub/simulate` with JSON body  
+`{ "youtube_channel_id", "youtube_video_id", "title?", "mode": "full"|"discovery_only" }`.
+
+| Goal | What to do |
+|---|---|
+| Test activity “Detected” only | `mode=discovery_only` with any unused video id |
+| Test full auto pipeline | `mode=full` + real video id **not** in DB yet |
+| Test live Google hub push | Wait for a real new upload on a subscribed channel (or publish to a test channel you control) |
+
+### Related env vars
+
+See `.env.example` for `WEBSUB_*`, `DISCOVERY_FALLBACK_POLL_HOURS`, and `TRANSCRIPT_RETRY_DELAYS_MINUTES`.
 
 ---
 

@@ -47,9 +47,47 @@ class Settings(BaseSettings):
     embedding_model: str = "text-embedding-3-small"
     embedding_dimensions: int = 384
 
+    # Public base URL for WebSub callbacks (ngrok URL locally, real host in prod).
+    # No trailing slash. Empty = skip WebSub subscribe (poll fallback only).
+    public_base_url: str = ""
+
+    # YouTube WebSub (PubSubHubbub) — free Google hub
+    websub_hub_url: str = "https://pubsubhubbub.appspot.com/subscribe"
+    websub_secret: str = ""
+    websub_lease_seconds: int = 864000  # 10 days (hub may clamp)
+    websub_renew_margin_hours: int = 24
+
+    # RSS fallback poll interval in hours (0 = disabled)
+    discovery_fallback_poll_hours: int = 6
+
+    # Comma-separated transcript retry delays in minutes after each failed attempt
+    transcript_retry_delays_minutes: str = "0,15,60,360,1440"
+
     @property
     def is_development(self) -> bool:
         return self.app_env == "development"
+
+    @property
+    def websub_enabled(self) -> bool:
+        """True when a public callback base URL is configured."""
+        return bool(self.public_base_url.strip())
+
+    @property
+    def transcript_retry_delays(self) -> list[int]:
+        """Parse transcript retry delays (minutes) into a list of ints."""
+        raw = self.transcript_retry_delays_minutes.strip()
+        if not raw:
+            return [0, 15, 60, 360, 1440]
+        delays: list[int] = []
+        for part in raw.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            try:
+                delays.append(max(0, int(part)))
+            except ValueError:
+                continue
+        return delays or [0, 15, 60, 360, 1440]
 
 
 @lru_cache

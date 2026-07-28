@@ -128,14 +128,16 @@ function SearchPageContent() {
 
         {results && (
           <div className="flex flex-col gap-4 pb-10">
-            {/* Stock Discovery Cards — shown prominently for exploratory queries */}
+            {/* Stock / ETF Discovery Cards — shown prominently for exploratory queries */}
             {results.stocks && results.stocks.length > 0 && (
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="h-5 w-5 text-indigo-400" />
                     <h2 className="text-xl font-semibold text-zinc-100">
-                      Top Stocks ({results.stocks.length})
+                      {results.instrument_type === "etfs" || results.stocks.every((s) => s.is_etf)
+                        ? `Top ETFs (${results.stocks.length})`
+                        : `Top Stocks (${results.stocks.length})`}
                     </h2>
                   </div>
                   <Badge variant="secondary" className="bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-xs">
@@ -163,6 +165,11 @@ function SearchPageContent() {
                               <Link href={`/tickers/${stock.ticker}`} className="hover:text-indigo-400 transition-colors">
                                 <span className="text-lg font-bold text-white tracking-tight">${stock.ticker}</span>
                               </Link>
+                              {stock.is_etf && (
+                                <Badge variant="outline" className="text-[10px] text-amber-300/90 border-amber-500/30 bg-amber-500/10 px-1.5 py-0">
+                                  ETF
+                                </Badge>
+                              )}
                             </div>
                             <div className="flex items-center gap-2">
                               <div className={`flex items-center gap-1 ${sentimentColor}`}>
@@ -301,29 +308,42 @@ function SearchPageContent() {
         )}
       </div>
 
-      {/* Right Sidebar - Dynamic Top Stocks */}
+      {/* Right Sidebar - Dynamic Top Stocks / ETFs */}
       <div className="w-80 flex-shrink-0 flex flex-col gap-4">
         <Card className="border-zinc-800 bg-zinc-900/40">
           <CardHeader>
             <CardTitle className="text-base font-semibold">
-              {results?.stocks && results.stocks.length > 0 ? "Discovered Stocks" : "Stocks Mentioned"}
+              {results?.stocks && results.stocks.length > 0
+                ? results.instrument_type === "etfs" || results.stocks.every((s) => s.is_etf)
+                  ? "Discovered ETFs"
+                  : "Discovered Stocks"
+                : "Stocks Mentioned"}
             </CardTitle>
             <CardDescription className="text-xs">
               {results?.stocks && results.stocks.length > 0
-                ? "Top stocks matching your query"
+                ? results.instrument_type === "etfs" || results.stocks.every((s) => s.is_etf)
+                  ? "Top ETFs matching your query"
+                  : "Top stocks matching your query"
                 : "Relevant to your search query"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Show discovered stocks if sector_discovery, else show predictions */}
+            {/* Show discovered stocks/ETFs if sector_discovery, else show predictions */}
             {results && results.stocks && results.stocks.length > 0 ? (
               <div className="flex flex-col gap-3">
                 {results.stocks.slice(0, 8).map((stock: StockDiscoveryResult, i: number) => (
                   <div key={i} className="flex items-center justify-between border-b border-zinc-800/60 pb-2.5 last:border-0 last:pb-0">
                     <div className="flex flex-col gap-0.5 max-w-[190px]">
-                      <Link href={`/tickers/${stock.ticker}`} className="font-bold text-sm text-zinc-200 hover:text-indigo-400 hover:underline">
-                        ${stock.ticker}
-                      </Link>
+                      <div className="flex items-center gap-1.5">
+                        <Link href={`/tickers/${stock.ticker}`} className="font-bold text-sm text-zinc-200 hover:text-indigo-400 hover:underline">
+                          ${stock.ticker}
+                        </Link>
+                        {stock.is_etf && (
+                          <Badge variant="outline" className="text-[9px] text-amber-300/90 border-amber-500/30 bg-amber-500/10 px-1 py-0">
+                            ETF
+                          </Badge>
+                        )}
+                      </div>
                       <span className="text-xs text-zinc-400 line-clamp-1">
                         {stock.themes.slice(0, 2).join(", ") || "—"}
                       </span>

@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -13,6 +13,11 @@ from src.database import Base
 
 class SpeakerTickerAggregation(Base):
     __tablename__ = "speaker_ticker_aggregation"
+    __table_args__ = (
+        UniqueConstraint(
+            "channel_id", "ticker", name="uq_speaker_ticker_agg_channel_ticker"
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

@@ -70,6 +70,27 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  beat:
+    build: .
+    container_name: yt-chatter-beat
+    command: celery -A src.tasks beat --loglevel=info
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://yt_chatter:yt_chatter_dev@postgres:5432/yt_chatter
+      DATABASE_URL_SYNC: postgresql://yt_chatter:yt_chatter_dev@postgres:5432/yt_chatter
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      worker:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:

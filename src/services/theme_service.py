@@ -133,9 +133,16 @@ class ThemeService:
         relevance_score: float,
         source: str = "curated",
         notes: str | None = None,
-    ) -> ThemeTickerMapping:
-        """Add a new ticker mapping for a theme."""
+    ) -> ThemeTickerMapping | None:
+        """Add a new equity ticker mapping for a theme.
+
+        Theme→ticker mappings are stock-only. ETFs belong in etf_mappings.json
+        and are resolved only for institutional channels. Returns None if the
+        ticker is a known ETF (rejected) or empty after cleaning.
+        """
         import re
+
+        from src.services.etf_mapping_service import ETFMappingService
 
         # Handle LLM outputs like "SAMSUNG ELECTRONICS (005930.KS)"
         match = re.search(r'\((.*?)\)', ticker)
@@ -147,6 +154,16 @@ class ThemeService:
 
         # Enforce DB limit
         clean_ticker = clean_ticker.upper()[:20]
+        if not clean_ticker:
+            return None
+
+        # Never store ETFs as theme stock mappings
+        if ETFMappingService().is_etf(clean_ticker):
+            logger.info(
+                f"Rejecting ETF ticker {clean_ticker} for theme_id={theme_id} "
+                f"(source={source}) — theme mappings are equities only"
+            )
+            return None
 
         mapping = ThemeTickerMapping(
             theme_id=theme_id,

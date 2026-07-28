@@ -17,6 +17,7 @@ export interface StockDiscoveryResult {
   bearish_pct: number;
   sample_predictions: SamplePrediction[];
   last_mentioned_at?: string;
+  is_etf?: boolean;
 }
 
 export interface SearchResult {
@@ -39,6 +40,8 @@ export interface SearchResult {
   videos: Record<string, any>;
   channels: Record<string, any>;
   query_intent: string;
+  /** stocks | etfs — which instrument class discovery results represent */
+  instrument_type?: string;
 }
 
 export const api = {
@@ -85,6 +88,12 @@ export const api = {
   async getTickers() {
     const res = await fetch("/api/tickers");
     if (!res.ok) throw new Error("Failed to fetch tickers");
+    return res.json();
+  },
+
+  async getTopETFs() {
+    const res = await fetch("/api/tickers/top-etfs");
+    if (!res.ok) throw new Error("Failed to fetch top ETFs");
     return res.json();
   },
 
@@ -150,4 +159,46 @@ export const api = {
     }
     return res.json();
   },
+
+  async getActivity(opts?: { limit?: number; unreadOnly?: boolean; offset?: number }) {
+    const params = new URLSearchParams();
+    if (opts?.limit) params.set("limit", String(opts.limit));
+    if (opts?.offset) params.set("offset", String(opts.offset));
+    if (opts?.unreadOnly) params.set("unread_only", "true");
+    const qs = params.toString();
+    const res = await fetch(`/api/activity${qs ? `?${qs}` : ""}`);
+    if (!res.ok) throw new Error("Failed to fetch activity");
+    return res.json() as Promise<ActivityEvent[]>;
+  },
+
+  async getActivityUnreadCount() {
+    const res = await fetch("/api/activity/unread-count");
+    if (!res.ok) throw new Error("Failed to fetch unread count");
+    return res.json() as Promise<{ count: number }>;
+  },
+
+  async markActivityRead(eventId: string) {
+    const res = await fetch(`/api/activity/${eventId}/read`, { method: "POST" });
+    if (!res.ok) throw new Error("Failed to mark activity read");
+    return res.json() as Promise<ActivityEvent>;
+  },
+
+  async markAllActivityRead() {
+    const res = await fetch("/api/activity/read-all", { method: "POST" });
+    if (!res.ok) throw new Error("Failed to mark all activity read");
+    return res.json() as Promise<{ marked_read: number }>;
+  },
 };
+
+export interface ActivityEvent {
+  id: string;
+  event_type: "video_detected" | "video_processed" | "video_failed" | string;
+  channel_id: string;
+  video_id?: string | null;
+  youtube_video_id: string;
+  title: string;
+  message: string;
+  payload?: Record<string, unknown> | null;
+  read_at?: string | null;
+  created_at: string;
+}

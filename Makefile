@@ -1,4 +1,4 @@
-.PHONY: up down migrate seed run worker test lint
+.PHONY: up down migrate seed run worker beat test lint subscribe-websub simulate-websub
 
 # Infrastructure
 up:
@@ -26,6 +26,24 @@ run:
 
 worker:
 	uv run celery -A src.tasks worker --loglevel=info
+
+beat:
+	uv run celery -A src.tasks beat --loglevel=info
+
+# Re-subscribe all channels to YouTube WebSub (after ngrok URL change / first setup)
+subscribe-websub:
+	PYTHONPATH=. uv run python scripts/subscribe_all_channels_websub.py
+
+# Fake a "channel just uploaded" WebSub push (no real YouTube upload needed)
+# Example:
+#   make simulate-websub channel=UCp4CBeq4nzeg9smAvdjPrig video=XXXXXXXXXXX
+#   make simulate-websub channel=UCp4CBeq4nzeg9smAvdjPrig video=XXXXXXXXXXX mode=discovery_only
+simulate-websub:
+	PYTHONPATH=. uv run python scripts/simulate_websub.py \
+		--youtube-channel-id "$(channel)" \
+		--video-id "$(video)" \
+		--mode "$(or $(mode),full)" \
+		--title "$(or $(title),Simulated new upload (dry run))"
 
 # Development
 test:

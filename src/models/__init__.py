@@ -1,5 +1,6 @@
 """SQLAlchemy ORM models package."""
 
+from src.models.activity_event import ActivityEvent
 from src.models.channel import Channel
 from src.models.performance import PerformanceRecord
 from src.models.prediction import Prediction
@@ -9,6 +10,7 @@ from src.models.transcript_segment import TranscriptSegment
 from src.models.video import Video
 
 __all__ = [
+    "ActivityEvent",
     "Channel",
     "Video",
     "TranscriptSegment",
