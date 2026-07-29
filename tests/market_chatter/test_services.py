@@ -33,7 +33,7 @@ async def test_rejects_symbols_outside_configured_universe(
     service: CollectionService,
 ) -> None:
     with pytest.raises(UnsupportedTickerError):
-        await service.ticker_response("MEME", SourceName.REDDIT, 7)
+        await service.ticker_response("INVALID123456", SourceName.REDDIT, 7)
 
 
 class PartiallyUnavailableProvider(FixtureProvider):

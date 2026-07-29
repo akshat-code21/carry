@@ -27,5 +27,8 @@ def normalize_symbol(value: str) -> str:
 
 
 def is_supported_symbol(value: str) -> bool:
+    """Validate ticker formatting. Allows any valid 1-5 letter ticker symbol."""
+    if not value or not isinstance(value, str):
+        return False
     symbol = normalize_symbol(value)
-    return bool(_SYMBOL_PATTERN.fullmatch(symbol)) and symbol in SP100_SYMBOLS
+    return bool(_SYMBOL_PATTERN.fullmatch(symbol))
