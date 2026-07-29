@@ -360,6 +360,16 @@ class NativeRawProvider:
         if not items:
             return await FixtureProvider().get_ticker_snapshot(symbol, source, period_days)
 
+        # Run LangGraph Multi-Agent Pipeline on collected raw items
+        from src.pipeline.graph import run_pipeline_for_raw_items
+
+        raw_dicts = [item.model_dump(mode="json") for item in items]
+        graph_score = await run_pipeline_for_raw_items(symbol, raw_dicts, period_days)
+
+        ocs = float(graph_score.get("ocs_score", 50.0))
+        sentiment_normalized = round((ocs - 50.0) / 50.0, 2)  # map 0..100 to -1..+1
+        trend_val = str(graph_score.get("trend", "stable"))
+
         now_date = date.today()
         today_metrics: dict[date, dict] = {}
         for offset in range(period_days):
@@ -385,9 +395,9 @@ class NativeRawProvider:
                     date=d,
                     mentions=mentions,
                     buzz_score=buzz,
-                    sentiment_score=0.25 if mentions > 0 else 0.0,
-                    bullish_pct=65.0 if mentions > 0 else 50.0,
-                    bearish_pct=25.0 if mentions > 0 else 30.0,
+                    sentiment_score=sentiment_normalized if mentions > 0 else 0.0,
+                    bullish_pct=round(ocs, 1),
+                    bearish_pct=round(max(0.0, 100.0 - ocs), 1),
                 )
             )
 
@@ -400,15 +410,16 @@ class NativeRawProvider:
             "found": True,
             "buzz_score": overall_buzz,
             "mentions": total_mentions,
-            "sentiment_score": 0.35,
-            "bullish_pct": 68.0,
-            "bearish_pct": 22.0,
-            "trend": "rising" if total_mentions > 5 else "stable",
+            "sentiment_score": sentiment_normalized,
+            "bullish_pct": round(ocs, 1),
+            "bearish_pct": round(max(0.0, 100.0 - ocs), 1),
+            "trend": trend_val,
             "unique_posts": len(authors),
             "subreddit_count": 5 if source == SourceName.REDDIT else None,
             "source_count": 4 if source == SourceName.NEWS else None,
             "daily_trend": [d.model_dump(mode="json") for d in daily_list],
             "raw_items": raw_items_dict,
+            "driver_cards": graph_score.get("driver_cards", []),
         }
         return normalize_adanos_payload(symbol, source, payload)
 
