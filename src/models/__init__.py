@@ -7,6 +7,7 @@ from src.models.performance import PerformanceRecord
 from src.models.prediction import Prediction
 from src.models.price_bar import PriceBarRecord
 from src.models.quota_usage import QuotaUsage
+from src.models.raw_content import RawContent
 from src.models.source_snapshot import SourceSnapshot
 from src.models.speaker_ticker import SpeakerTickerAggregation
 from src.models.theme import ThemeHierarchy, ThemeMention, ThemeTickerMapping
@@ -27,6 +28,7 @@ __all__ = [
     "PerformanceRecord",
     "PriceBarRecord",
     "QuotaUsage",
+    "RawContent",
     "SourceSnapshot",
     "SpeakerTickerAggregation",
     "TickerDailyMetric",

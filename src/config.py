@@ -75,8 +75,17 @@ class Settings(BaseSettings):
     adanos_collection_days: int = 30
 
     # Provider selection (fixture = deterministic fake data for dev/tests)
-    sentiment_provider: Literal["fixture", "adanos"] = "fixture"
-    price_provider: Literal["fixture", "yfinance_local"] = "fixture"
+    sentiment_provider: Literal["fixture", "adanos", "native_raw"] = "native_raw"
+    price_provider: Literal["fixture", "yfinance_local"] = "yfinance_local"
+
+    # Native Raw Ingestion Credentials & Controls
+    reddit_client_id: str = ""
+    reddit_client_secret: str = ""
+    reddit_user_agent: str = "yt-chatter:v1.0 (by /u/market_chatter)"
+
+    twitter_username: str = ""
+    twitter_password: str = ""
+    twitter_email: str = ""
 
     # CORS origins for the TickerFlow API (comma-separated)
     api_cors_origins: str = "http://localhost:3000"
