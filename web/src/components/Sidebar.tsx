@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, Home, LayoutDashboard, Tv, Hash, TrendingUp } from "lucide-react";
+import { BarChart3, Bell, Home, LayoutDashboard, Tv, Hash, TrendingUp } from "lucide-react";
 
 export function Sidebar() {
   return (
@@ -41,6 +41,13 @@ export function Sidebar() {
             Themes
           </Link>
           <Link
+            href="/tickerflow"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+          >
+            <BarChart3 className="h-4 w-4" />
+            TickerFlow
+          </Link>
+          <Link
             href="/activity"
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
           >
@@ -52,3 +59,4 @@ export function Sidebar() {
     </div>
   );
 }
+

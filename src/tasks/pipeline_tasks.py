@@ -617,3 +617,72 @@ def generate_embeddings_task(self) -> dict:
             return result
 
     return asyncio.run(_run_and_cleanup(_run()))
+
+
+# ── TickerFlow tasks ─────────────────────────────────────────────────────
+
+
+@celery_app.task(bind=True, name="tickerflow.watchlist_collect")
+def tickerflow_watchlist_collect_task(self) -> dict:
+    """Collect social-sentiment data for all pilot watchlist symbols.
+
+    Replaces the market-chatter async worker loop with a proper Celery
+    periodic task.  Schedule via Beat (e.g. daily at 01:00 UTC).
+    """
+
+    async def _run():
+        from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession as AS
+
+        from src.config import get_settings
+        from src.database import engine
+        from src.services.market_chatter.cache import JsonCache
+        from src.services.market_chatter.collection_service import CollectionService
+        from src.services.market_chatter.providers import (
+            build_price_provider,
+            build_sentiment_provider,
+        )
+
+        settings = get_settings()
+        if not settings.enable_watchlist_worker:
+            return {"status": "disabled", "symbols": []}
+
+        symbols = settings.pilot_symbols
+        if not symbols:
+            return {"status": "no_symbols", "symbols": []}
+
+        cache = await JsonCache.connect(settings.redis_url)
+        sentiment_provider = build_sentiment_provider(settings)
+        price_provider = build_price_provider(settings)
+
+        session_factory: async_sessionmaker[AS] = async_sessionmaker(
+            engine, class_=AS, expire_on_commit=False
+        )
+
+        service = CollectionService(
+            settings=settings,
+            session_factory=session_factory,
+            cache=cache,
+            sentiment_provider=sentiment_provider,
+            price_provider=price_provider,
+        )
+
+        results = {}
+        for symbol in symbols:
+            try:
+                outcome = await service.collect(symbol)
+                results[symbol] = {
+                    "status": "ok",
+                    "sources": len(outcome.snapshots),
+                    "requests": outcome.request_count,
+                }
+            except Exception as e:
+                logger.warning("Watchlist collect failed for %s: %s", symbol, e)
+                results[symbol] = {"status": "error", "error": str(e)}
+
+        await sentiment_provider.close()
+        await cache.close()
+
+        return {"status": "completed", "symbols": results}
+
+    return asyncio.run(_run_and_cleanup(_run()))
+

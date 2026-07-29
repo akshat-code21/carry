@@ -1,6 +1,7 @@
 """Application configuration via pydantic-settings."""
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -12,6 +13,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     # App
@@ -63,6 +65,28 @@ class Settings(BaseSettings):
     # Comma-separated transcript retry delays in minutes after each failed attempt
     transcript_retry_delays_minutes: str = "0,15,60,360,1440"
 
+    # ── TickerFlow / Market-Chatter ──────────────────────────────────────
+
+    # Adanos social-sentiment API
+    adanos_api_key: str | None = None
+    adanos_plan: Literal["free", "hobby", "professional"] = "free"
+    adanos_monthly_budget: int = 225
+    adanos_base_url: str = "https://api.adanos.org"
+    adanos_collection_days: int = 30
+
+    # Provider selection (fixture = deterministic fake data for dev/tests)
+    sentiment_provider: Literal["fixture", "adanos"] = "fixture"
+    price_provider: Literal["fixture", "yfinance_local"] = "fixture"
+
+    # CORS origins for the TickerFlow API (comma-separated)
+    api_cors_origins: str = "http://localhost:3000"
+
+    # Watchlist worker
+    pilot_watchlist: str = "AAPL,NVDA"
+    enable_watchlist_worker: bool = False
+
+    # ── Properties ───────────────────────────────────────────────────────
+
     @property
     def is_development(self) -> bool:
         return self.app_env == "development"
@@ -88,6 +112,30 @@ class Settings(BaseSettings):
             except ValueError:
                 continue
         return delays or [0, 15, 60, 360, 1440]
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Parse comma-separated CORS origins."""
+        return [
+            origin.strip()
+            for origin in self.api_cors_origins.split(",")
+            if origin.strip()
+        ]
+
+    @property
+    def pilot_symbols(self) -> list[str]:
+        """Parse comma-separated pilot watchlist symbols."""
+        return [
+            symbol.strip().upper()
+            for symbol in self.pilot_watchlist.split(",")
+            if symbol.strip()
+        ]
+
+    def source_ttl_seconds(self, source: str) -> int:
+        """Cache TTL for Adanos source snapshots. Free tier = 24h, pro = 15m/1h."""
+        if self.adanos_plan != "professional":
+            return 24 * 60 * 60
+        return 15 * 60 if source == "news" else 60 * 60
 
 
 @lru_cache

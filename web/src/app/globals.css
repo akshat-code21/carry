@@ -128,3 +128,60 @@
     @apply font-sans;
   }
 }
+
+/* ── TickerFlow scoped design tokens ───────────────────────────────────── */
+
+@theme inline {
+  /* TickerFlow palette — scoped via .tickerflow-theme */
+  --color-tf-canvas: var(--tf-canvas);
+  --color-tf-panel: var(--tf-panel);
+  --color-tf-panel-raised: var(--tf-panel-raised);
+  --color-tf-ink: var(--tf-ink);
+  --color-tf-ink-secondary: var(--tf-ink-secondary);
+  --color-tf-muted: var(--tf-muted);
+  --color-tf-faint: var(--tf-faint);
+  --color-tf-signal: var(--tf-signal);
+  --color-tf-price: var(--tf-price);
+  --color-tf-positive: var(--tf-positive);
+  --color-tf-negative: var(--tf-negative);
+  --color-tf-warning: var(--tf-warning);
+  --color-tf-stroke: var(--tf-stroke);
+  --color-tf-stroke-strong: var(--tf-stroke-strong);
+}
+
+.tickerflow-theme {
+  --tf-canvas: #111411;
+  --tf-panel: #171b17;
+  --tf-panel-raised: #1d221d;
+  --tf-ink: #e5e7e1;
+  --tf-ink-secondary: #adb5a5;
+  --tf-muted: #7f897b;
+  --tf-faint: #4f5b4d;
+  --tf-signal: #d8f36a;
+  --tf-price: #efb864;
+  --tf-positive: #3ecf70;
+  --tf-negative: #ef5858;
+  --tf-warning: #f0a83e;
+  --tf-stroke: #262b26;
+  --tf-stroke-strong: #3a413a;
+}
+
+.tickerflow-theme .tf-skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--tf-panel) 25%,
+    var(--tf-panel-raised) 50%,
+    var(--tf-panel) 75%
+  );
+  background-size: 200% 100%;
+  animation: tf-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes tf-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
