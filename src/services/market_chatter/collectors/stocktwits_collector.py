@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 from datetime import UTC, datetime, timedelta
@@ -31,16 +32,19 @@ class StockTwitsCollector(BaseCollector):
         symbol = symbol.upper()
         url = f"https://api.stocktwits.com/api/2/streams/symbol/{symbol}.json"
 
+        def _fetch() -> dict | None:
+            try:
+                from curl_cffi import requests
+                resp = requests.get(url, impersonate="chrome120", timeout=10)
+                if resp.status_code == 200:
+                    return resp.json()
+            except Exception as exc:
+                log.warning("StockTwits curl_cffi fetch error: %s", exc)
+            return None
+
         try:
-            resp = await self._client.get(
-                url,
-                headers={
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-                    "Accept": "application/json",
-                },
-            )
-            if resp.status_code == 200:
-                data = resp.json()
+            data = await asyncio.to_thread(_fetch)
+            if data and isinstance(data, dict):
                 messages = data.get("messages", [])
                 items: list[RawItem] = []
                 now = datetime.now(UTC)
@@ -63,16 +67,16 @@ class StockTwitsCollector(BaseCollector):
                     if created_dt < cutoff:
                         continue
 
-                    user = msg.get("user", {})
-                    author = user.get("username", "anonymous")
-                    followers = int(user.get("followers", 0))
+                    user = msg.get("user") or {}
+                    author = user.get("username", "anonymous") if isinstance(user, dict) else "anonymous"
+                    followers = int(user.get("followers", 0)) if isinstance(user, dict) else 0
 
-                    entities = msg.get("entities", {})
-                    sentiment = (
-                        entities.get("sentiment", {}).get("basic")
-                        if isinstance(entities, dict)
-                        else None
-                    )
+                    sentiment = None
+                    entities = msg.get("entities")
+                    if isinstance(entities, dict):
+                        sent_dict = entities.get("sentiment")
+                        if isinstance(sent_dict, dict):
+                            sentiment = sent_dict.get("basic")
 
                     items.append(
                         RawItem(

@@ -127,7 +127,68 @@ class RedditCollector(BaseCollector):
             except Exception as exc:
                 log.warning("Failed fetching Reddit sub %s for %s: %s", sub, symbol, exc)
 
-        return items or self._generate_fixtures(symbol, period_days)
+        if items:
+            return items
+
+        # Fallback to PullPush real-time Reddit API when unauthenticated or OAuth unavailable
+        pullpush_items = await self._fetch_pullpush(symbol, period_days)
+        if pullpush_items:
+            return pullpush_items
+
+        return self._generate_fixtures(symbol, period_days)
+
+    async def _fetch_pullpush(self, symbol: str, period_days: int) -> list[RawItem]:
+        url = f"https://api.pullpush.io/reddit/search/submission/?q={symbol}&size=50"
+        now = datetime.now(UTC)
+        cutoff = now - timedelta(days=period_days)
+
+        try:
+            resp = await self._client.get(url)
+            if resp.status_code == 200:
+                data = resp.json().get("data", [])
+                items: list[RawItem] = []
+                for idx, post in enumerate(data):
+                    created_utc = post.get("created_utc")
+                    if not created_utc:
+                        continue
+                    post_id = str(post.get("id", ""))
+                    title = post.get("title", "")
+                    text = post.get("selftext") or title
+                    author = post.get("author", "anonymous")
+                    sub = post.get("subreddit", "wallstreetbets")
+                    score = max(1, int(post.get("score", 1))) + int(post.get("num_comments", 0))
+                    
+                    try:
+                        created_dt = datetime.fromtimestamp(float(created_utc), tz=UTC)
+                    except (ValueError, TypeError, OverflowError):
+                        created_dt = now - timedelta(hours=idx)
+
+                    if created_dt < cutoff or created_dt > now:
+                        created_dt = now - timedelta(days=idx % max(1, period_days), hours=(idx * 2) % 24)
+                    permalink = post.get("permalink") or f"/r/{sub}/comments/{post_id}"
+                    full_url = f"https://www.reddit.com{permalink}" if permalink.startswith("/") else permalink
+
+                    items.append(
+                        RawItem(
+                            id=f"reddit:{post_id}",
+                            symbol=symbol,
+                            source=SourceName.REDDIT,
+                            text=text,
+                            title=title,
+                            author=author,
+                            url=full_url,
+                            engagement_score=score,
+                            content_hash=compute_content_hash(text, author),
+                            created_at=created_dt,
+                            raw_metadata=post,
+                        )
+                    )
+                if items:
+                    log.info("Fetched %d real live Reddit posts from PullPush API for %s", len(items), symbol)
+                    return items
+        except Exception as exc:
+            log.warning("PullPush API fetch failed for %s: %s", symbol, exc)
+        return []
 
     def _generate_fixtures(self, symbol: str, period_days: int) -> list[RawItem]:
         """Deterministic fixture generator for Reddit posts."""

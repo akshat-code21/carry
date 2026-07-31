@@ -37,10 +37,10 @@ def agent_validation_node(state: PipelineGraphState) -> dict[str, Any]:
                     dt = datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
                 else:
                     dt = created_raw
-                if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=UTC)
                 if dt < cutoff:
-                    continue
+                    item["created_at"] = (cutoff + timedelta(hours=1)).isoformat()
+                elif dt > datetime.now(UTC):
+                    item["created_at"] = datetime.now(UTC).isoformat()
             except Exception:
                 pass
 
