@@ -8,21 +8,21 @@ from src.services.youtube_service import YouTubeAPIService
 
 
 def test_is_short_duration():
-    """Test that videos with duration <= 60 seconds are identified as Shorts."""
-    # Under or equal to 60 seconds -> Short
+    """Test that videos with duration <= 180 seconds are identified as Shorts."""
+    # Under or equal to 180 seconds -> Short
     assert YouTubeAPIService._is_short(duration_sec=30, title="Quick Tech Update") is True
-    assert YouTubeAPIService._is_short(duration_sec=60, title="1 Min News") is True
+    assert YouTubeAPIService._is_short(duration_sec=180, title="3 Min News") is True
 
-    # Over 60 seconds -> Long-form
-    assert YouTubeAPIService._is_short(duration_sec=61, title="61 Second Video") is False
+    # Over 180 seconds -> Long-form
+    assert YouTubeAPIService._is_short(duration_sec=181, title="181 Second Video") is False
     assert YouTubeAPIService._is_short(duration_sec=600, title="10 Min Deep Dive") is False
 
 
 def test_is_short_title_hashtags():
     """Test that videos with #shorts or #short in title are identified as Shorts."""
-    assert YouTubeAPIService._is_short(duration_sec=120, title="Market Breakdown #shorts") is True
-    assert YouTubeAPIService._is_short(duration_sec=120, title="Nvidia News #SHORT") is True
-    assert YouTubeAPIService._is_short(duration_sec=120, title="Regular Market Analysis") is False
+    assert YouTubeAPIService._is_short(duration_sec=300, title="Market Breakdown #shorts") is True
+    assert YouTubeAPIService._is_short(duration_sec=300, title="Nvidia News #SHORT") is True
+    assert YouTubeAPIService._is_short(duration_sec=300, title="Regular Market Analysis") is False
 
 
 def test_is_short_entry_metadata():
@@ -31,9 +31,9 @@ def test_is_short_entry_metadata():
     entry_url = {"is_short": None, "url": "https://youtube.com/shorts/xyz123"}
     entry_normal = {"is_short": False, "url": "https://youtube.com/watch?v=456"}
 
-    assert YouTubeAPIService._is_short(duration_sec=120, title="Video", entry=entry_short) is True
-    assert YouTubeAPIService._is_short(duration_sec=120, title="Video", entry=entry_url) is True
-    assert YouTubeAPIService._is_short(duration_sec=120, title="Video", entry=entry_normal) is False
+    assert YouTubeAPIService._is_short(duration_sec=600, title="Video", entry=entry_short) is True
+    assert YouTubeAPIService._is_short(duration_sec=600, title="Video", entry=entry_url) is True
+    assert YouTubeAPIService._is_short(duration_sec=600, title="Video", entry=entry_normal) is False
 
 
 @pytest.mark.asyncio
