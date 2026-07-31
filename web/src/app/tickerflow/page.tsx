@@ -129,21 +129,14 @@ function SourceIcon({ source }: { source: Source }) {
 
 function LoadingSkeleton() {
   return (
-    <div className="mt-10 space-y-5" aria-label="Loading ticker data">
-      <div className="flex items-center justify-between rounded-lg border border-tf-signal/20 bg-tf-signal/5 px-5 py-4">
-        <div className="flex items-center gap-3">
-          <RefreshCw className="h-4 w-4 animate-spin text-tf-signal" />
-          <div>
-            <p className="text-[13px] font-medium text-tf-ink">
-              LangGraph Multi-Agent AI Engine Ingesting & Analyzing Market Chatter...
-            </p>
-            <p className="mt-0.5 text-[11px] text-tf-muted">
-              Agent 2 Validation · Agent 3 MinHash Cleaner · Agent 4 FinBERT ONNX Logits · Agent 5 LLM Narratives
-            </p>
-          </div>
-        </div>
-        <span className="rounded bg-tf-signal/10 px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-wider text-tf-signal">
-          AI Pipeline Active
+    <div className="mt-8 space-y-4" aria-label="Loading ticker data">
+      <div className="inline-flex items-center gap-2.5 rounded-full border border-tf-stroke bg-tf-panel/80 px-3.5 py-1.5 backdrop-blur-md shadow-sm">
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-tf-signal opacity-75" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-tf-signal" />
+        </span>
+        <span className="text-[12px] font-medium tracking-tight text-tf-muted animate-pulse">
+          Analyzing market chatter...
         </span>
       </div>
       <div className="tf-skeleton-shimmer h-16 rounded-lg border border-tf-stroke bg-tf-panel" />
@@ -425,6 +418,7 @@ export default function TickerFlowPage() {
       const currentRequest = ++requestId.current;
       setLoading(true);
       setError(null);
+      setData((prev) => (prev?.symbol === requestedSymbol ? prev : null));
 
       try {
         const params = new URLSearchParams({
