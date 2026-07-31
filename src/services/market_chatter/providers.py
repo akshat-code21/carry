@@ -331,6 +331,7 @@ class NativeRawProvider:
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+        self._graph_cache: dict[str, tuple[datetime, dict]] = {}
 
     async def get_ticker_snapshot(
         self, symbol: str, source: SourceName, period_days: int = 30
@@ -360,11 +361,21 @@ class NativeRawProvider:
         if not items:
             return await FixtureProvider().get_ticker_snapshot(symbol, source, period_days)
 
-        # Run LangGraph Multi-Agent Pipeline on collected raw items
+        # Run LangGraph Multi-Agent Pipeline on collected raw items (with 60s deduplication cache per symbol)
         from src.pipeline.graph import run_pipeline_for_raw_items
 
         raw_dicts = [item.model_dump(mode="json") for item in items]
-        graph_score = await run_pipeline_for_raw_items(symbol, raw_dicts, period_days)
+        cache_key = f"{symbol}:{period_days}"
+        now_dt = datetime.now(UTC)
+
+        if (
+            cache_key in self._graph_cache
+            and (now_dt - self._graph_cache[cache_key][0]).total_seconds() < 60
+        ):
+            graph_score = self._graph_cache[cache_key][1]
+        else:
+            graph_score = await run_pipeline_for_raw_items(symbol, raw_dicts, period_days)
+            self._graph_cache[cache_key] = (now_dt, graph_score)
 
         ocs = float(graph_score.get("ocs_score", 50.0))
         sentiment_normalized = round((ocs - 50.0) / 50.0, 2)  # map 0..100 to -1..+1

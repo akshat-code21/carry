@@ -130,6 +130,22 @@ function SourceIcon({ source }: { source: Source }) {
 function LoadingSkeleton() {
   return (
     <div className="mt-10 space-y-5" aria-label="Loading ticker data">
+      <div className="flex items-center justify-between rounded-lg border border-tf-signal/20 bg-tf-signal/5 px-5 py-4">
+        <div className="flex items-center gap-3">
+          <RefreshCw className="h-4 w-4 animate-spin text-tf-signal" />
+          <div>
+            <p className="text-[13px] font-medium text-tf-ink">
+              LangGraph Multi-Agent AI Engine Ingesting & Analyzing Market Chatter...
+            </p>
+            <p className="mt-0.5 text-[11px] text-tf-muted">
+              Agent 2 Validation · Agent 3 MinHash Cleaner · Agent 4 FinBERT ONNX Logits · Agent 5 LLM Narratives
+            </p>
+          </div>
+        </div>
+        <span className="rounded bg-tf-signal/10 px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-wider text-tf-signal">
+          AI Pipeline Active
+        </span>
+      </div>
       <div className="tf-skeleton-shimmer h-16 rounded-lg border border-tf-stroke bg-tf-panel" />
       <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
         {Array.from({ length: 4 }, (_, index) => (
@@ -418,12 +434,27 @@ export default function TickerFlowPage() {
         });
         const response = await fetch(
           `${API_BASE}/tickers/${requestedSymbol}?${params}`,
-          { cache: "no-store" },
+          {
+            cache: "no-store",
+            signal: AbortSignal.timeout(120000),
+          },
         );
-        const body = (await response.json()) as TickerData & { detail?: string };
+        const contentType = response.headers.get("content-type");
+        let body: (TickerData & { detail?: string }) | null = null;
+        let errorMessage = "Unable to load ticker data.";
 
-        if (!response.ok) {
-          throw new Error(body.detail ?? "Unable to load ticker data.");
+        if (contentType && contentType.includes("application/json")) {
+          body = (await response.json()) as TickerData & { detail?: string };
+          if (!response.ok) {
+            errorMessage = body.detail ?? errorMessage;
+          }
+        } else if (!response.ok) {
+          const rawText = await response.text();
+          errorMessage = rawText.length < 150 ? rawText : "Server processing error. Please try again.";
+        }
+
+        if (!response.ok || !body) {
+          throw new Error(errorMessage);
         }
 
         if (currentRequest === requestId.current) {

@@ -7,6 +7,7 @@ with imports rewritten for the yt-chatter package layout.
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 
@@ -312,48 +313,37 @@ class CollectionService:
             await session.flush()
 
             collection_period_days = self._collection_period_days()
-            for source in SourceName:
-                latest = await self._latest_snapshot(session, symbol, source)
+            async def _process_source(src: SourceName):
+                latest = await self._latest_snapshot(session, symbol, src)
                 has_required_history = await self._has_metric_coverage(
-                    session, symbol, source, collection_period_days
+                    session, symbol, src, collection_period_days
                 )
                 if (
                     latest
                     and not force
-                    and self._is_fresh(latest.fetched_at, source)
+                    and self._is_fresh(latest.fetched_at, src)
                     and has_required_history
                 ):
-                    snapshots[source] = latest
-                    statuses[source] = "cached"
-                    continue
-
-                if self._sentiment_provider.name == "adanos":
-                    if not await self._quota.reserve(session):
-                        quota_limited = True
-                        if latest:
-                            snapshots[source] = latest
-                            statuses[source] = "stale_budget_limited"
-                        else:
-                            statuses[source] = "budget_limited"
-                        continue
-                    request_count += 1
+                    return src, latest, "cached", None
 
                 try:
                     snapshot = await self._sentiment_provider.get_ticker_snapshot(
-                        symbol, source, collection_period_days
+                        symbol, src, collection_period_days
                     )
+                    return src, snapshot, "collected", None
                 except ProviderError as exc:
-                    if latest:
-                        snapshots[source] = latest
-                        statuses[source] = "stale_provider_unavailable"
-                    else:
-                        statuses[source] = "unavailable"
-                    errors[source] = str(exc)
-                    continue
+                    st_val = "stale_provider_unavailable" if latest else "unavailable"
+                    return src, latest, st_val, str(exc)
 
-                snapshots[source] = snapshot
-                statuses[source] = "collected"
-                await self._store_snapshot(session, run.id, snapshot)
+            results = await asyncio.gather(*[_process_source(src) for src in SourceName])
+            for src, snap, stat, err in results:
+                statuses[src] = stat
+                if err:
+                    errors[src] = err
+                if snap:
+                    snapshots[src] = snap
+                    if stat == "collected":
+                        await self._store_snapshot(session, run.id, snap)
 
             run.completed_sources = [source.value for source in snapshots]
             run.request_count = request_count

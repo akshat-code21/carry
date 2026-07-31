@@ -60,17 +60,18 @@ class RedditCollector(BaseCollector):
         symbol = symbol.upper()
         token = await self._ensure_token()
 
-        if token:
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "User-Agent": self.user_agent,
-            }
-            base_url = "https://oauth.reddit.com"
-        else:
-            headers = {
-                "User-Agent": f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 {self.user_agent}"
-            }
-            base_url = "https://www.reddit.com"
+        if not token:
+            # When unauthenticated, bypass blocked www.reddit.com search and use live PullPush API directly
+            pullpush_items = await self._fetch_pullpush(symbol, period_days)
+            if pullpush_items:
+                return pullpush_items
+            return self._generate_fixtures(symbol, period_days)
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "User-Agent": self.user_agent,
+        }
+        base_url = "https://oauth.reddit.com"
 
         items: list[RawItem] = []
         now = datetime.now(UTC)
@@ -143,7 +144,7 @@ class RedditCollector(BaseCollector):
         cutoff = now - timedelta(days=period_days)
 
         try:
-            resp = await self._client.get(url)
+            resp = await self._client.get(url, timeout=3.0)
             if resp.status_code == 200:
                 data = resp.json().get("data", [])
                 items: list[RawItem] = []

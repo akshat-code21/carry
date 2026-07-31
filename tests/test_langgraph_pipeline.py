@@ -96,10 +96,11 @@ def test_agent_cleaner_node(sample_raw_items: list[dict]) -> None:
     assert any(item["id"] == "reddit:p1" for item in cleaned)
 
 
-def test_agent_finbert_node(sample_raw_items: list[dict]) -> None:
+@pytest.mark.asyncio
+async def test_agent_finbert_node(sample_raw_items: list[dict]) -> None:
     val_state = agent_validation_node({"symbol": "NVDA", "period_days": 7, "raw_items": sample_raw_items, "errors": []})
     clean_state = agent_cleaner_node(val_state)
-    result = agent_finbert_node(clean_state)
+    result = await agent_finbert_node(clean_state)
     finbert_results = result["finbert_results"]
     assert len(finbert_results) == 3
     assert "reddit:p1" in finbert_results

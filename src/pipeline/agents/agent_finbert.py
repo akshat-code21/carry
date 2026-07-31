@@ -1,7 +1,4 @@
-"""Agent 4 Node — FinBERT ONNX Sentiment Inference."""
-
-from __future__ import annotations
-
+import asyncio
 import logging
 from typing import Any
 
@@ -22,8 +19,8 @@ def _get_finbert_service() -> FinBertService:
     return _finbert_service
 
 
-def agent_finbert_node(state: PipelineGraphState) -> dict[str, Any]:
-    """Agent 4: Runs local ONNX FinBERT batch inference on cleaned content."""
+async def agent_finbert_node(state: PipelineGraphState) -> dict[str, Any]:
+    """Agent 4: Runs local ONNX FinBERT batch inference on cleaned content asynchronously."""
     symbol = state.get("symbol", "").upper()
     cleaned_items = state.get("cleaned_items", [])
     errors = list(state.get("errors", []))
@@ -35,7 +32,7 @@ def agent_finbert_node(state: PipelineGraphState) -> dict[str, Any]:
     texts = [str(item.get("cleaned_text", "")) for item in cleaned_items]
 
     try:
-        results = service.analyze_texts(texts)
+        results = await asyncio.to_thread(service.analyze_texts, texts)
         finbert_map: dict[str, dict[str, Any]] = {}
 
         for item, res in zip(cleaned_items, results):

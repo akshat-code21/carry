@@ -71,6 +71,11 @@ async def get_ticker(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        log.exception("Unexpected error processing ticker %s: %s", symbol, exc)
+        raise HTTPException(
+            status_code=500, detail=f"Unable to process ticker data: {exc}"
+        ) from exc
 
 
 @router.post("/tickers/{symbol}/refresh", response_model=MCTickerResponse)
