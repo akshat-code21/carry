@@ -77,6 +77,11 @@ type TickerData = {
     mentions?: number | null;
     buzz_score?: number | null;
     close?: number | null;
+    signal?: "buy" | "sell" | "neutral" | null;
+    signal_label?: string | null;
+    confidence?: number | null;
+    catalyst_theme?: string | null;
+    key_quote?: string | null;
   }>;
   quota_remaining?: number | null;
 };
@@ -156,6 +161,33 @@ function LoadingSkeleton() {
   );
 }
 
+function CustomSignalDot(props: any) {
+  const { cx, cy, payload } = props;
+  if (!cx || !cy || !payload || !payload.signal_label) return null;
+
+  const isBuy = payload.signal === "buy";
+  const bgFill = isBuy ? "#10b981" : "#f43f5e";
+  const label = payload.signal_label; // "B" or "S"
+
+  return (
+    <g transform={`translate(${cx},${cy})`}>
+      <circle r={10} fill={bgFill} opacity={0.3} className="animate-ping" />
+      <circle r={7.5} fill={bgFill} stroke="#16190f" strokeWidth={1.5} />
+      <text
+        x={0}
+        y={3}
+        textAnchor="middle"
+        fill="#ffffff"
+        fontSize={9}
+        fontWeight="bold"
+        fontFamily="monospace"
+      >
+        {label}
+      </text>
+    </g>
+  );
+}
+
 function ChartTooltip({
   active,
   payload,
@@ -167,16 +199,35 @@ function ChartTooltip({
 }) {
   if (!active || !payload?.length || !label) return null;
 
+  const pointData = (payload[0] as any)?.payload;
+  const hasSignal = pointData?.signal_label;
+  const isBuy = pointData?.signal === "buy";
+
   return (
-    <div className="min-w-44 rounded-md border border-tf-stroke-strong bg-tf-panel-raised px-3 py-2.5 shadow-2xl shadow-black/30">
-      <p className="mb-2 border-b border-tf-stroke pb-2 font-mono text-[10px] uppercase tracking-[0.08em] text-tf-muted">
-        {new Date(`${label}T00:00:00`).toLocaleDateString(undefined, {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })}
-      </p>
-      <div className="space-y-1.5">
+    <div className="min-w-52 max-w-72 rounded-lg border border-tf-stroke-strong bg-tf-panel-raised p-3 shadow-2xl shadow-black/40">
+      <div className="flex items-center justify-between border-b border-tf-stroke pb-2">
+        <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-tf-muted">
+          {new Date(`${label}T00:00:00`).toLocaleDateString(undefined, {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })}
+        </p>
+        {hasSignal && (
+          <span
+            className={cn(
+              "flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider",
+              isBuy
+                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                : "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+            )}
+          >
+            {isBuy ? "B" : "S"}
+          </span>
+        )}
+      </div>
+
+      <div className="mt-2.5 space-y-1.5">
         {payload.map((entry) => (
           <div
             key={String(entry.dataKey)}
@@ -198,6 +249,22 @@ function ChartTooltip({
           </div>
         ))}
       </div>
+
+      {hasSignal && pointData?.catalyst_theme && (
+        <div className="mt-3 border-t border-tf-stroke/60 pt-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-tf-faint">
+            Social Catalyst Theme
+          </p>
+          <p className="mt-0.5 text-[11px] font-medium text-tf-ink line-clamp-2">
+            {pointData.catalyst_theme}
+          </p>
+          {pointData.key_quote && (
+            <p className="mt-1 text-[10px] italic text-tf-muted line-clamp-2">
+              "{pointData.key_quote}"
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -309,9 +376,9 @@ function DualLineChart({
             name="Closing price"
             stroke="#efb864"
             strokeWidth={1.5}
-            dot={false}
+            dot={<CustomSignalDot />}
             activeDot={{
-              r: 4,
+              r: 5,
               fill: "#efb864",
               stroke: "#111411",
               strokeWidth: 2,

@@ -523,23 +523,75 @@ class CollectionService:
         metric_by_date = {metric.metric_date: metric for metric in metrics}
         price_by_date = {bar.date: bar.close for bar in prices}
         dates = sorted(set(metric_by_date) | set(price_by_date))
-        chart = [
-            ChartPoint(
-                date=metric_date,
-                mentions=(
-                    metric_by_date[metric_date].mentions
-                    if metric_date in metric_by_date
-                    else None
-                ),
-                buzz_score=(
-                    metric_by_date[metric_date].buzz_score
-                    if metric_date in metric_by_date
-                    else None
-                ),
-                close=price_by_date.get(metric_date),
+        # Extract top catalyst card or quote from snapshots if available
+        top_driver_card = None
+        for snapshot in collection.snapshots.values():
+            d_cards = snapshot.raw_payload.get("driver_cards") or []
+            if d_cards:
+                top_driver_card = d_cards[0]
+                break
+
+        chart = []
+        for metric_date in dates:
+            metric_item = metric_by_date.get(metric_date)
+            close_price = price_by_date.get(metric_date)
+            mentions_val = metric_item.mentions if metric_item else None
+            buzz_val = metric_item.buzz_score if metric_item else None
+
+            sig_type: str | None = None
+            sig_label: str | None = None
+            conf_val: float | None = None
+            theme_val: str | None = None
+            quote_val: str | None = None
+
+            if metric_item and metric_item.bullish_pct is not None:
+                b_pct = metric_item.bullish_pct
+                if b_pct >= 65.0:
+                    sig_type = "buy"
+                    sig_label = "B"
+                    conf_val = round(b_pct / 100.0, 2)
+                    theme_val = (
+                        top_driver_card.get("driver")
+                        if top_driver_card
+                        else "Bullish Chatter & Catalyst Momentum"
+                    )
+                    quote_val = (
+                        top_driver_card.get("evidence")
+                        if top_driver_card
+                        else f"Social chatter consensus reached {b_pct:.1f}% bullish sentiment."
+                    )
+                elif b_pct <= 40.0:
+                    sig_type = "sell"
+                    sig_label = "S"
+                    conf_val = round((100.0 - b_pct) / 100.0, 2)
+                    theme_val = (
+                        top_driver_card.get("driver")
+                        if top_driver_card
+                        else "Bearish Chatter & Pullback Risk"
+                    )
+                    quote_val = (
+                        top_driver_card.get("evidence")
+                        if top_driver_card
+                        else f"Social chatter consensus dropped to {b_pct:.1f}% bullish sentiment."
+                    )
+                else:
+                    sig_type = "neutral"
+                    sig_label = None
+                    conf_val = 0.5
+
+            chart.append(
+                ChartPoint(
+                    date=metric_date,
+                    mentions=mentions_val,
+                    buzz_score=buzz_val,
+                    close=close_price,
+                    signal=sig_type,
+                    signal_label=sig_label,
+                    confidence=conf_val,
+                    catalyst_theme=theme_val,
+                    key_quote=quote_val,
+                )
             )
-            for metric_date in dates
-        ]
         chart_metric = (
             "mentions"
             if any(metric.mentions is not None for metric in metrics)

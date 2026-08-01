@@ -95,6 +95,11 @@ class ChartPoint(BaseModel):
     mentions: int | None = None
     buzz_score: float | None = None
     close: float | None = None
+    signal: Literal["buy", "sell", "neutral"] | None = None
+    signal_label: str | None = None  # "B" | "S"
+    confidence: float | None = None  # 0 to 1.0
+    catalyst_theme: str | None = None
+    key_quote: str | None = None
 
 
 class MCTickerResponse(BaseModel):
