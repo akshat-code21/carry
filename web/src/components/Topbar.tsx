@@ -107,7 +107,7 @@ export function Topbar({ onMenuClick, onOpenCommandPalette }: TopbarProps) {
         >
           <div className="flex items-center gap-2">
             <Search className="h-3.5 w-3.5 text-ink-faint" />
-            <span className="font-mono text-caption">Search the tape…</span>
+            <span className="font-mono text-caption">Search...</span>
           </div>
           <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-line bg-canvas px-1.5 font-mono text-micro font-medium text-ink-faint">
             <span className="text-caption">⌘</span>K
@@ -183,9 +183,8 @@ export function Topbar({ onMenuClick, onOpenCommandPalette }: TopbarProps) {
                         key={event.id}
                         href={href}
                         onClick={() => handleClickEvent(event)}
-                        className={`block border-b border-line px-3 py-2.5 transition-colors hover:bg-panel-raised ${
-                          event.read_at ? "opacity-70" : ""
-                        }`}
+                        className={`block border-b border-line px-3 py-2.5 transition-colors hover:bg-panel-raised ${event.read_at ? "opacity-70" : ""
+                          }`}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <span
