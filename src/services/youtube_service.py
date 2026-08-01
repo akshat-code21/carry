@@ -364,11 +364,17 @@ class YouTubeTranscriptFetcher(TranscriptSource):
                 f"Caption fetch failed for {video_id}, will attempt Whisper fallback: {e}"
             )
 
-        # Fallback: yt-dlp + Whisper (not implemented in v1 — requires local Whisper)
-        raise NotImplementedError(
-            f"Whisper fallback not yet implemented. Caption fetch failed for {video_id}. "
-            "Set up whisper or faster-whisper for ASR fallback."
-        )
+        # Fallback: yt-dlp + faster-whisper
+        try:
+            return await self._fetch_via_whisper(video_id)
+        except Exception as whisper_err:
+            logger.error(
+                f"Whisper fallback also failed for {video_id}: {whisper_err}"
+            )
+            raise ValueError(
+                f"All transcript methods failed for {video_id}. "
+                f"Captions unavailable and Whisper fallback error: {whisper_err}"
+            ) from whisper_err
 
     async def _fetch_via_api(self, video_id: str) -> list[TranscriptSegmentDTO]:
         """Fetch transcript using youtube-transcript-api."""
@@ -399,3 +405,97 @@ class YouTubeTranscriptFetcher(TranscriptSource):
             )
             for seg in raw_segments
         ]
+
+    async def _fetch_via_whisper(self, video_id: str) -> list[TranscriptSegmentDTO]:
+        """Download audio via yt-dlp and transcribe with faster-whisper."""
+        import shutil
+        import tempfile
+
+        from faster_whisper import WhisperModel
+
+        model_size = settings.whisper_model_size
+        url = f"https://www.youtube.com/watch?v={video_id}"
+        tmp_dir = tempfile.mkdtemp(prefix="yt_whisper_")
+
+        try:
+            # Step 1: Download audio with yt-dlp
+            audio_path = await self._download_audio(url, tmp_dir)
+
+            # Step 2: Transcribe with faster-whisper
+            logger.info(
+                f"Starting Whisper transcription for {video_id} "
+                f"(model: {model_size})"
+            )
+            model = WhisperModel(model_size, device="cpu", compute_type="int8")
+            segments_iter, info = model.transcribe(
+                audio_path, beam_size=5, language="en"
+            )
+
+            segments: list[TranscriptSegmentDTO] = []
+            for seg in segments_iter:
+                segments.append(
+                    TranscriptSegmentDTO(
+                        start_sec=seg.start,
+                        end_sec=seg.end,
+                        text=seg.text.strip(),
+                    )
+                )
+
+            logger.info(
+                f"Whisper transcription complete for {video_id}: "
+                f"{len(segments)} segments, language={info.language}, "
+                f"duration={info.duration:.1f}s"
+            )
+
+            if not segments:
+                raise ValueError(
+                    f"Whisper produced no segments for {video_id}"
+                )
+
+            return segments
+
+        finally:
+            # Always clean up temp files
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    async def _download_audio(self, url: str, output_dir: str) -> str:
+        """Download audio from a YouTube URL using yt-dlp. Returns path to audio file."""
+        import glob
+        import subprocess
+
+        output_template = f"{output_dir}/audio.%(ext)s"
+        cmd = [
+            "yt-dlp",
+            "--no-playlist",
+            "-x",                       # extract audio only
+            "--audio-format", "wav",     # wav for whisper compatibility
+            "--audio-quality", "0",      # best quality
+            "-o", output_template,
+            "--no-warnings",
+            url,
+        ]
+
+        logger.info(f"Downloading audio: {url}")
+        proc = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: subprocess.run(
+                cmd, capture_output=True, text=True, timeout=300
+            ),
+        )
+
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"yt-dlp failed (exit {proc.returncode}): {proc.stderr[:500]}"
+            )
+
+        # Find the downloaded file
+        audio_files = glob.glob(f"{output_dir}/audio.*")
+        if not audio_files:
+            raise FileNotFoundError(
+                f"yt-dlp completed but no audio file found in {output_dir}"
+            )
+
+        audio_path = audio_files[0]
+        logger.info(f"Audio downloaded: {audio_path}")
+        return audio_path
+

@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { QueryProvider } from "@/components/QueryProvider";
 import { AppShell } from "@/components/AppShell";
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,6 +51,7 @@ export default function RootLayout({
         <ThemeProvider>
           <QueryProvider>
             <AppShell>{children}</AppShell>
+            <ReactQueryDevtools initialIsOpen={false} />
           </QueryProvider>
         </ThemeProvider>
       </body>
