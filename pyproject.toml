@@ -25,6 +25,7 @@ dependencies = [
     "youtube-transcript-api>=0.6.0",
     "google-api-python-client>=2.150.0",
     "yt-dlp>=2024.12.0",
+    "faster-whisper>=1.0.0",
     # Market data
     "yfinance>=0.2.40",
     "fredapi>=0.5.0",

@@ -57,7 +57,9 @@ class AnalysisPipeline:
 
         if video.transcript_status != "fetched":
             raise ValueError(
-                f"Video transcript not ready (status: {video.transcript_status})"
+                f"Video transcript not ready for '{video.title}' "
+                f"(id={video_id}, status={video.transcript_status}). "
+                f"Re-run transcript ingestion or check Whisper fallback logs."
             )
 
         seg_result = await self.db.execute(

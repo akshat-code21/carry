@@ -65,6 +65,9 @@ class Settings(BaseSettings):
     # Comma-separated transcript retry delays in minutes after each failed attempt
     transcript_retry_delays_minutes: str = "0,15,60,360,1440"
 
+    # Whisper model for local ASR fallback (tiny.en, base.en, small.en, etc.)
+    whisper_model_size: str = "tiny.en"
+
     # ── TickerFlow / Market-Chatter ──────────────────────────────────────
 
     # Adanos social-sentiment API
