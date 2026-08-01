@@ -102,12 +102,15 @@ async def refresh_ticker(
 
 @router.get("/tickerflow/dashboard", response_model=MCDashboardResponse)
 @router.get("/dashboard/overview", response_model=MCDashboardResponse)
+@router.get("/market-chatter/dashboard", response_model=MCDashboardResponse)
 async def get_tickerflow_dashboard(
     period_days: int = Query(default=7, ge=1, le=90),
+    days: int | None = Query(default=None, ge=1, le=90),
     db: AsyncSession = Depends(get_db),
 ) -> MCDashboardResponse:
     """Get aggregate TickerFlow social sentiment dashboard stats."""
     from src.services.market_chatter.dashboard_service import DashboardService
 
+    effective_period = days if days is not None else period_days
     dashboard_service = DashboardService()
-    return await dashboard_service.get_dashboard_data(db, period_days=period_days)
+    return await dashboard_service.get_dashboard_data(db, period_days=effective_period)

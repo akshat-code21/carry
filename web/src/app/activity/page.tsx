@@ -1,147 +1,117 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { api, type ActivityEvent } from "@/lib/api";
+import { useState } from "react";
+import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-function eventLabel(type: string): string {
-  switch (type) {
-    case "video_detected":
-      return "Detected";
-    case "video_processed":
-      return "Ready";
-    case "video_failed":
-      return "Failed";
-    default:
-      return type;
-  }
-}
-
-function eventBadgeClass(type: string): string {
-  switch (type) {
-    case "video_detected":
-      return "bg-blue-500/15 text-blue-600 dark:text-blue-400";
-    case "video_processed":
-      return "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400";
-    case "video_failed":
-      return "bg-red-500/15 text-red-600 dark:text-red-400";
-    default:
-      return "bg-muted text-muted-foreground";
-  }
-}
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
+import { eventLabel, eventBadgeClass } from "@/lib/activity";
+import { Bell, CheckCheck } from "lucide-react";
+import { useActivity } from "@/lib/hooks";
 
 export default function ActivityPage() {
-  const [events, setEvents] = useState<ActivityEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const { data: events = [], isLoading, isError, error, refetch } = useActivity({ limit: 100, unreadOnly });
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const handleMarkAllRead = async () => {
     try {
-      const list = await api.getActivity({ limit: 100, unreadOnly });
-      setEvents(list);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load activity");
-    } finally {
-      setLoading(false);
+      await api.markAllActivityRead();
+      refetch();
+    } catch (err) {
+      console.error(err);
     }
-  }, [unreadOnly]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const markAll = async () => {
-    await api.markAllActivityRead();
-    await load();
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Activity</h1>
-          <p className="text-sm text-muted-foreground">
-            New videos detected on tracked channels and processing status.
-          </p>
-        </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Activity Log"
+        description="System events, ingested videos, processing notifications, and errors."
+      >
         <div className="flex items-center gap-2">
           <Button
             variant={unreadOnly ? "default" : "outline"}
             size="sm"
-            onClick={() => setUnreadOnly((v) => !v)}
+            onClick={() => setUnreadOnly(!unreadOnly)}
           >
-            {unreadOnly ? "Showing unread" : "Show unread only"}
+            {unreadOnly ? "Showing Unread Only" : "Filter Unread"}
           </Button>
-          <Button variant="outline" size="sm" onClick={markAll}>
+          <Button variant="outline" size="sm" onClick={handleMarkAllRead} className="gap-1.5">
+            <CheckCheck className="h-4 w-4 text-muted-foreground" />
             Mark all read
           </Button>
         </div>
-      </div>
+      </PageHeader>
 
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Feed</CardTitle>
+        <CardHeader className="py-4">
+          <CardTitle className="text-base font-semibold">Events ({events.length})</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-0 p-0">
-          {loading && (
+        <CardContent className="p-0">
+          {isLoading && (
             <p className="px-6 py-8 text-center text-sm text-muted-foreground">
-              Loading…
+              Loading events...
             </p>
           )}
-          {error && (
-            <p className="px-6 py-8 text-center text-sm text-red-500">{error}</p>
+
+          {isError && (
+            <div className="p-4">
+              <ErrorState message={error instanceof Error ? error.message : "Failed to load activity log."} onRetry={refetch} />
+            </div>
           )}
-          {!loading && !error && events.length === 0 && (
-            <p className="px-6 py-8 text-center text-sm text-muted-foreground">
-              No activity yet. Once WebSub is configured, new channel uploads appear
-              here automatically.
-            </p>
+
+          {!isLoading && !isError && events.length === 0 && (
+            <div className="p-6">
+              <EmptyState
+                icon={<Bell className="h-6 w-6" />}
+                title="No activity events"
+                description={unreadOnly ? "You have no unread notifications." : "No events recorded yet."}
+              />
+            </div>
           )}
-          {!loading &&
-            !error &&
-            events.map((event) => {
-              const href = event.video_id
-                ? `/videos/${event.video_id}`
-                : `/channels/${event.channel_id}`;
-              return (
-                <Link
-                  key={event.id}
-                  href={href}
-                  className={`flex flex-col gap-1 border-t px-6 py-4 transition-colors hover:bg-muted/40 ${
-                    event.read_at ? "opacity-70" : ""
+
+          {!isLoading && !isError && events.length > 0 && (
+            <div className="divide-y divide-border">
+              {events.map((evt) => (
+                <div
+                  key={evt.id}
+                  className={`flex flex-col gap-1 p-4 transition-colors sm:flex-row sm:items-center sm:justify-between ${
+                    !evt.read_at ? "bg-muted/30" : ""
                   }`}
-                  onClick={async () => {
-                    if (!event.read_at) {
-                      try {
-                        await api.markActivityRead(event.id);
-                      } catch {
-                        // ignore
-                      }
-                    }
-                  }}
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-start gap-3">
                     <span
-                      className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${eventBadgeClass(
-                        event.event_type
+                      className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wider ${eventBadgeClass(
+                        evt.event_type
                       )}`}
                     >
-                      {eventLabel(event.event_type)}
+                      {eventLabel(evt.event_type)}
                     </span>
-                    <time className="text-xs text-muted-foreground">
-                      {new Date(event.created_at).toLocaleString()}
-                    </time>
+                    <div>
+                      <p className="text-sm font-medium leading-snug">{evt.title}</p>
+                      {evt.message && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{evt.message}</p>
+                      )}
+                      {evt.video_id && (
+                        <Link
+                          href={`/videos/${evt.video_id}`}
+                          className="mt-1 inline-block text-xs text-primary hover:underline font-medium"
+                        >
+                          View Video →
+                        </Link>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-sm font-medium leading-snug">{event.title}</p>
-                  <p className="text-sm text-muted-foreground">{event.message}</p>
-                </Link>
-              );
-            })}
+                  <span className="text-xs text-muted-foreground shrink-0 font-mono">
+                    {new Date(evt.created_at).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

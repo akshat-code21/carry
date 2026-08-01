@@ -21,6 +21,20 @@ import {
   ReferenceDot,
 } from "recharts";
 import { PredictionSentimentChart } from "@/components/PredictionSentimentChart";
+import { PageHeader } from "@/components/PageHeader";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { ErrorState } from "@/components/ErrorState";
+import { DetailSkeleton } from "@/components/skeletons/LayoutSkeletons";
+import { useTicker, useTickerSentiment, useTickerPriceHistory } from "@/lib/hooks";
+import { useChartColors } from "@/lib/useChartColors";
+
+/**
+ * Reads a CSS custom property from :root / .dark and returns its computed value.
+ */
+function getCSSVar(name: string, fallback: string): string {
+  if (typeof window === "undefined") return fallback;
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+}
 
 function SignalMarker({
   cx,
@@ -32,10 +46,13 @@ function SignalMarker({
   signal: "B" | "S";
 }) {
   if (cx == null || cy == null) return null;
-  const color = signal === "B" ? "#22c55e" : "#ef4444";
+  const successColor = getCSSVar("--success", "#22c55e");
+  const dangerColor = getCSSVar("--danger", "#ef4444");
+  const bgColor = getCSSVar("--background", "#0a0a0a");
+  const color = signal === "B" ? successColor : dangerColor;
   return (
     <g>
-      <circle cx={cx} cy={cy} r={10} fill={color} stroke="#0a0a0a" strokeWidth={1.5} />
+      <circle cx={cx} cy={cy} r={10} fill={color} stroke={bgColor} strokeWidth={1.5} />
       <text
         x={cx}
         y={cy}
@@ -77,59 +94,77 @@ const PRICE_RANGE_OPTIONS: { label: string; days: number }[] = [
   { label: "All", days: 3650 },
 ];
 
+const PriceTooltip = ({ active, payload }: any) => {
+  if (!active || !payload || !payload.length) return null;
+  const data = payload[0].payload;
+  const closePrice = typeof data.close === "number" ? data.close.toFixed(2) : data.close;
+
+  return (
+    <div className="z-50 rounded-lg border bg-popover px-3.5 py-2.5 text-popover-foreground shadow-md">
+      <p className="text-xs font-medium text-muted-foreground">{data.label || data.date}</p>
+      <p className="mt-1 text-sm font-bold font-mono text-foreground">
+        Close Price: <span className="text-primary">${closePrice}</span>
+      </p>
+    </div>
+  );
+};
+
+const PerfTooltip = ({ active, payload }: any) => {
+  if (!active || !payload || !payload.length) return null;
+  const data = payload[0].payload;
+
+  return (
+    <div className="z-50 rounded-lg border bg-popover px-3.5 py-2.5 text-popover-foreground shadow-md space-y-1">
+      <p className="text-xs font-medium text-muted-foreground">{data.name}</p>
+      {payload.map((entry: any, i: number) => (
+        <p key={i} className="text-xs font-mono" style={{ color: entry.color }}>
+          {entry.name}: ${typeof entry.value === "number" ? entry.value.toFixed(2) : entry.value}
+        </p>
+      ))}
+    </div>
+  );
+};
+
+const MentionsTooltip = ({ active, payload }: any) => {
+  if (!active || !payload || !payload.length) return null;
+  const data = payload[0].payload;
+
+  return (
+    <div className="z-50 rounded-lg border bg-popover px-3.5 py-2.5 text-popover-foreground shadow-md space-y-1">
+      <p className="text-xs font-medium text-muted-foreground">{data.label || data.date}</p>
+      <div className="flex items-center gap-3 text-xs font-mono">
+        <span className="text-success font-semibold">Bullish: {data.bullish_count || 0}</span>
+        <span className="text-danger font-semibold">Bearish: {data.bearish_count || 0}</span>
+      </div>
+    </div>
+  );
+};
+
 export default function TickerPage() {
   const params = useParams();
   const ticker = params.ticker as string;
 
-  const [data, setData] = useState<any>(null);
-  const [sentimentTimeline, setSentimentTimeline] = useState<any[]>([]);
-  const [priceHistory, setPriceHistory] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [priceRangeDays, setPriceRangeDays] = useState(30);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [res, timelineRes] = await Promise.all([
-          api.getTicker(ticker),
-          api.getTickerSentimentTimeline(ticker).catch(() => []),
-        ]);
-        setData(res);
-        setSentimentTimeline(timelineRes || []);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [ticker]);
+  const { data, isLoading } = useTicker(ticker);
+  const { data: sentimentTimeline = [] } = useTickerSentiment(ticker);
+  const { data: priceHistory = [] } = useTickerPriceHistory(ticker, priceRangeDays);
 
-  useEffect(() => {
-    async function loadPriceHistory() {
-      try {
-        const priceRes = await api.getTickerPriceHistory(ticker, priceRangeDays).catch(() => []);
-        setPriceHistory(priceRes || []);
-      } catch (err) {
-        console.error(err);
-      }
-    }
-    loadPriceHistory();
-  }, [ticker, priceRangeDays]);
+  const chartColors = useChartColors();
+  const successColor = chartColors.success;
+  const dangerColor = chartColors.danger;
+  const mutedFgColor = chartColors.mutedForeground;
+  const chart1Color = chartColors.chart1;
+  const chart2Color = chartColors.chart2;
 
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+  if (isLoading) {
+    return <DetailSkeleton />;
   }
 
   if (!data) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 py-20">
-        <h2 className="text-2xl font-bold">Ticker Not Found</h2>
-        <p className="text-muted-foreground">No data found for {ticker}</p>
+      <div className="p-8">
+        <ErrorState title="Ticker Not Found" message={`No market intelligence found for $${ticker}`} />
       </div>
     );
   }
@@ -171,10 +206,17 @@ export default function TickerPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight uppercase">{ticker}</h1>
-        <p className="text-muted-foreground">
-          Market Intelligence & Video Predictions for {ticker}
-        </p>
+        <Breadcrumbs
+          items={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Tickers", href: "/dashboard" },
+            { label: `$${ticker.toUpperCase()}` },
+          ]}
+        />
+        <PageHeader
+          title={`$${ticker.toUpperCase()}`}
+          description={`Market Intelligence & Video Predictions for ${ticker.toUpperCase()}`}
+        />
       </div>
 
       {/* Video Level Prediction Trajectory Chart */}
@@ -213,8 +255,8 @@ export default function TickerPage() {
                   <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                   <XAxis dataKey="label" />
                   <YAxis domain={["auto", "auto"]} />
-                  <Tooltip labelStyle={{ color: "#000000", fontWeight: 600 }} />
-                  <Line type="monotone" dataKey="close" stroke="#8884d8" dot={false} name="Close Price" strokeWidth={2} />
+                  <Tooltip content={<PriceTooltip />} wrapperStyle={{ outline: "none" }} />
+                  <Line type="monotone" dataKey="close" stroke={chart1Color} dot={false} name="Close Price" strokeWidth={2} />
                   {signalMarkers.map((m, i) => (
                     <ReferenceDot
                       key={i}
@@ -245,10 +287,10 @@ export default function TickerPage() {
                   <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                   <XAxis dataKey="name" />
                   <YAxis domain={["auto", "auto"]} />
-                  <Tooltip labelStyle={{ color: "#000000", fontWeight: 600 }} />
+                  <Tooltip content={<PerfTooltip />} wrapperStyle={{ outline: "none" }} />
                   <Legend />
-                  <Line type="monotone" dataKey="price" stroke="#8884d8" name="Price at Prediction" strokeWidth={2} />
-                  <Line type="monotone" dataKey="price_1w" stroke="#82ca9d" name="Price 1W Later" strokeWidth={2} />
+                  <Line type="monotone" dataKey="price" stroke={chart1Color} name="Price at Prediction" strokeWidth={2} />
+                  <Line type="monotone" dataKey="price_1w" stroke={chart2Color} name="Price 1W Later" strokeWidth={2} />
                   {data.predictions?.map((pred: any, i: number) => {
                     const perf = data.performance?.find((p: any) => p.prediction_id === pred.id);
                     if (!perf) return null;
@@ -259,7 +301,7 @@ export default function TickerPage() {
                         x={dateStr}
                         y={perf.price_at_video}
                         r={7}
-                        fill={pred.direction === "bullish" ? "#22c55e" : pred.direction === "bearish" ? "#ef4444" : "#64748b"}
+                        fill={pred.direction === "bullish" ? successColor : pred.direction === "bearish" ? dangerColor : mutedFgColor}
                         stroke="#ffffff"
                         strokeWidth={2}
                       />
@@ -294,10 +336,10 @@ export default function TickerPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="label" />
                   <YAxis allowDecimals={false} />
-                  <Tooltip labelStyle={{ color: "#000000", fontWeight: 600 }} />
+                  <Tooltip content={<MentionsTooltip />} wrapperStyle={{ outline: "none" }} />
                   <Legend />
-                  <Bar dataKey="bullish_count" name="Bullish" fill="#22c55e" />
-                  <Bar dataKey="bearish_count" name="Bearish" fill="#ef4444" />
+                  <Bar dataKey="bullish_count" name="Bullish" fill={successColor} />
+                  <Bar dataKey="bearish_count" name="Bearish" fill={dangerColor} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -354,7 +396,7 @@ export default function TickerPage() {
 
                   <div className="flex items-center justify-between pt-1">
                     {p.accurate !== null && p.accurate !== undefined ? (
-                      <Badge variant="outline" className={p.accurate ? "border-green-500 text-green-500 bg-green-500/10 text-xs" : "border-red-500 text-red-500 bg-red-500/10 text-xs"}>
+                      <Badge variant="outline" className={p.accurate ? "border-success text-success bg-success/10 text-xs" : "border-danger text-danger bg-danger/10 text-xs"}>
                         {p.accurate ? "Accurate ✅" : "Inaccurate ❌"}
                       </Badge>
                     ) : <div />}

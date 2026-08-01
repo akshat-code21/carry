@@ -68,7 +68,7 @@ export function DashboardOverview({
               <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-tf-muted">
                 Tracked Universe
               </span>
-              <Flame className="h-4 w-4 text-amber-400" />
+              <Flame className="h-4 w-4 text-tf-warning" />
             </div>
             <div className="mt-4">
               <AnimatedCounter
@@ -87,14 +87,14 @@ export function DashboardOverview({
               <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-tf-muted">
                 Market Sentiment Index
               </span>
-              <TrendingUp className="h-4 w-4 text-emerald-400" />
+              <TrendingUp className="h-4 w-4 text-tf-positive" />
             </div>
             <div className="mt-4">
               <AnimatedCounter
                 value={summary.overall_bullish_pct}
                 decimals={1}
                 suffix="%"
-                className="text-[34px] font-medium leading-none tracking-[-0.06em] text-emerald-400"
+                className="text-[34px] font-medium leading-none tracking-[-0.06em] text-tf-positive"
               />
               <p className="mt-2 text-[11px] text-tf-faint">
                 Weighted average OCS bullish sentiment
@@ -180,7 +180,7 @@ export function DashboardOverview({
                       ${item.symbol}
                     </span>
                     {item.is_etf ? (
-                      <span className="rounded bg-amber-400/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-amber-400 border border-amber-400/20">
+                      <span className="rounded bg-tf-warning/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-tf-warning border border-tf-warning/20">
                         ETF
                       </span>
                     ) : (
@@ -209,7 +209,7 @@ export function DashboardOverview({
                   <span className="text-[10px] uppercase tracking-wider text-tf-faint block">
                     Bullish OCS
                   </span>
-                  <span className="font-mono text-[16px] font-medium text-emerald-400">
+                  <span className="font-mono text-[16px] font-medium text-tf-positive">
                     {item.bullish_pct}%
                   </span>
                 </div>
@@ -217,7 +217,7 @@ export function DashboardOverview({
 
               <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-tf-stroke">
                 <div
-                  className="h-full bg-emerald-400 transition-all duration-500"
+                  className="h-full bg-tf-positive transition-all duration-500"
                   style={{ width: `${Math.min(100, Math.max(0, item.bullish_pct))}%` }}
                 />
               </div>
@@ -229,7 +229,7 @@ export function DashboardOverview({
       {/* ── Sentiment Leaderboard (Bullish vs Bearish) ────────────────────────── */}
       <section className="grid grid-cols-2 gap-6 max-lg:grid-cols-1">
         <GlowCard glowColor="signal" className="p-5">
-          <div className="flex items-center gap-2 border-b border-tf-stroke pb-3 text-emerald-400">
+          <div className="flex items-center gap-2 border-b border-tf-stroke pb-3 text-tf-positive">
             <TrendingUp className="h-5 w-5" />
             <h3 className="text-[15px] font-semibold text-tf-ink">
               Top Bullish Sentiment Leaders
@@ -240,7 +240,7 @@ export function DashboardOverview({
               <div
                 key={`bullish-${item.symbol}`}
                 onClick={() => onSelectTicker(item.symbol)}
-                className="flex items-center justify-between rounded-lg border border-tf-stroke/40 bg-tf-canvas p-3 transition-colors hover:border-emerald-500/30 cursor-pointer"
+                className="flex items-center justify-between rounded-lg border border-tf-stroke/40 bg-tf-canvas p-3 transition-colors hover:border-tf-positive/30 cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-[15px] font-semibold text-tf-ink">
@@ -250,7 +250,7 @@ export function DashboardOverview({
                     {item.company_name}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 font-mono text-[14px] font-semibold text-emerald-400">
+                <div className="flex items-center gap-2 font-mono text-[14px] font-semibold text-tf-positive">
                   {item.bullish_pct}%
                 </div>
               </div>
@@ -259,7 +259,7 @@ export function DashboardOverview({
         </GlowCard>
 
         <GlowCard glowColor="neutral" className="p-5">
-          <div className="flex items-center gap-2 border-b border-tf-stroke pb-3 text-rose-400">
+          <div className="flex items-center gap-2 border-b border-tf-stroke pb-3 text-tf-negative">
             <ShieldAlert className="h-5 w-5" />
             <h3 className="text-[15px] font-semibold text-tf-ink">
               Top Bearish / Pullback Risks
@@ -270,7 +270,7 @@ export function DashboardOverview({
               <div
                 key={`bearish-${item.symbol}`}
                 onClick={() => onSelectTicker(item.symbol)}
-                className="flex items-center justify-between rounded-lg border border-tf-stroke/40 bg-tf-canvas p-3 transition-colors hover:border-rose-500/30 cursor-pointer"
+                className="flex items-center justify-between rounded-lg border border-tf-stroke/40 bg-tf-canvas p-3 transition-colors hover:border-tf-negative/30 cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-[15px] font-semibold text-tf-ink">
@@ -280,7 +280,7 @@ export function DashboardOverview({
                     {item.company_name}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 font-mono text-[14px] font-semibold text-rose-400">
+                <div className="flex items-center gap-2 font-mono text-[14px] font-semibold text-tf-negative">
                   {item.bullish_pct}%
                 </div>
               </div>
@@ -299,7 +299,7 @@ export function DashboardOverview({
           <div className="mt-5 grid grid-cols-3 gap-4 max-sm:grid-cols-1">
             <div className="rounded-lg border border-tf-stroke bg-tf-canvas p-4">
               <div className="flex items-center gap-2 text-tf-muted">
-                <MessageCircle className="h-4 w-4 text-amber-400" />
+                <MessageCircle className="h-4 w-4 text-tf-warning" />
                 <span className="text-[12px] font-medium">Reddit Retail</span>
               </div>
               <p className="mt-2 font-mono text-[22px] font-medium text-tf-ink">
@@ -308,7 +308,7 @@ export function DashboardOverview({
             </div>
             <div className="rounded-lg border border-tf-stroke bg-tf-canvas p-4">
               <div className="flex items-center gap-2 text-tf-muted">
-                <AtSign className="h-4 w-4 text-sky-400" />
+                <AtSign className="h-4 w-4 text-tf-signal" />
                 <span className="text-[12px] font-medium">X / FinTwit</span>
               </div>
               <p className="mt-2 font-mono text-[22px] font-medium text-tf-ink">
@@ -317,7 +317,7 @@ export function DashboardOverview({
             </div>
             <div className="rounded-lg border border-tf-stroke bg-tf-canvas p-4">
               <div className="flex items-center gap-2 text-tf-muted">
-                <Newspaper className="h-4 w-4 text-emerald-400" />
+                <Newspaper className="h-4 w-4 text-tf-positive" />
                 <span className="text-[12px] font-medium">Financial News</span>
               </div>
               <p className="mt-2 font-mono text-[22px] font-medium text-tf-ink">

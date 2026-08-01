@@ -33,6 +33,7 @@ import { MCFooter } from "@/components/market-chatter/MCFooter";
 import { GlowCard } from "@/components/market-chatter/GlowCard";
 import { GradientText } from "@/components/market-chatter/GradientText";
 import { SectionLabel } from "@/components/market-chatter/SectionLabel";
+import { useTickerFlowDashboard } from "@/lib/hooks";
 import { StatusBadge } from "@/components/market-chatter/StatusBadge";
 import { DashboardOverview } from "@/components/market-chatter/DashboardOverview";
 import { api, MCDashboardData } from "@/lib/api";
@@ -477,29 +478,13 @@ export default function TickerFlowPage() {
   const [query, setQuery] = useState("");
   const [activeSymbol, setActiveSymbol] = useState("");
   const [viewMode, setViewMode] = useState<"overview" | "detail">("overview");
-  const [dashboardData, setDashboardData] = useState<MCDashboardData | null>(null);
-  const [dashboardLoading, setDashboardLoading] = useState(false);
-  const [source, setSource] = useState<Source>("reddit");
   const [period, setPeriod] = useState(7);
+  const { data: dashboardData = null, isLoading: dashboardLoading } = useTickerFlowDashboard(period);
+  const [source, setSource] = useState<Source>("reddit");
   const [data, setData] = useState<TickerData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestId = useRef(0);
-
-  useEffect(() => {
-    async function loadDashboard() {
-      setDashboardLoading(true);
-      try {
-        const dbData = await api.getTickerFlowDashboard(period);
-        setDashboardData(dbData);
-      } catch (err) {
-        console.error("Dashboard overview load failed:", err);
-      } finally {
-        setDashboardLoading(false);
-      }
-    }
-    void loadDashboard();
-  }, [period]);
 
   const fetchTicker = useCallback(
     async (requestedSymbol: string, refresh = false) => {
@@ -691,7 +676,7 @@ export default function TickerFlowPage() {
                     viewMode === "detail" && "bg-tf-panel-raised text-tf-ink shadow-sm",
                   )}
                 >
-                  <ChartIcon className="h-3 w-3 text-amber-400" />
+                  <ChartIcon className="h-3 w-3 text-tf-price" />
                   {activeSymbol ? `$${activeSymbol} Analysis` : "Single Ticker"}
                 </button>
               </div>
@@ -731,11 +716,22 @@ export default function TickerFlowPage() {
           )}
         </AnimatePresence>
 
+        {viewMode === "overview" && dashboardLoading && !dashboardData && <LoadingSkeleton />}
+
         {viewMode === "overview" && dashboardData && (
           <DashboardOverview
             data={dashboardData}
             onSelectTicker={(symbol) => chooseTicker(symbol)}
           />
+        )}
+
+        {viewMode === "overview" && !dashboardLoading && !dashboardData && (
+          <div className="mt-8 rounded-xl border border-tf-stroke bg-tf-panel p-8 text-center">
+            <p className="text-sm font-semibold text-tf-ink">Social Chatter Overview Unavailable</p>
+            <p className="mt-1 text-xs text-tf-muted">
+              Ensure the Python backend service is running to fetch social chatter data across platforms.
+            </p>
+          </div>
         )}
 
         {viewMode === "detail" && loading && !data && <LoadingSkeleton />}

@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Minus, ExternalLink, PlayCircle } from "lucide-react";
+import { useChartColors } from "@/lib/useChartColors";
 
 export interface PredictionDataPoint {
   id: string;
@@ -38,9 +39,16 @@ interface Props {
 }
 
 export function PredictionSentimentChart({ predictions, ticker }: Props) {
+  const chartColors = useChartColors();
+
   if (!predictions || predictions.length === 0) {
     return null;
   }
+
+  const successColor = chartColors.success;
+  const dangerColor = chartColors.danger;
+  const mutedFgColor = chartColors.mutedForeground;
+  const chartLineColor = chartColors.chart1;
 
   // 1. Group predictions by video_id (or prediction id if video_id is missing)
   const videoGroups = new Map<string, PredictionDataPoint[]>();
@@ -137,9 +145,9 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
     const { cx, cy, payload } = props;
     if (!cx || !cy) return null;
 
-    let fill = "#64748b"; // Neutral slate
-    if (payload.direction === "bullish") fill = "#22c55e"; // Green
-    if (payload.direction === "bearish") fill = "#ef4444"; // Red
+    let fill = mutedFgColor;
+    if (payload.direction === "bullish") fill = successColor;
+    if (payload.direction === "bearish") fill = dangerColor;
 
     const radius = 6 + Math.round((payload.confidence || 0.5) * 3);
 
@@ -160,9 +168,9 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
     const { cx, cy, payload } = props;
     if (!cx || !cy) return null;
 
-    let fill = "#64748b";
-    if (payload.direction === "bullish") fill = "#22c55e";
-    if (payload.direction === "bearish") fill = "#ef4444";
+    let fill = mutedFgColor;
+    if (payload.direction === "bullish") fill = successColor;
+    if (payload.direction === "bearish") fill = dangerColor;
 
     const radius = 9 + Math.round((payload.confidence || 0.5) * 3);
 
@@ -232,8 +240,8 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
               variant="outline"
               className={
                 data.accurate
-                  ? "border-green-500 text-green-500 bg-green-500/10 text-xs"
-                  : "border-red-500 text-red-500 bg-red-500/10 text-xs"
+                  ? "border-success text-success bg-success/10 text-xs"
+                  : "border-danger text-danger bg-danger/10 text-xs"
               }
             >
               {data.accurate ? "Direction Verified ✅" : "Direction Inaccurate ❌"}
@@ -294,13 +302,13 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
           </div>
           <div>
             <span className="text-muted-foreground">Bullish Ratio:</span>
-            <p className="text-sm font-semibold text-green-500">
+            <p className="text-sm font-semibold text-success">
               {((bullishVideos / totalVideos) * 100).toFixed(0)}% ({bullishVideos})
             </p>
           </div>
           <div>
             <span className="text-muted-foreground">Bearish Ratio:</span>
-            <p className="text-sm font-semibold text-red-500">
+            <p className="text-sm font-semibold text-danger">
               {((bearishVideos / totalVideos) * 100).toFixed(0)}% ({bearishVideos})
             </p>
           </div>
@@ -320,12 +328,12 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
             >
               <defs>
                 <linearGradient id="bullishGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#22c55e" stopOpacity={0.4} />
-                  <stop offset="100%" stopColor="#22c55e" stopOpacity={0.0} />
+                  <stop offset="0%" stopColor={successColor} stopOpacity={0.4} />
+                  <stop offset="100%" stopColor={successColor} stopOpacity={0.0} />
                 </linearGradient>
                 <linearGradient id="bearishGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#ef4444" stopOpacity={0.0} />
-                  <stop offset="100%" stopColor="#ef4444" stopOpacity={0.4} />
+                  <stop offset="0%" stopColor={dangerColor} stopOpacity={0.0} />
+                  <stop offset="100%" stopColor={dangerColor} stopOpacity={0.4} />
                 </linearGradient>
               </defs>
 
@@ -356,7 +364,7 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
 
               <Tooltip content={<CustomTooltip />} wrapperStyle={{ outline: "none", pointerEvents: "none" }} />
 
-              <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" label={{ value: "Neutral Line", fill: "#94a3b8", fontSize: 10, position: "insideBottomRight" }} />
+              <ReferenceLine y={0} stroke={mutedFgColor} strokeDasharray="3 3" label={{ value: "Neutral Line", fill: mutedFgColor, fontSize: 10, position: "insideBottomRight" }} />
 
               <Area
                 type="stepAfter"
@@ -368,7 +376,7 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
               <Line
                 type="stepAfter"
                 dataKey="score"
-                stroke="#3b82f6"
+                stroke={chartLineColor}
                 strokeWidth={2.5}
                 dot={<CustomDot />}
                 activeDot={<CustomActiveDot />}
