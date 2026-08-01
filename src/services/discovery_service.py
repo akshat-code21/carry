@@ -44,6 +44,7 @@ class DiscoveryService:
         title: str | None = None,
         published_at: str | None = None,
         channel_id: uuid.UUID | None = None,
+        is_short_flag: bool = False,
         source: str = "websub",
     ) -> dict[str, Any]:
         """Ensure a video is known and queue-worthy.
@@ -101,6 +102,16 @@ class DiscoveryService:
         meta_thumbnail = None
         meta_views: int | None = None
 
+        if is_short_flag:
+            logger.info("Skipping Short on discovery (feed flag): %s (%s)", title, youtube_video_id)
+            channel.last_checked_at = datetime.now(UTC)
+            return {
+                "status": "skipped_short",
+                "video_id": None,
+                "enqueue": False,
+                "youtube_video_id": youtube_video_id,
+            }
+
         if self.youtube is not None:
             try:
                 meta = await self.youtube.get_video_info(youtube_video_id)
@@ -111,7 +122,7 @@ class DiscoveryService:
                 meta_thumbnail = meta.thumbnail_url
                 meta_views = meta.view_count
 
-                if self._is_short(meta_duration, meta_title):
+                if self._is_short(meta_duration, meta_title, is_short_flag=is_short_flag):
                     logger.info(
                         "Skipping Short on discovery: %s (%s)", meta_title, youtube_video_id
                     )
@@ -129,7 +140,7 @@ class DiscoveryService:
                     e,
                 )
                 # Title-based short heuristic without duration
-                if self._is_short(None, meta_title):
+                if self._is_short(None, meta_title, is_short_flag=is_short_flag):
                     return {
                         "status": "skipped_short",
                         "video_id": None,
@@ -223,6 +234,7 @@ class DiscoveryService:
                 youtube_video_id=entry.youtube_video_id,
                 title=entry.title,
                 published_at=entry.published_at,
+                is_short_flag=entry.is_short,
                 source=source,
             )
             results.append(result)
@@ -249,8 +261,12 @@ class DiscoveryService:
         return None
 
     @staticmethod
-    def _is_short(duration_sec: int | None, title: str) -> bool:
-        if duration_sec is not None and 0 < duration_sec <= 60:
+    def _is_short(
+        duration_sec: int | None, title: str, is_short_flag: bool = False
+    ) -> bool:
+        if is_short_flag:
+            return True
+        if duration_sec is not None and 0 < duration_sec <= 180:
             return True
         title_lower = (title or "").lower()
         return "#shorts" in title_lower or "#short" in title_lower

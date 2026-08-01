@@ -39,6 +39,15 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* Semantic state tokens */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -64,6 +73,15 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  /* Semantic state colors — light mode */
+  --success: oklch(0.54 0.16 155);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.68 0.16 70);
+  --warning-foreground: oklch(0.145 0 0);
+  --danger: oklch(0.577 0.245 27.325);
+  --danger-foreground: oklch(0.985 0 0);
+  --info: oklch(0.55 0.15 250);
+  --info-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -81,6 +99,12 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  /* Motion scale */
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --duration-slow: 350ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 .dark {
@@ -99,6 +123,15 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  /* Semantic state colors — dark mode */
+  --success: oklch(0.72 0.19 155);
+  --success-foreground: oklch(0.145 0 0);
+  --warning: oklch(0.78 0.16 70);
+  --warning-foreground: oklch(0.145 0 0);
+  --danger: oklch(0.704 0.191 22.216);
+  --danger-foreground: oklch(0.985 0 0);
+  --info: oklch(0.7 0.15 250);
+  --info-foreground: oklch(0.145 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
@@ -126,5 +159,62 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* ── TickerFlow scoped design tokens ───────────────────────────────────── */
+
+@theme inline {
+  /* TickerFlow palette — scoped via .tickerflow-theme */
+  --color-tf-canvas: var(--tf-canvas);
+  --color-tf-panel: var(--tf-panel);
+  --color-tf-panel-raised: var(--tf-panel-raised);
+  --color-tf-ink: var(--tf-ink);
+  --color-tf-ink-secondary: var(--tf-ink-secondary);
+  --color-tf-muted: var(--tf-muted);
+  --color-tf-faint: var(--tf-faint);
+  --color-tf-signal: var(--tf-signal);
+  --color-tf-price: var(--tf-price);
+  --color-tf-positive: var(--tf-positive);
+  --color-tf-negative: var(--tf-negative);
+  --color-tf-warning: var(--tf-warning);
+  --color-tf-stroke: var(--tf-stroke);
+  --color-tf-stroke-strong: var(--tf-stroke-strong);
+}
+
+.tickerflow-theme {
+  --tf-canvas: #111411;
+  --tf-panel: #171b17;
+  --tf-panel-raised: #1d221d;
+  --tf-ink: #e5e7e1;
+  --tf-ink-secondary: #adb5a5;
+  --tf-muted: #7f897b;
+  --tf-faint: #4f5b4d;
+  --tf-signal: #d8f36a;
+  --tf-price: #efb864;
+  --tf-positive: #3ecf70;
+  --tf-negative: #ef5858;
+  --tf-warning: #f0a83e;
+  --tf-stroke: #262b26;
+  --tf-stroke-strong: #3a413a;
+}
+
+.tickerflow-theme .tf-skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--tf-panel) 25%,
+    var(--tf-panel-raised) 50%,
+    var(--tf-panel) 75%
+  );
+  background-size: 200% 100%;
+  animation: tf-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes tf-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
   }
 }

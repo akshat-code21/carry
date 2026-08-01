@@ -1,113 +1,98 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
-import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/PageHeader";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
+import { SentimentBadge } from "@/components/SentimentBadge";
+import { DetailSkeleton } from "@/components/skeletons/LayoutSkeletons";
+import { useChannel, useIngestVideo } from "@/lib/hooks";
 
 export default function ChannelPage() {
   const params = useParams();
   const id = params.id as string;
 
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading } = useChannel(id);
+  const ingestMutation = useIngestVideo();
 
   // Ingest-video form state
   const [showIngestForm, setShowIngestForm] = useState(false);
   const [youtubeVideoId, setYoutubeVideoId] = useState("");
-  const [ingesting, setIngesting] = useState(false);
   const [ingestFeedback, setIngestFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
-
-  async function loadChannel() {
-    try {
-      const res = await api.getChannel(id);
-      setData(res);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadChannel();
-  }, [id]);
 
   async function handleIngest(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = youtubeVideoId.trim();
     if (!trimmed) return;
 
-    setIngesting(true);
     setIngestFeedback(null);
 
     try {
-      const res = await api.ingestSingleVideo(id, trimmed);
+      const res = await ingestMutation.mutateAsync({ channelDbId: id, youtubeVideoId: trimmed });
       setIngestFeedback({
         type: "success",
         message: `Video ingestion queued! Task ID: ${res.task_id}`,
       });
       setYoutubeVideoId("");
-      // Reload channel data after a short delay to pick up the new video
-      setTimeout(() => loadChannel(), 5000);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Something went wrong";
       setIngestFeedback({
         type: "error",
-        message: err.message || "Something went wrong",
+        message: errorMessage,
       });
-    } finally {
-      setIngesting(false);
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+  if (isLoading) {
+    return <DetailSkeleton />;
   }
 
-  if (!data) {
+  if (!data || !data.channel) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4">
-        <h2 className="text-2xl font-bold">Channel Not Found</h2>
+      <div className="p-8">
+        <ErrorState title="Channel Not Found" message={`No channel details found for ID: ${id}`} />
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-6 pb-10">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{data.channel.title}</h1>
-          <p className="text-muted-foreground line-clamp-2 max-w-3xl mt-2">
-            {data.channel.description}
-          </p>
-        </div>
-        <Button
-          onClick={() => {
-            setShowIngestForm((prev) => !prev);
-            setIngestFeedback(null);
-          }}
-          variant={showIngestForm ? "outline" : "default"}
-          className="shrink-0"
+      <div>
+        <Breadcrumbs
+          items={[
+            { label: "Channels", href: "/channels" },
+            { label: data.channel.title },
+          ]}
+        />
+        <PageHeader
+          title={data.channel.title}
+          description={data.channel.description}
         >
-          {showIngestForm ? (
-            <>
-              <X className="mr-2 h-4 w-4" /> Cancel
-            </>
-          ) : (
-            <>
-              <Plus className="mr-2 h-4 w-4" /> Process Video
-            </>
-          )}
-        </Button>
+          <Button
+            onClick={() => {
+              setShowIngestForm((prev) => !prev);
+              setIngestFeedback(null);
+            }}
+            variant={showIngestForm ? "outline" : "default"}
+          >
+            {showIngestForm ? (
+              <>
+                <X className="mr-2 h-4 w-4" /> Cancel
+              </>
+            ) : (
+              <>
+                <Plus className="mr-2 h-4 w-4" /> Process Video
+              </>
+            )}
+          </Button>
+        </PageHeader>
       </div>
 
       {/* Inline ingest-video form */}
@@ -133,8 +118,8 @@ export default function ChannelPage() {
                   required
                 />
               </div>
-              <Button type="submit" disabled={ingesting || !youtubeVideoId.trim()}>
-                {ingesting ? (
+              <Button type="submit" disabled={ingestMutation.isPending || !youtubeVideoId.trim()}>
+                {ingestMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting…
                   </>
@@ -147,7 +132,7 @@ export default function ChannelPage() {
             {ingestFeedback && (
               <p
                 className={`mt-3 text-sm ${
-                  ingestFeedback.type === "success" ? "text-green-600" : "text-red-600"
+                  ingestFeedback.type === "success" ? "text-success" : "text-danger"
                 }`}
               >
                 {ingestFeedback.message}
@@ -161,24 +146,24 @@ export default function ChannelPage() {
         <div className="md:col-span-2 flex flex-col gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Videos ({data.videos?.length || 0})</CardTitle>
+              <CardTitle className="text-base font-semibold">Videos ({data.videos?.length || 0})</CardTitle>
               <CardDescription>Processed videos from this channel</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4">
-                {data.videos?.map((v: any) => (
+                {data.videos?.map((v) => (
                   <div key={v.id} className="flex flex-col gap-2 rounded-lg border p-4">
                     <Link href={`/videos/${v.id}`} className="font-semibold hover:underline text-lg">
                       {v.title}
                     </Link>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground font-mono">
                       <span>Published: {new Date(v.published_at).toLocaleDateString()}</span>
                       <span>Duration: {Math.floor(v.duration_sec / 60)} mins</span>
                     </div>
                   </div>
                 ))}
                 {(!data.videos || data.videos.length === 0) && (
-                  <p className="text-sm text-muted-foreground">No videos processed yet.</p>
+                  <EmptyState title="No videos processed" description="No videos processed for this channel yet." />
                 )}
               </div>
             </CardContent>
@@ -188,23 +173,21 @@ export default function ChannelPage() {
         <div className="flex flex-col gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Top Stocks Discussed</CardTitle>
+              <CardTitle className="text-base font-semibold">Top Stocks Discussed</CardTitle>
               <CardDescription>Based on extraction & theme mapping</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              {data.top_stocks?.slice(0, 15).map((s: any) => (
+              {data.top_stocks?.slice(0, 15).map((s) => (
                 <div key={s.ticker} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
                   <div className="flex flex-col">
                     <Link href={`/tickers/${s.ticker}`} className="font-bold hover:underline">
-                      {s.ticker}
+                      ${s.ticker}
                     </Link>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground font-mono">
                       Score: {(s.weighted_relevance * 100).toFixed(0)}
                     </span>
                   </div>
-                  <Badge variant={s.avg_sentiment > 0.2 ? "default" : s.avg_sentiment < -0.2 ? "destructive" : "secondary"}>
-                    {s.total_mentions} Mentions
-                  </Badge>
+                  <SentimentBadge score={s.avg_sentiment} />
                 </div>
               ))}
               {(!data.top_stocks || data.top_stocks.length === 0) && (

@@ -10,6 +10,8 @@ from pathlib import Path
 
 import numpy as np
 
+from transformers import AutoTokenizer
+
 from src.services.interfaces import FinBertResult
 
 logger = logging.getLogger(__name__)
@@ -67,7 +69,7 @@ class FinBertService:
         # Load ONNX session with CPU provider
         sess_options = ort.SessionOptions()
         sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-        sess_options.intra_op_num_threads = int(os.environ.get("FINBERT_THREADS", "2"))
+        sess_options.intra_op_num_threads = int(os.environ.get("FINBERT_THREADS", "4"))
 
         self._session = ort.InferenceSession(
             str(model_path),
@@ -167,23 +169,29 @@ class FinBertService:
 
         self._ensure_loaded()
 
-        # Tokenize with truncation (BERT 512 token limit) and padding
-        encoded = self._tokenizer(
-            texts,
-            padding=True,
-            truncation=True,
-            max_length=512,
-            return_tensors="np",  # NumPy tensors — no torch needed
-        )
+        # Trim texts to 300 chars (social posts/headlines are short; avoids massive zero-padding)
+        trimmed_texts = [str(t)[:300] for t in texts]
 
-        # Run ONNX inference
-        ort_inputs = {
-            "input_ids": encoded["input_ids"].astype(np.int64),
-            "attention_mask": encoded["attention_mask"].astype(np.int64),
-        }
-        logits = self._session.run(None, ort_inputs)[0]  # shape: (batch, 3)
+        batch_size = 16
+        all_logits = []
 
-        # Convert logits → probabilities → results
+        for i in range(0, len(trimmed_texts), batch_size):
+            chunk = trimmed_texts[i : i + batch_size]
+            encoded = self._tokenizer(
+                chunk,
+                padding=True,
+                truncation=True,
+                max_length=512,
+                return_tensors="np",
+            )
+            ort_inputs = {
+                "input_ids": encoded["input_ids"].astype(np.int64),
+                "attention_mask": encoded["attention_mask"].astype(np.int64),
+            }
+            chunk_logits = self._session.run(None, ort_inputs)[0]
+            all_logits.append(chunk_logits)
+
+        logits = np.vstack(all_logits)
         probabilities = _softmax(logits)
         results = []
 

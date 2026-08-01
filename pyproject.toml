@@ -36,6 +36,13 @@ dependencies = [
     "onnxruntime>=1.17.0",
     "transformers>=4.40.0",
     "numpy>=1.26.0",
+    # LangGraph & Deduplication
+    "langgraph>=0.2.0",
+    "datasketch>=1.6.0",
+    # SQLite fallback (TickerFlow)
+    "aiosqlite>=0.20.0",
+    "curl-cffi>=0.15.0",
+    "twikit>=2.3.3",
 ]
 
 [project.optional-dependencies]

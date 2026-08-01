@@ -27,6 +27,7 @@ class WebSubEntry:
     youtube_channel_id: str
     title: str
     published_at: str | None = None
+    is_short: bool = False
 
 
 class WebSubService:
@@ -46,10 +47,7 @@ class WebSubService:
 
     @staticmethod
     def topic_url(youtube_channel_id: str) -> str:
-        return (
-            f"https://www.youtube.com/xml/feeds/videos.xml"
-            f"?channel_id={youtube_channel_id}"
-        )
+        return f"https://www.youtube.com/feeds/videos.xml?channel_id={youtube_channel_id}"
 
     @staticmethod
     def build_atom_notification(
@@ -173,12 +171,21 @@ class WebSubService:
                 # Try yt:channelId already handled; also link rel
                 channel_id = ""
 
+            is_short = False
+            for el in entry.iter():
+                if el.tag.endswith("link") or el.tag == "link":
+                    href = el.attrib.get("href", "")
+                    if "/shorts/" in href:
+                        is_short = True
+                        break
+
             entries.append(
                 WebSubEntry(
                     youtube_video_id=video_id,
                     youtube_channel_id=channel_id,
                     title=title or video_id,
                     published_at=published,
+                    is_short=is_short,
                 )
             )
 
@@ -249,9 +256,12 @@ class WebSubService:
             logger.info("WebSub unsubscribe accepted for %s", youtube_channel_id)
 
     async def fetch_rss_feed(self, youtube_channel_id: str) -> list[WebSubEntry]:
-        """Fetch the channel's public Atom/RSS feed (no API quota). Used as fallback."""
         url = self.topic_url(youtube_channel_id)
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            "Accept-Encoding": "identity",
+        }
+        async with httpx.AsyncClient(timeout=30.0, headers=headers, follow_redirects=True) as client:
             response = await client.get(url)
             response.raise_for_status()
             return self.parse_atom_notification(response.content)

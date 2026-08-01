@@ -1,89 +1,67 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Plus, X } from "lucide-react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Loader2, Plus, X, Tv } from "lucide-react";
+import Link from "next/link";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { DashboardSkeleton } from "@/components/skeletons/LayoutSkeletons";
+import { useChannels, useBackfillChannel } from "@/lib/hooks";
 
 export default function ChannelsPage() {
-  const [channels, setChannels] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: channels = [], isLoading } = useChannels();
+  const backfillMutation = useBackfillChannel();
 
-  // Add-channel form state
+  // Form state
   const [showForm, setShowForm] = useState(false);
   const [channelId, setChannelId] = useState("");
-  const [maxVideos, setMaxVideos] = useState("20");
-  const [submitting, setSubmitting] = useState(false);
+  const [maxVideos, setMaxVideos] = useState("50");
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
-
-  async function loadChannels() {
-    try {
-      const res = await api.getChannels();
-      setChannels(res);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadChannels();
-  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = channelId.trim();
     if (!trimmed) return;
 
-    setSubmitting(true);
     setFeedback(null);
-
     try {
-      const res = await api.backfillChannel(trimmed, parseInt(maxVideos, 10) || 20);
+      const res = await backfillMutation.mutateAsync({
+        youtubeChannelId: trimmed,
+        maxVideos: parseInt(maxVideos, 10) || 50,
+      });
       setFeedback({
         type: "success",
         message: `Backfill queued! Task ID: ${res.task_id}`,
       });
       setChannelId("");
-      setMaxVideos("20");
-      // Reload channels after a short delay to pick up the newly ingested channel
-      setTimeout(() => loadChannels(), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Something went wrong";
       setFeedback({
         type: "error",
-        message: err.message || "Something went wrong",
+        message: errorMessage,
       });
-    } finally {
-      setSubmitting(false);
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+  if (isLoading) {
+    return <DashboardSkeleton />;
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Channels</h1>
-          <p className="text-muted-foreground">Browse all tracked financial YouTube channels.</p>
-        </div>
+      <PageHeader
+        title="Channels"
+        description="Browse all tracked financial YouTube channels and ingest new sources."
+      >
         <Button
           onClick={() => {
             setShowForm((prev) => !prev);
             setFeedback(null);
           }}
           variant={showForm ? "outline" : "default"}
-          className="shrink-0"
         >
           {showForm ? (
             <>
@@ -95,7 +73,7 @@ export default function ChannelsPage() {
             </>
           )}
         </Button>
-      </div>
+      </PageHeader>
 
       {/* Inline add-channel form */}
       {showForm && (
@@ -133,8 +111,8 @@ export default function ChannelsPage() {
                   onChange={(e) => setMaxVideos(e.target.value)}
                 />
               </div>
-              <Button type="submit" disabled={submitting || !channelId.trim()}>
-                {submitting ? (
+              <Button type="submit" disabled={backfillMutation.isPending || !channelId.trim()}>
+                {backfillMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting…
                   </>
@@ -147,7 +125,7 @@ export default function ChannelsPage() {
             {feedback && (
               <p
                 className={`mt-3 text-sm ${
-                  feedback.type === "success" ? "text-green-600" : "text-red-600"
+                  feedback.type === "success" ? "text-success" : "text-danger"
                 }`}
               >
                 {feedback.message}
@@ -157,21 +135,29 @@ export default function ChannelsPage() {
         </Card>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {channels.map((ch: any) => (
-          <Card key={ch.id}>
-            <CardHeader>
-              <CardTitle>{ch.title}</CardTitle>
-              <CardDescription className="line-clamp-2">{ch.description}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Link href={`/channels/${ch.id}`}>
-                <Button className="w-full">View Channel</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {channels.length === 0 ? (
+        <EmptyState
+          icon={<Tv className="h-6 w-6" />}
+          title="No channels tracked yet"
+          description="Add a channel above to begin backfilling and analyzing video transcripts."
+        />
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {channels.map((ch) => (
+            <Card key={ch.id} className="flex flex-col justify-between">
+              <CardHeader>
+                <CardTitle className="line-clamp-1">{ch.title}</CardTitle>
+                <CardDescription className="line-clamp-2">{ch.description}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Link href={`/channels/${ch.id}`}>
+                  <Button variant="outline" className="w-full">View Channel</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

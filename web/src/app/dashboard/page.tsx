@@ -1,112 +1,121 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, TrendingUp, Hash, PlaySquare, BarChart } from "lucide-react";
 import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TrendingUp, Hash, PlaySquare, BarChart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/PageHeader";
+import { StatCard } from "@/components/StatCard";
+import { DataTable, type Column } from "@/components/DataTable";
+import { DashboardSkeleton } from "@/components/skeletons/LayoutSkeletons";
+import { useDashboardData } from "@/lib/hooks";
+import type { TickerItem } from "@/lib/api";
 
 export default function DashboardPage() {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { isLoading, data } = useDashboardData();
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [videos, channels, themes, tickers, etfs] = await Promise.all([
-          api.getVideos(),
-          api.getChannels(),
-          api.getThemes(),
-          api.getTickers(),
-          api.getTopETFs(),
-        ]);
-        setData({ videos, channels, themes, tickers, etfs });
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+  if (isLoading) {
+    return <DashboardSkeleton />;
   }
+
+  const stocksData = data.tickers.filter((t) => !t.is_etf);
+
+  const stockColumns: Column<TickerItem>[] = [
+    {
+      key: "ticker",
+      header: "Ticker",
+      render: (t) => (
+        <Link href={`/tickers/${t.ticker}`} className="font-bold hover:underline">
+          ${t.ticker}
+        </Link>
+      ),
+    },
+    {
+      key: "mentions",
+      header: "Mentions",
+      numeric: true,
+      render: (t) => (
+        <Badge variant="secondary" className="font-mono">
+          {t.total_mentions}
+        </Badge>
+      ),
+    },
+  ];
+
+  const etfColumns: Column<TickerItem>[] = [
+    {
+      key: "ticker",
+      header: "ETF",
+      render: (etf) => (
+        <div className="flex flex-col">
+          <Link href={`/tickers/${etf.ticker}`} className="font-bold text-warning hover:underline flex items-center gap-1.5">
+            ${etf.ticker}
+            <Badge variant="outline" className="text-[10px] px-1 py-0 bg-warning/10 border-warning/30 text-warning">
+              ETF
+            </Badge>
+          </Link>
+          {etf.themes && etf.themes.length > 0 && (
+            <span className="text-xs text-muted-foreground capitalize line-clamp-1">
+              {etf.themes.join(", ")}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "mentions",
+      header: "Mentions",
+      numeric: true,
+      render: (etf) => (
+        <Badge variant="secondary" className="shrink-0 font-mono">
+          {etf.total_mentions || 0}
+        </Badge>
+      ),
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Overview of processed financial content.</p>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        description="Overview of processed financial content, tracked universe, and sector sentiment."
+      />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Videos</CardTitle>
-            <PlaySquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data.videos?.length || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tracked Tickers</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data.tickers?.length || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Themes Extracted</CardTitle>
-            <Hash className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data.themes?.length || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tracked Channels</CardTitle>
-            <BarChart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data.channels?.length || 0}</div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Videos"
+          value={data.videos.length}
+          icon={<PlaySquare className="h-4 w-4" />}
+        />
+        <StatCard
+          title="Tracked Tickers"
+          value={data.tickers.length}
+          icon={<TrendingUp className="h-4 w-4" />}
+        />
+        <StatCard
+          title="Themes Extracted"
+          value={data.themes.length}
+          icon={<Hash className="h-4 w-4" />}
+        />
+        <StatCard
+          title="Tracked Channels"
+          value={data.channels.length}
+          icon={<BarChart className="h-4 w-4" />}
+        />
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Top Tracked Stocks
-            </CardTitle>
+            <CardTitle className="text-base font-semibold">Top Tracked Stocks</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            {data.tickers?.filter((t: any) => !t.is_etf).length > 0 ? (
-              data.tickers
-                ?.filter((t: any) => !t.is_etf)
-                .slice(0, 8)
-                .map((t: any) => (
-                  <div key={t.ticker} className="flex items-center justify-between border-b border-zinc-800 pb-2 last:border-0 last:pb-0">
-                    <Link href={`/tickers/${t.ticker}`} className="font-bold hover:underline">
-                      {t.ticker}
-                    </Link>
-                    <Badge variant="secondary">
-                      {t.total_mentions} Mentions
-                    </Badge>
-                  </div>
-                ))
+          <CardContent>
+            {stocksData.length > 0 ? (
+              <DataTable
+                columns={stockColumns}
+                data={stocksData.slice(0, 8)}
+                keyExtractor={(t) => t.ticker}
+              />
             ) : (
               <div className="text-xs text-muted-foreground py-6 text-center">
                 No individual stocks tracked yet.
@@ -117,35 +126,20 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="flex items-center justify-between text-base font-semibold">
               <span>Top Sector ETFs</span>
-              <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-400 border-amber-500/20">
+              <Badge variant="outline" className="text-xs bg-warning/10 text-warning border-warning/20">
                 Institutional
               </Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            {data.etfs && data.etfs.length > 0 ? (
-              data.etfs.slice(0, 8).map((etf: any) => (
-                <div key={etf.ticker} className="flex items-center justify-between border-b border-zinc-800 pb-2 last:border-0 last:pb-0">
-                  <div className="flex flex-col">
-                    <Link href={`/tickers/${etf.ticker}`} className="font-bold text-amber-400 hover:underline flex items-center gap-1.5">
-                      {etf.ticker}
-                      <Badge variant="outline" className="text-[10px] px-1 py-0 bg-amber-500/10 border-amber-500/30 text-amber-400">
-                        ETF
-                      </Badge>
-                    </Link>
-                    {etf.themes && etf.themes.length > 0 && (
-                      <span className="text-xs text-muted-foreground capitalize line-clamp-1">
-                        {etf.themes.join(", ")}
-                      </span>
-                    )}
-                  </div>
-                  <Badge variant="secondary" className="shrink-0">
-                    {etf.total_mentions || 0} Mentions
-                  </Badge>
-                </div>
-              ))
+          <CardContent>
+            {data.etfs.length > 0 ? (
+              <DataTable
+                columns={etfColumns}
+                data={data.etfs.slice(0, 8)}
+                keyExtractor={(etf) => etf.ticker}
+              />
             ) : (
               <div className="text-xs text-muted-foreground py-6 text-center">
                 No sector ETFs tracked yet.
@@ -156,15 +150,15 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Recent Videos</CardTitle>
+            <CardTitle className="text-base font-semibold">Recent Videos</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            {data.videos?.slice(0, 8).map((v: any) => (
-              <div key={v.id} className="flex flex-col gap-1 border-b border-zinc-800 pb-2 last:border-0 last:pb-0">
+            {data.videos.slice(0, 8).map((v) => (
+              <div key={v.id} className="flex flex-col gap-1 border-b pb-2 last:border-0 last:pb-0">
                 <Link href={`/videos/${v.id}`} className="font-medium hover:underline line-clamp-1 text-sm">
                   {v.title}
                 </Link>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground font-mono">
                   Published: {new Date(v.published_at).toLocaleDateString()}
                 </span>
               </div>

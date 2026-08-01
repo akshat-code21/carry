@@ -66,11 +66,11 @@ class YouTubeAPIService(YouTubeService):
         """Check if a video is a YouTube Short.
 
         A video is considered a Short if:
-        - duration_sec <= 60 (standard YouTube Shorts duration threshold)
+        - duration_sec <= 180 (YouTube Shorts duration threshold)
         - title contains '#shorts' or '#short'
         - entry dict metadata explicitly marks it as short (is_short=True or /shorts/ in URL)
         """
-        if duration_sec > 0 and duration_sec <= 60:
+        if duration_sec > 0 and duration_sec <= 180:
             return True
 
         title_lower = title.lower()

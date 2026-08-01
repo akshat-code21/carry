@@ -1,12 +1,17 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "@/components/PageHeader";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { SentimentBadge } from "@/components/SentimentBadge";
+import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
+import { DetailSkeleton } from "@/components/skeletons/LayoutSkeletons";
+import { useVideo } from "@/lib/hooks";
 
 function VideoPageContent() {
   const params = useParams();
@@ -16,35 +21,16 @@ function VideoPageContent() {
   const startTimeParam = searchParams.get("t") || searchParams.get("start");
   const startTime = startTimeParam ? Math.floor(parseFloat(startTimeParam)) : 0;
 
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading } = useVideo(id);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await api.getVideo(id);
-        setData(res);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [id]);
-
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center p-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+  if (isLoading) {
+    return <DetailSkeleton />;
   }
 
   if (!data) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 p-12">
-        <h2 className="text-2xl font-bold">Video Not Found</h2>
+      <div className="p-8">
+        <ErrorState title="Video Not Found" message={`No video details found for ID: ${id}`} />
       </div>
     );
   }
@@ -62,10 +48,17 @@ function VideoPageContent() {
   return (
     <div className="flex flex-col gap-6 pb-10">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{data.title}</h1>
-        <p className="text-muted-foreground">
-          Published: {data.published_at ? new Date(data.published_at).toLocaleDateString() : "N/A"}
-        </p>
+        <Breadcrumbs
+          items={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Videos" },
+            { label: data.title },
+          ]}
+        />
+        <PageHeader
+          title={data.title}
+          description={`Published: ${data.published_at ? new Date(data.published_at).toLocaleDateString() : "N/A"}`}
+        />
       </div>
 
       <div className="aspect-video w-full max-w-4xl overflow-hidden rounded-xl border bg-black shadow-sm">
@@ -84,11 +77,11 @@ function VideoPageContent() {
         <div className="md:col-span-2 flex flex-col gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Transcript</CardTitle>
+              <CardTitle className="text-base font-semibold">Transcript</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex h-[400px] flex-col gap-4 overflow-y-auto pr-4">
-                {data.segments?.map((seg: any) => (
+                {data.segments?.map((seg) => (
                   <div key={seg.id} className="flex gap-4">
                     <span className="w-12 shrink-0 text-xs text-muted-foreground font-mono">
                       {formatTime(seg.start_sec)}
@@ -104,43 +97,41 @@ function VideoPageContent() {
         <div className="flex flex-col gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Predictions</CardTitle>
+              <CardTitle className="text-base font-semibold">Predictions</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              {data.predictions?.map((p: any) => (
+              {data.predictions?.map((p) => (
                 <div key={p.id} className="flex flex-col gap-2 rounded-lg border p-3">
                   <div className="flex items-center justify-between">
                     {p.ticker ? (
                       <Link href={`/tickers/${p.ticker}`} className="font-bold hover:underline">
-                        {p.ticker}
+                        ${p.ticker}
                       </Link>
                     ) : (
-                      <span className="font-bold">Macro/Thematic</span>
+                      <span className="font-bold text-sm">Macro/Thematic</span>
                     )}
-                    <Badge variant={p.direction === "bullish" ? "default" : p.direction === "bearish" ? "destructive" : "secondary"}>
-                      {p.direction}
-                    </Badge>
+                    <SentimentBadge direction={p.direction} confidence={p.confidence || undefined} />
                   </div>
-                  <p className="text-sm">{p.prediction_text}</p>
+                  <p className="text-sm italic text-muted-foreground">&quot;{p.prediction_text}&quot;</p>
                 </div>
               ))}
               {(!data.predictions || data.predictions.length === 0) && (
-                <p className="text-sm text-muted-foreground">No predictions extracted.</p>
+                <EmptyState title="No predictions" description="No predictions extracted from this video." />
               )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Themes Discussed</CardTitle>
+              <CardTitle className="text-base font-semibold">Themes Discussed</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              {data.themes?.map((t: any) => (
+              {data.themes?.map((t) => (
                 <div key={t.id} className="flex flex-col gap-1 border-b pb-2 last:border-0 last:pb-0">
                   <Link href={`/themes/${t.theme_id}`} className="font-medium hover:underline">
                     {t.name}
                   </Link>
-                  <p className="text-xs text-muted-foreground italic">"{t.narrative}"</p>
+                  <p className="text-xs text-muted-foreground italic">&quot;{t.narrative}&quot;</p>
                 </div>
               ))}
               {(!data.themes || data.themes.length === 0) && (
