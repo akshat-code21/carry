@@ -44,6 +44,19 @@ export interface SearchResult {
   instrument_type?: string;
 }
 
+export interface ActivityEvent {
+  id: string;
+  event_type: "video_detected" | "video_processed" | "video_failed" | string;
+  channel_id: string;
+  video_id?: string | null;
+  youtube_video_id: string;
+  title: string;
+  message: string;
+  payload?: Record<string, unknown> | null;
+  read_at?: string | null;
+  created_at: string;
+}
+
 export const api = {
   async search(query: string, type: "keyword" | "semantic" | "hybrid" = "hybrid"): Promise<SearchResult> {
     const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=${type}`);
@@ -188,17 +201,52 @@ export const api = {
     if (!res.ok) throw new Error("Failed to mark all activity read");
     return res.json() as Promise<{ marked_read: number }>;
   },
+
+  async getTickerFlowDashboard(periodDays = 7) {
+    const res = await fetch(`/api/v1/tickerflow/dashboard?period_days=${periodDays}`);
+    if (!res.ok) throw new Error("Failed to fetch TickerFlow dashboard");
+    return res.json() as Promise<MCDashboardData>;
+  },
 };
 
-export interface ActivityEvent {
-  id: string;
-  event_type: "video_detected" | "video_processed" | "video_failed" | string;
-  channel_id: string;
-  video_id?: string | null;
-  youtube_video_id: string;
-  title: string;
-  message: string;
-  payload?: Record<string, unknown> | null;
-  read_at?: string | null;
-  created_at: string;
+export interface MCDashboardSummary {
+  total_mentions: number;
+  tracked_tickers: number;
+  tracked_stocks: number;
+  tracked_etfs: number;
+  avg_market_sentiment: number;
+  overall_bullish_pct: number;
+}
+
+export interface MCDashboardTickerItem {
+  symbol: string;
+  company_name?: string | null;
+  is_etf: boolean;
+  mentions: number;
+  buzz_score: number;
+  sentiment_score: number;
+  bullish_pct: number;
+  trend: string;
+  top_catalyst?: string | null;
+  last_updated?: string | null;
+}
+
+export interface MCPlatformBreakdown {
+  reddit_mentions: number;
+  x_mentions: number;
+  news_mentions: number;
+  stocktwits_mentions: number;
+  total_mentions: number;
+}
+
+export interface MCDashboardData {
+  as_of: string;
+  period_days: number;
+  summary: MCDashboardSummary;
+  top_stocks: MCDashboardTickerItem[];
+  top_etfs: MCDashboardTickerItem[];
+  bullish_leaders: MCDashboardTickerItem[];
+  bearish_laggards: MCDashboardTickerItem[];
+  platform_breakdown: MCPlatformBreakdown;
+  driver_cards: any[];
 }

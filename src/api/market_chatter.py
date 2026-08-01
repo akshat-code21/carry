@@ -10,7 +10,11 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.database import get_db
 from src.schemas.market_chatter import (
+    MCDashboardResponse,
     MCErrorResponse,
     MCTickerResponse,
     SourceName,
@@ -94,3 +98,16 @@ async def refresh_ticker(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/tickerflow/dashboard", response_model=MCDashboardResponse)
+@router.get("/dashboard/overview", response_model=MCDashboardResponse)
+async def get_tickerflow_dashboard(
+    period_days: int = Query(default=7, ge=1, le=90),
+    db: AsyncSession = Depends(get_db),
+) -> MCDashboardResponse:
+    """Get aggregate TickerFlow social sentiment dashboard stats."""
+    from src.services.market_chatter.dashboard_service import DashboardService
+
+    dashboard_service = DashboardService()
+    return await dashboard_service.get_dashboard_data(db, period_days=period_days)

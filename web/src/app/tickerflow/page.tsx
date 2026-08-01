@@ -34,6 +34,9 @@ import { GlowCard } from "@/components/market-chatter/GlowCard";
 import { GradientText } from "@/components/market-chatter/GradientText";
 import { SectionLabel } from "@/components/market-chatter/SectionLabel";
 import { StatusBadge } from "@/components/market-chatter/StatusBadge";
+import { DashboardOverview } from "@/components/market-chatter/DashboardOverview";
+import { api, MCDashboardData } from "@/lib/api";
+import { LayoutDashboard, LineChart as ChartIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Source = "reddit" | "x" | "news";
@@ -406,12 +409,30 @@ function SourceMetric({
 export default function TickerFlowPage() {
   const [query, setQuery] = useState("");
   const [activeSymbol, setActiveSymbol] = useState("");
+  const [viewMode, setViewMode] = useState<"overview" | "detail">("overview");
+  const [dashboardData, setDashboardData] = useState<MCDashboardData | null>(null);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
   const [source, setSource] = useState<Source>("reddit");
   const [period, setPeriod] = useState(7);
   const [data, setData] = useState<TickerData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestId = useRef(0);
+
+  useEffect(() => {
+    async function loadDashboard() {
+      setDashboardLoading(true);
+      try {
+        const dbData = await api.getTickerFlowDashboard(period);
+        setDashboardData(dbData);
+      } catch (err) {
+        console.error("Dashboard overview load failed:", err);
+      } finally {
+        setDashboardLoading(false);
+      }
+    }
+    void loadDashboard();
+  }, [period]);
 
   const fetchTicker = useCallback(
     async (requestedSymbol: string, refresh = false) => {
@@ -480,6 +501,7 @@ export default function TickerFlowPage() {
     const normalized = query.trim().toUpperCase();
     if (!normalized) return;
 
+    setViewMode("detail");
     setQuery(normalized);
     if (normalized === activeSymbol) {
       void fetchTicker(normalized);
@@ -490,6 +512,7 @@ export default function TickerFlowPage() {
   };
 
   const chooseTicker = (ticker: string) => {
+    setViewMode("detail");
     setQuery(ticker);
     if (ticker === activeSymbol) {
       void fetchTicker(ticker);
@@ -554,24 +577,57 @@ export default function TickerFlowPage() {
               </button>
             </form>
 
-            <div className="flex items-center gap-2 px-2 pb-1 pt-3 max-sm:overflow-x-auto">
-              <span className="mr-1 shrink-0 text-[10px] font-semibold uppercase tracking-[0.09em] text-tf-faint">
-                Quick look
-              </span>
-              {QUICK_TICKERS.map((ticker) => (
+            <div className="flex items-center justify-between border-t border-tf-stroke/50 px-3 pb-1 pt-3 max-sm:flex-col max-sm:align-start max-sm:gap-2 max-sm:overflow-x-auto">
+              <div className="flex items-center gap-2">
+                <span className="mr-1 shrink-0 text-[10px] font-semibold uppercase tracking-[0.09em] text-tf-faint">
+                  Quick look
+                </span>
+                {QUICK_TICKERS.map((ticker) => (
+                  <button
+                    key={ticker}
+                    type="button"
+                    onClick={() => chooseTicker(ticker)}
+                    aria-pressed={activeSymbol === ticker && viewMode === "detail"}
+                    className={cn(
+                      "shrink-0 rounded px-2 py-1 font-mono text-[10px] font-medium tracking-[0.06em] text-tf-muted transition-colors hover:bg-tf-panel-raised hover:text-tf-ink",
+                      activeSymbol === ticker && viewMode === "detail" && "bg-tf-signal/10 text-tf-signal",
+                    )}
+                  >
+                    ${ticker}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex rounded-md border border-tf-stroke bg-tf-canvas p-0.5">
                 <button
-                  key={ticker}
                   type="button"
-                  onClick={() => chooseTicker(ticker)}
-                  aria-pressed={activeSymbol === ticker}
+                  onClick={() => setViewMode("overview")}
                   className={cn(
-                    "shrink-0 rounded px-2 py-1 font-mono text-[10px] font-medium tracking-[0.06em] text-tf-muted transition-colors hover:bg-tf-panel-raised hover:text-tf-ink",
-                    activeSymbol === ticker && "bg-tf-signal/10 text-tf-signal",
+                    "flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-medium text-tf-muted transition-colors",
+                    viewMode === "overview" && "bg-tf-panel-raised text-tf-ink shadow-sm",
                   )}
                 >
-                  ${ticker}
+                  <LayoutDashboard className="h-3 w-3 text-tf-signal" />
+                  Overview Dashboard
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!activeSymbol) {
+                      chooseTicker("NVDA");
+                    } else {
+                      setViewMode("detail");
+                    }
+                  }}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-medium text-tf-muted transition-colors",
+                    viewMode === "detail" && "bg-tf-panel-raised text-tf-ink shadow-sm",
+                  )}
+                >
+                  <ChartIcon className="h-3 w-3 text-amber-400" />
+                  {activeSymbol ? `$${activeSymbol} Analysis` : "Single Ticker"}
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -608,10 +664,17 @@ export default function TickerFlowPage() {
           )}
         </AnimatePresence>
 
-        {loading && !data && <LoadingSkeleton />}
+        {viewMode === "overview" && dashboardData && (
+          <DashboardOverview
+            data={dashboardData}
+            onSelectTicker={(symbol) => chooseTicker(symbol)}
+          />
+        )}
+
+        {viewMode === "detail" && loading && !data && <LoadingSkeleton />}
 
         <AnimatePresence mode="wait">
-          {data && (
+          {viewMode === "detail" && data && (
             <motion.section
               key={data.symbol}
               initial={{ opacity: 0, y: 8 }}

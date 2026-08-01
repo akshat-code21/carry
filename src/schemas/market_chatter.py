@@ -116,3 +116,45 @@ class MCTickerResponse(BaseModel):
 
 class MCErrorResponse(BaseModel):
     detail: str
+
+
+class MCDashboardSummary(BaseModel):
+    total_mentions: int
+    tracked_tickers: int
+    tracked_stocks: int
+    tracked_etfs: int
+    avg_market_sentiment: float  # -1.0 to +1.0
+    overall_bullish_pct: float  # 0 to 100%
+
+
+class MCDashboardTickerItem(BaseModel):
+    symbol: str
+    company_name: str | None = None
+    is_etf: bool = False
+    mentions: int
+    buzz_score: float
+    sentiment_score: float
+    bullish_pct: float
+    trend: str = "stable"
+    top_catalyst: str | None = None
+    last_updated: datetime | None = None
+
+
+class MCPlatformBreakdown(BaseModel):
+    reddit_mentions: int
+    x_mentions: int
+    news_mentions: int
+    stocktwits_mentions: int
+    total_mentions: int
+
+
+class MCDashboardResponse(BaseModel):
+    as_of: datetime
+    period_days: int
+    summary: MCDashboardSummary
+    top_stocks: list[MCDashboardTickerItem]
+    top_etfs: list[MCDashboardTickerItem]
+    bullish_leaders: list[MCDashboardTickerItem]
+    bearish_laggards: list[MCDashboardTickerItem]
+    platform_breakdown: MCPlatformBreakdown
+    driver_cards: list[dict[str, Any]] = Field(default_factory=list)
