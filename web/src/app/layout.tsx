@@ -23,7 +23,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "yt·tape — Market Commentary Intelligence",
+  title: "Carry — Market Commentary Intelligence",
   description:
     "Read the market's mood through what finance commentators say — tickers, predictions, confidence, and verified outcomes.",
 };
