@@ -129,9 +129,9 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between text-title font-semibold">
               <span>Top Sector ETFs</span>
-              <Badge variant="outline" className="bg-warning/10 text-micro text-warning">
+              {/* <Badge variant="outline" className="bg-warning/10 text-micro text-warning">
                 Institutional
-              </Badge>
+              </Badge> */}
             </CardTitle>
           </CardHeader>
           <CardContent>

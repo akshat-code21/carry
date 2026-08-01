@@ -145,7 +145,7 @@ export default function TickerPage() {
 
   const { data, isLoading } = useTicker(ticker);
   const { data: sentimentTimeline = [] } = useTickerSentiment(ticker);
-  const { data: priceHistory = [] } = useTickerPriceHistory(ticker, priceRangeDays);
+  const { data: priceHistory = [], isFetching: isFetchingPrice } = useTickerPriceHistory(ticker, priceRangeDays);
 
   const chartColors = useChartColors();
   const successColor = chartColors.success;
@@ -249,7 +249,7 @@ export default function TickerPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="h-[420px] w-full">
+            <div className={`h-[420px] w-full transition-opacity duration-200 ${isFetchingPrice ? "opacity-60" : "opacity-100"}`}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={priceChartData} margin={{ top: 30, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.3} stroke={lineColor} vertical={false} />

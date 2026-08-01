@@ -130,7 +130,7 @@ export function Topbar({ onMenuClick, onOpenCommandPalette }: TopbarProps) {
           <Button variant="ghost" size="icon-sm" onClick={openPanel} className="relative text-ink-faint hover:text-ink">
             <Bell className="h-4 w-4" />
             {unread > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-signal px-1 font-mono text-micro font-semibold text-signal-foreground">
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-signal px-1 font-mono text-micro font-semibold text-black">
                 {unread > 99 ? "99+" : unread}
               </span>
             )}

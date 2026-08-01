@@ -8,7 +8,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-signal text-signal-foreground hover:bg-signal/85",
+        default: "bg-signal text-black! font-semibold hover:bg-signal/85",
         outline:
           "border-line bg-panel text-ink hover:bg-panel-raised hover:text-ink aria-expanded:bg-panel-raised aria-expanded:text-ink",
         secondary:
