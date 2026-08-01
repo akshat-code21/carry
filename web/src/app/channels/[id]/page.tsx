@@ -64,7 +64,7 @@ export default function ChannelPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-10">
-      <div className="mb-2 flex gap-2 flex-col items-start">
+      <div className="mb-2 flex gap-2 flex-col items-start w-full">
         <Breadcrumbs
           items={[
             { label: "Channels", href: "/channels" },
@@ -72,6 +72,7 @@ export default function ChannelPage() {
           ]}
         />
         <PageHeader
+          className="w-full"
           title={data.channel.title}
           description={data.channel.description}
         >
