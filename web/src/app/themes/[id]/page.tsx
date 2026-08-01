@@ -35,7 +35,7 @@ export default function ThemePage() {
 
   return (
     <div className="flex flex-col gap-6 pb-10">
-      <div>
+      <div className="mb-2 flex gap-2 flex-col items-start">
         <Breadcrumbs
           items={[
             { label: "Themes", href: "/themes" },
@@ -43,11 +43,11 @@ export default function ThemePage() {
           ]}
         />
         <div className="flex items-center gap-3 mb-2">
-          <Badge variant="outline" className="uppercase tracking-widest">{theme.level}</Badge>
+          <Badge variant="outline" className="font-mono text-micro uppercase tracking-[0.1em] text-ink-secondary">{theme.level}</Badge>
         </div>
         <PageHeader
           title={theme.name}
-          description={theme.description}
+          description={theme.description || undefined}
         />
       </div>
 
@@ -60,17 +60,17 @@ export default function ThemePage() {
             <CardContent>
               <div className="grid gap-4">
                 {videos?.map((v) => (
-                  <div key={v.id} className="flex flex-col gap-2 rounded-lg border p-4">
+                  <div key={v.id} className="flex flex-col gap-2 rounded-md border border-line p-4">
                     <div className="flex justify-between items-start">
-                      <Link href={`/videos/${v.id}`} className="font-semibold hover:underline text-lg">
+                      <Link href={`/videos/${v.id}`} className="font-medium text-ink hover:text-signal hover:underline">
                         {v.title}
                       </Link>
                     </div>
-                    <p className="text-sm border-l-2 border-primary pl-4 italic text-muted-foreground mt-2">
+                    <p className="mt-2 border-l-2 border-signal pl-4 text-small italic text-ink-secondary">
                       &quot;{v.mention_text}&quot;
                     </p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-muted-foreground font-mono">
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="font-mono text-micro tabular-nums text-ink-faint">
                         Published: {new Date(v.published_at).toLocaleDateString()}
                       </span>
                       <SentimentBadge direction={v.sentiment} />
@@ -93,12 +93,12 @@ export default function ThemePage() {
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               {mapped_tickers?.map((t) => (
-                <div key={t.ticker} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+                <div key={t.ticker} className="flex items-center justify-between border-b border-line pb-2 last:border-0 last:pb-0">
                   <div className="flex flex-col">
-                    <Link href={`/tickers/${t.ticker}`} className="font-bold hover:underline">
+                    <Link href={`/tickers/${t.ticker}`} className="font-mono font-semibold text-ink hover:text-signal hover:underline">
                       ${t.ticker}
                     </Link>
-                    <span className="text-xs text-muted-foreground capitalize">
+                    <span className="text-small capitalize text-ink-secondary">
                       Source: {t.source}
                     </span>
                   </div>
@@ -108,7 +108,7 @@ export default function ThemePage() {
                 </div>
               ))}
               {(!mapped_tickers || mapped_tickers.length === 0) && (
-                <p className="text-sm text-muted-foreground">No tickers mapped to this theme.</p>
+                <p className="text-small text-ink-secondary">No tickers mapped to this theme.</p>
               )}
             </CardContent>
           </Card>

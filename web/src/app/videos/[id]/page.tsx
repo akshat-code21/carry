@@ -47,7 +47,7 @@ function VideoPageContent() {
 
   return (
     <div className="flex flex-col gap-6 pb-10">
-      <div>
+      <div className="mb-2 flex gap-2 flex-col items-start">
         <Breadcrumbs
           items={[
             { label: "Dashboard", href: "/dashboard" },
@@ -77,16 +77,16 @@ function VideoPageContent() {
         <div className="md:col-span-2 flex flex-col gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base font-semibold">Transcript</CardTitle>
+              <CardTitle className="text-title font-semibold">Transcript</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex h-[400px] flex-col gap-4 overflow-y-auto pr-4">
                 {data.segments?.map((seg) => (
                   <div key={seg.id} className="flex gap-4">
-                    <span className="w-12 shrink-0 text-xs text-muted-foreground font-mono">
+                    <span className="w-12 shrink-0 font-mono text-micro tabular-nums text-ink-faint">
                       {formatTime(seg.start_sec)}
                     </span>
-                    <p className="text-sm">{seg.text}</p>
+                    <p className="text-body text-ink">{seg.text}</p>
                   </div>
                 ))}
               </div>
@@ -97,22 +97,22 @@ function VideoPageContent() {
         <div className="flex flex-col gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base font-semibold">Predictions</CardTitle>
+              <CardTitle className="text-title font-semibold">Predictions</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-4">
+            <CardContent className="flex flex-col gap-3">
               {data.predictions?.map((p) => (
-                <div key={p.id} className="flex flex-col gap-2 rounded-lg border p-3">
+                <div key={p.id} className="flex flex-col gap-2 rounded-md border border-line p-3">
                   <div className="flex items-center justify-between">
                     {p.ticker ? (
-                      <Link href={`/tickers/${p.ticker}`} className="font-bold hover:underline">
+                      <Link href={`/tickers/${p.ticker}`} className="font-mono font-semibold text-ink hover:text-signal hover:underline">
                         ${p.ticker}
                       </Link>
                     ) : (
-                      <span className="font-bold text-sm">Macro/Thematic</span>
+                      <span className="text-small font-semibold text-ink">Macro/Thematic</span>
                     )}
                     <SentimentBadge direction={p.direction} confidence={p.confidence || undefined} />
                   </div>
-                  <p className="text-sm italic text-muted-foreground">&quot;{p.prediction_text}&quot;</p>
+                  <p className="text-small italic text-ink-secondary">&quot;{p.prediction_text}&quot;</p>
                 </div>
               ))}
               {(!data.predictions || data.predictions.length === 0) && (
@@ -123,19 +123,19 @@ function VideoPageContent() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base font-semibold">Themes Discussed</CardTitle>
+              <CardTitle className="text-title font-semibold">Themes Discussed</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-4">
+            <CardContent className="flex flex-col gap-3">
               {data.themes?.map((t) => (
-                <div key={t.id} className="flex flex-col gap-1 border-b pb-2 last:border-0 last:pb-0">
-                  <Link href={`/themes/${t.theme_id}`} className="font-medium hover:underline">
+                <div key={t.id} className="flex flex-col gap-1 border-b border-line pb-2 last:border-0 last:pb-0">
+                  <Link href={`/themes/${t.theme_id}`} className="text-small font-medium text-ink hover:text-signal hover:underline">
                     {t.name}
                   </Link>
-                  <p className="text-xs text-muted-foreground italic">&quot;{t.narrative}&quot;</p>
+                  <p className="text-small italic text-ink-secondary">&quot;{t.narrative}&quot;</p>
                 </div>
               ))}
               {(!data.themes || data.themes.length === 0) && (
-                <p className="text-sm text-muted-foreground">No themes extracted.</p>
+                <p className="text-small text-ink-secondary">No themes extracted.</p>
               )}
             </CardContent>
           </Card>
@@ -150,7 +150,7 @@ export default function VideoPage() {
     <Suspense
       fallback={
         <div className="flex h-full items-center justify-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Loader2 className="h-8 w-8 animate-spin text-ink-faint" />
         </div>
       }
     >

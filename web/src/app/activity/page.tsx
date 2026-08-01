@@ -40,7 +40,7 @@ export default function ActivityPage() {
             {unreadOnly ? "Showing Unread Only" : "Filter Unread"}
           </Button>
           <Button variant="outline" size="sm" onClick={handleMarkAllRead} className="gap-1.5">
-            <CheckCheck className="h-4 w-4 text-muted-foreground" />
+            <CheckCheck className="h-4 w-4 text-ink-faint" />
             Mark all read
           </Button>
         </div>
@@ -48,11 +48,11 @@ export default function ActivityPage() {
 
       <Card>
         <CardHeader className="py-4">
-          <CardTitle className="text-base font-semibold">Events ({events.length})</CardTitle>
+          <CardTitle className="text-title font-semibold">Events ({events.length})</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {isLoading && (
-            <p className="px-6 py-8 text-center text-sm text-muted-foreground">
+            <p className="px-6 py-8 text-center text-small text-ink-secondary">
               Loading events...
             </p>
           )}
@@ -74,38 +74,38 @@ export default function ActivityPage() {
           )}
 
           {!isLoading && !isError && events.length > 0 && (
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-line">
               {events.map((evt) => (
                 <div
                   key={evt.id}
                   className={`flex flex-col gap-1 p-4 transition-colors sm:flex-row sm:items-center sm:justify-between ${
-                    !evt.read_at ? "bg-muted/30" : ""
+                    !evt.read_at ? "bg-panel-raised/40" : ""
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <span
-                      className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wider ${eventBadgeClass(
+                      className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 font-mono text-micro font-semibold uppercase tracking-wider ${eventBadgeClass(
                         evt.event_type
                       )}`}
                     >
                       {eventLabel(evt.event_type)}
                     </span>
                     <div>
-                      <p className="text-sm font-medium leading-snug">{evt.title}</p>
+                      <p className="text-small font-medium leading-snug text-ink">{evt.title}</p>
                       {evt.message && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{evt.message}</p>
+                        <p className="mt-0.5 text-micro text-ink-secondary">{evt.message}</p>
                       )}
                       {evt.video_id && (
                         <Link
                           href={`/videos/${evt.video_id}`}
-                          className="mt-1 inline-block text-xs text-primary hover:underline font-medium"
+                          className="mt-1 inline-block text-micro font-medium text-signal hover:underline"
                         >
                           View Video →
                         </Link>
                       )}
                     </div>
                   </div>
-                  <span className="text-xs text-muted-foreground shrink-0 font-mono">
+                  <span className="shrink-0 font-mono text-micro tabular-nums text-ink-faint">
                     {new Date(evt.created_at).toLocaleString()}
                   </span>
                 </div>

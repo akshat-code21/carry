@@ -11,7 +11,7 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({
-  title = "Something went wrong",
+  title = "Signal interrupted",
   message,
   onRetry,
   className,
@@ -19,21 +19,23 @@ export function ErrorState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded-xl border border-danger/30 bg-danger/5 p-8 text-center",
+        "flex flex-col items-center justify-center rounded-md border border-bearish/25 bg-bearish/5 px-6 py-10 text-center",
         className
       )}
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-danger/10 text-danger mb-3">
-        <AlertCircle className="h-6 w-6" />
+      <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-md border border-bearish/30 bg-bearish/10 text-bearish">
+        <AlertCircle className="h-4 w-4" />
       </div>
-      <h3 className="text-base font-semibold text-foreground">{title}</h3>
-      <p className="mt-1 text-sm text-muted-foreground max-w-md">{message}</p>
+      <h3 className="font-display text-title font-semibold tracking-tight text-ink">
+        {title}
+      </h3>
+      <p className="mt-1 max-w-md text-small text-ink-secondary">{message}</p>
       {onRetry && (
         <Button
           onClick={onRetry}
           variant="outline"
           size="sm"
-          className="mt-4 gap-2 border-danger/30 hover:bg-danger/10 text-danger"
+          className="mt-4 gap-2 border-bearish/30 text-bearish hover:bg-bearish/10"
         >
           <RefreshCw className="h-3.5 w-3.5" />
           Try Again

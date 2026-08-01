@@ -1,5 +1,4 @@
 import React from "react";
-import { FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface EmptyStateProps {
@@ -20,18 +19,20 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 p-8 text-center",
+        "flex flex-col items-center justify-center rounded-md border border-dashed border-line-strong bg-panel px-6 py-10 text-center",
         className
       )}
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground mb-3">
-        {icon || <FolderOpen className="h-6 w-6" />}
-      </div>
-      <h3 className="text-base font-semibold text-foreground">{title}</h3>
+      {icon && (
+        <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-md border border-line bg-panel-raised text-ink-faint">
+          {icon}
+        </div>
+      )}
+      <h3 className="font-display text-title font-semibold tracking-tight text-ink">
+        {title}
+      </h3>
       {description && (
-        <p className="mt-1 text-sm text-muted-foreground max-w-sm">
-          {description}
-        </p>
+        <p className="mt-1 max-w-sm text-small text-ink-secondary">{description}</p>
       )}
       {action && <div className="mt-4">{action}</div>}
     </div>

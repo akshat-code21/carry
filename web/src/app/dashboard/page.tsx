@@ -25,7 +25,7 @@ export default function DashboardPage() {
       key: "ticker",
       header: "Ticker",
       render: (t) => (
-        <Link href={`/tickers/${t.ticker}`} className="font-bold hover:underline">
+        <Link href={`/tickers/${t.ticker}`} className="font-mono font-semibold text-ink hover:text-signal hover:underline">
           ${t.ticker}
         </Link>
       ),
@@ -48,14 +48,14 @@ export default function DashboardPage() {
       header: "ETF",
       render: (etf) => (
         <div className="flex flex-col">
-          <Link href={`/tickers/${etf.ticker}`} className="font-bold text-warning hover:underline flex items-center gap-1.5">
+          <Link href={`/tickers/${etf.ticker}`} className="flex items-center gap-1.5 font-mono font-semibold text-ink hover:text-signal hover:underline">
             ${etf.ticker}
-            <Badge variant="outline" className="text-[10px] px-1 py-0 bg-warning/10 border-warning/30 text-warning">
+            <Badge variant="outline" className="bg-warning/10 px-1 py-0 text-micro text-warning">
               ETF
             </Badge>
           </Link>
           {etf.themes && etf.themes.length > 0 && (
-            <span className="text-xs text-muted-foreground capitalize line-clamp-1">
+            <span className="line-clamp-1 text-small capitalize text-ink-secondary">
               {etf.themes.join(", ")}
             </span>
           )}
@@ -107,7 +107,7 @@ export default function DashboardPage() {
       <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-semibold">Top Tracked Stocks</CardTitle>
+            <CardTitle className="text-title font-semibold">Top Tracked Stocks</CardTitle>
           </CardHeader>
           <CardContent>
             {stocksData.length > 0 ? (
@@ -117,8 +117,9 @@ export default function DashboardPage() {
                 keyExtractor={(t) => t.ticker}
               />
             ) : (
-              <div className="text-xs text-muted-foreground py-6 text-center">
-                No individual stocks tracked yet.
+              <div className="py-6 text-center">
+                <p className="text-small font-medium text-ink">No individual stocks tracked yet</p>
+                <p className="mt-1 text-small text-ink-secondary">Add channels and process videos to build the watchlist.</p>
               </div>
             )}
           </CardContent>
@@ -126,9 +127,9 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between text-base font-semibold">
+            <CardTitle className="flex items-center justify-between text-title font-semibold">
               <span>Top Sector ETFs</span>
-              <Badge variant="outline" className="text-xs bg-warning/10 text-warning border-warning/20">
+              <Badge variant="outline" className="bg-warning/10 text-micro text-warning">
                 Institutional
               </Badge>
             </CardTitle>
@@ -141,8 +142,9 @@ export default function DashboardPage() {
                 keyExtractor={(etf) => etf.ticker}
               />
             ) : (
-              <div className="text-xs text-muted-foreground py-6 text-center">
-                No sector ETFs tracked yet.
+              <div className="py-6 text-center">
+                <p className="text-small font-medium text-ink">No sector ETFs tracked yet</p>
+                <p className="mt-1 text-small text-ink-secondary">Sector ETFs will appear as themes are mapped to instruments.</p>
               </div>
             )}
           </CardContent>
@@ -150,15 +152,15 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-semibold">Recent Videos</CardTitle>
+            <CardTitle className="text-title font-semibold">Recent Videos</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             {data.videos.slice(0, 8).map((v) => (
-              <div key={v.id} className="flex flex-col gap-1 border-b pb-2 last:border-0 last:pb-0">
-                <Link href={`/videos/${v.id}`} className="font-medium hover:underline line-clamp-1 text-sm">
+              <div key={v.id} className="flex flex-col gap-1 border-b border-line pb-2 last:border-0 last:pb-0">
+                <Link href={`/videos/${v.id}`} className="line-clamp-1 text-small font-medium text-ink hover:underline">
                   {v.title}
                 </Link>
-                <span className="text-xs text-muted-foreground font-mono">
+                <span className="font-mono text-micro text-ink-secondary">
                   Published: {new Date(v.published_at).toLocaleDateString()}
                 </span>
               </div>

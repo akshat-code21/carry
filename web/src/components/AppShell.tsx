@@ -22,7 +22,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div className="flex h-full overflow-hidden bg-background">
+    <div className="flex h-full overflow-hidden bg-canvas">
       <Sidebar
         isOpen={mobileSidebarOpen}
         onClose={() => setMobileSidebarOpen(false)}
@@ -33,7 +33,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           onMenuClick={() => setMobileSidebarOpen(true)}
           onOpenCommandPalette={() => setCommandPaletteOpen(true)}
         />
-        <main className="flex-1 overflow-y-auto bg-muted/10 p-4 md:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto bg-canvas p-4 md:p-5 lg:p-6">
           {children}
         </main>
       </div>

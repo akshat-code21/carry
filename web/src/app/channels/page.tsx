@@ -81,13 +81,13 @@ export default function ChannelsPage() {
           <CardHeader>
             <CardTitle>Add a YouTube Channel</CardTitle>
             <CardDescription>
-              Enter a YouTube Channel ID (e.g. <code className="text-xs bg-muted px-1 py-0.5 rounded">UC...</code>) to backfill its videos.
+              Enter a YouTube Channel ID (e.g. <code className="rounded bg-panel-raised px-1 py-0.5 font-mono text-micro text-signal">UC...</code>) to backfill its videos.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:flex-row sm:items-end">
               <div className="flex-1 space-y-1.5">
-                <label htmlFor="channelId" className="text-sm font-medium">
+                <label htmlFor="channelId" className="text-small font-medium text-ink">
                   YouTube Channel ID
                 </label>
                 <Input
@@ -99,7 +99,7 @@ export default function ChannelsPage() {
                 />
               </div>
               <div className="w-28 space-y-1.5">
-                <label htmlFor="maxVideos" className="text-sm font-medium">
+                <label htmlFor="maxVideos" className="text-small font-medium text-ink">
                   Max Videos
                 </label>
                 <Input
@@ -124,8 +124,8 @@ export default function ChannelsPage() {
 
             {feedback && (
               <p
-                className={`mt-3 text-sm ${
-                  feedback.type === "success" ? "text-success" : "text-danger"
+                className={`mt-3 text-small ${
+                  feedback.type === "success" ? "text-bullish" : "text-bearish"
                 }`}
               >
                 {feedback.message}

@@ -161,11 +161,41 @@ export interface TickerDetail {
   }[];
 }
 
+export interface ThemeTickerInfo {
+  ticker: string;
+  relevance_score: number;
+  source: string;
+}
+
+export interface SubThemeNode {
+  id: string;
+  name: string;
+  description?: string | null;
+  level: "theme";
+  tickers?: ThemeTickerInfo[];
+}
+
+export interface IndustryThemeNode {
+  id: string;
+  name: string;
+  description?: string | null;
+  level: "industry";
+  themes: SubThemeNode[];
+}
+
+export interface SectorThemeNode {
+  id: string;
+  name: string;
+  description?: string | null;
+  level: "sector" | "narrative";
+  industries?: IndustryThemeNode[];
+}
+
 export interface ThemeItem {
   id: string;
   name: string;
   level: "sector" | "industry" | "theme" | "narrative";
-  description?: string;
+  description?: string | null;
   parent_id?: string | null;
 }
 
@@ -188,6 +218,7 @@ export interface ThemeDetail {
   mapped_tickers: ThemeMappedTicker[];
   videos: ThemeVideoMention[];
 }
+
 
 /* ── Market Chatter Types (TickerFlow) ────────────────────────── */
 
@@ -252,7 +283,17 @@ export const api = {
   async getChannel(id: string): Promise<ChannelDetail> {
     const res = await fetch(`/api/channels/${id}`);
     if (!res.ok) throw new Error("Failed to fetch channel");
-    return res.json();
+    const channel = await res.json();
+
+    const [videosRes, stocksRes] = await Promise.all([
+      fetch(`/api/videos?channel_id=${id}`),
+      fetch(`/api/channels/${id}/top-stocks`),
+    ]);
+
+    const videos = videosRes.ok ? await videosRes.json() : [];
+    const top_stocks = stocksRes.ok ? await stocksRes.json() : [];
+
+    return { channel, videos, top_stocks };
   },
 
   async getTickers(): Promise<TickerItem[]> {
@@ -285,7 +326,7 @@ export const api = {
     return res.json();
   },
 
-  async getThemes(): Promise<ThemeItem[]> {
+  async getThemes(): Promise<SectorThemeNode[]> {
     const res = await fetch("/api/themes");
     if (!res.ok) throw new Error("Failed to fetch themes");
     return res.json();
@@ -294,8 +335,19 @@ export const api = {
   async getTheme(id: string): Promise<ThemeDetail> {
     const res = await fetch(`/api/themes/${id}`);
     if (!res.ok) throw new Error("Failed to fetch theme");
-    return res.json();
+    const theme = await res.json();
+
+    const [tickersRes, videosRes] = await Promise.all([
+      fetch(`/api/themes/${id}/tickers`),
+      fetch(`/api/themes/${id}/videos`),
+    ]);
+
+    const mapped_tickers = tickersRes.ok ? await tickersRes.json() : [];
+    const videos = videosRes.ok ? await videosRes.json() : [];
+
+    return { theme, mapped_tickers, videos };
   },
+
 
   async addChannel(youtubeChannelId: string, maxVideos = 50): Promise<{ task_id: string }> {
     const res = await fetch("/api/channels", {

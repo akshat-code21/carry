@@ -223,4 +223,16 @@ class ThemeService:
 
             tree.append(sector_node)
 
+        # Include narrative-level themes (free-text LLM extractions)
+        narratives = await self.get_themes_by_level("narrative")
+        for narrative in narratives:
+            tree.append({
+                "id": str(narrative.id),
+                "name": narrative.name,
+                "description": narrative.description,
+                "level": narrative.level,
+                "industries": [],
+            })
+
         return tree
+

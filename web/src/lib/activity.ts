@@ -16,11 +16,11 @@ export function eventBadgeClass(type: string): string {
     case "video_detected":
       return "bg-info/15 text-info";
     case "video_processed":
-      return "bg-success/15 text-success";
+      return "bg-bullish/15 text-bullish";
     case "video_failed":
-      return "bg-danger/15 text-danger";
+      return "bg-bearish/15 text-bearish";
     default:
-      return "bg-muted text-muted-foreground";
+      return "bg-panel-raised text-ink-secondary";
   }
 }
 

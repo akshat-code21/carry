@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface StatCardProps {
@@ -23,31 +23,32 @@ export function StatCard({
   className,
 }: StatCardProps) {
   return (
-    <Card className={cn("", className)}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        {icon && <div className="text-muted-foreground">{icon}</div>}
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold font-mono tabular-nums tracking-tight text-foreground">
+    <Card size="sm" className={cn("p-0", className)}>
+      <div className="flex items-center justify-between px-4 pt-3">
+        <span className="label-overline">{title}</span>
+        {icon && <span className="text-ink-faint">{icon}</span>}
+      </div>
+      <div className="px-4 pb-3 pt-1.5">
+        <div className="font-mono text-display font-semibold tracking-tight tabular-nums text-ink">
           {value}
         </div>
         {(description || trend) && (
-          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+          <div className="mt-1 flex items-center gap-2 text-small text-ink-faint">
             {trend && (
               <span
                 className={cn(
-                  "font-semibold font-mono",
-                  trend.positive ? "text-success" : "text-danger"
+                  "font-mono font-semibold tabular-nums",
+                  trend.positive ? "text-bullish" : "text-bearish"
                 )}
               >
-                {trend.positive ? "+" : ""}{trend.value}
+                {trend.positive ? "+" : ""}
+                {trend.value}
               </span>
             )}
             {description && <span>{description}</span>}
           </div>
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }
