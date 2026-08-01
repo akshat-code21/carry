@@ -350,7 +350,7 @@ export const api = {
 
 
   async addChannel(youtubeChannelId: string, maxVideos = 50): Promise<{ task_id: string }> {
-    const res = await fetch("/api/channels", {
+    const res = await fetch("/api/pipeline/backfill", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ youtube_channel_id: youtubeChannelId, max_videos: maxVideos }),
@@ -360,7 +360,7 @@ export const api = {
   },
 
   async backfillChannel(youtubeChannelId: string, maxVideos = 20): Promise<{ task_id: string }> {
-    const res = await fetch("/api/channels/backfill", {
+    const res = await fetch("/api/pipeline/backfill", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -373,10 +373,10 @@ export const api = {
   },
 
   async ingestSingleVideo(channelDbId: string, youtubeVideoId: string): Promise<{ task_id: string }> {
-    const res = await fetch(`/api/channels/${channelDbId}/ingest-video`, {
+    const res = await fetch("/api/pipeline/ingest-single-video", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ youtube_video_id: youtubeVideoId }),
+      body: JSON.stringify({ channel_id: channelDbId, youtube_video_id: youtubeVideoId }),
     });
     if (!res.ok) throw new Error("Failed to trigger video ingestion");
     return res.json();
