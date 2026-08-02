@@ -223,11 +223,19 @@ def ingest_single_video_task(self, channel_id: str, youtube_video_id: str) -> di
             video = await ingestion.ingest_single_video(c_uuid, youtube_video_id)
             if video.transcript_status == "fetched":
                 video.ingest_status = "ready_for_analysis"
+            else:
+                video.ingest_status = "failed"
+                logger.warning(
+                    "Transcript not available for %s (status: %s), skipping processing",
+                    youtube_video_id,
+                    video.transcript_status,
+                )
             await db.commit()
             video_id_str = str(video.id)
             already_processed = video.processed
+            transcript_ready = video.transcript_status == "fetched"
 
-        if not already_processed:
+        if not already_processed and transcript_ready:
             process_video_task.delay(video_id_str)
 
         return {

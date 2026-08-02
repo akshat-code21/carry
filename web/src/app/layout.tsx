@@ -3,6 +3,8 @@ import { Space_Grotesk, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { QueryProvider } from "@/components/QueryProvider";
+import { AppShell } from "@/components/AppShell";
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -59,7 +61,10 @@ export default function RootLayout({
       </head>
       <body className="h-full bg-canvas">
         <ThemeProvider>
-          <QueryProvider>{children}</QueryProvider>
+          <QueryProvider>
+            <AppShell>{children}</AppShell>
+            <ReactQueryDevtools initialIsOpen={false} />
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>
