@@ -42,7 +42,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
-    handleNavigate(`/?q=${encodeURIComponent(query.trim())}`);
+    handleNavigate(`/search?q=${encodeURIComponent(query.trim())}`);
   };
 
   if (!isOpen) return null;
@@ -114,7 +114,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
           {/* Direct Search Action */}
           {query.trim() && (
             <div
-              onClick={() => handleNavigate(`/?q=${encodeURIComponent(query.trim())}`)}
+              onClick={() => handleNavigate(`/search?q=${encodeURIComponent(query.trim())}`)}
               className="mb-2 flex cursor-pointer items-center justify-between rounded-md bg-signal/10 px-3 py-2 text-body font-medium text-signal transition-colors hover:bg-signal/20"
             >
               <div className="flex items-center gap-2">

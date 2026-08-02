@@ -71,13 +71,13 @@ function SearchPageContent() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
-    router.push(`/?q=${encodeURIComponent(query.trim())}&type=${type}`);
+    router.push(`/search?q=${encodeURIComponent(query.trim())}&type=${type}`);
   };
 
   const handleTypeChange = (newType: "keyword" | "semantic" | "hybrid") => {
     setType(newType);
     if (query.trim()) {
-      router.push(`/?q=${encodeURIComponent(query.trim())}&type=${newType}`);
+      router.push(`/search?q=${encodeURIComponent(query.trim())}&type=${newType}`);
     }
   };
 

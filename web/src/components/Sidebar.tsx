@@ -13,7 +13,7 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { href: "/", label: "Search", icon: Search },
+  { href: "/search", label: "Search", icon: Search },
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/channels", label: "Channels", icon: Tv },
   { href: "/themes", label: "Themes", icon: Hash },
