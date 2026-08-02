@@ -1,6 +1,4 @@
 import React from "react";
-import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SentimentBadgeProps {
@@ -31,31 +29,45 @@ export function SentimentBadge({
   const isBullish = resolvedDirection === "bullish";
   const isBearish = resolvedDirection === "bearish";
 
-  const Icon = isBullish ? TrendingUp : isBearish ? TrendingDown : Minus;
+  const glyph = isBullish ? "B" : isBearish ? "S" : "–";
 
-  const variantClass = isBullish
-    ? "bg-success/10 text-success border-success/30 hover:bg-success/20"
+  const chipClass = isBullish
+    ? "bg-bullish/12 text-bullish border-bullish/30"
     : isBearish
-    ? "bg-danger/10 text-danger border-danger/30 hover:bg-danger/20"
-    : "bg-secondary text-secondary-foreground border-border";
+      ? "bg-bearish/12 text-bearish border-bearish/30"
+      : "bg-panel-raised text-ink-secondary border-line";
 
-  const sizeClass = size === "sm" ? "text-[10px] px-1.5 py-0" : "text-xs px-2 py-0.5";
+  const sizeClass = size === "sm" ? "h-4 gap-1 px-1 text-micro" : "h-5 gap-1.5 px-1.5 text-micro";
 
   return (
-    <Badge
-      variant="outline"
+    <span
       className={cn(
-        "font-semibold uppercase tracking-wider gap-1 font-mono shrink-0",
-        variantClass,
+        "inline-flex shrink-0 items-center rounded-md border font-mono font-semibold tracking-[0.02em]",
+        chipClass,
         sizeClass,
         className
       )}
     >
-      {showIcon && <Icon className={size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"} />}
-      <span>{resolvedDirection}</span>
-      {confidence !== undefined && (
-        <span className="opacity-80 font-normal">({(confidence * 100).toFixed(0)}%)</span>
+      {showIcon && (
+        <span
+          className={cn(
+            "flex h-3.5 w-3.5 items-center justify-center rounded-sm border font-bold",
+            isBullish
+              ? "border-bullish/40 bg-bullish/15"
+              : isBearish
+                ? "border-bearish/40 bg-bearish/15"
+                : "border-line bg-panel"
+          )}
+        >
+          {glyph}
+        </span>
       )}
-    </Badge>
+      <span className="lowercase">{resolvedDirection}</span>
+      {confidence !== undefined && (
+        <span className="font-normal opacity-80 tabular-nums">
+          ({(confidence * 100).toFixed(0)}%)
+        </span>
+      )}
+    </span>
   );
 }

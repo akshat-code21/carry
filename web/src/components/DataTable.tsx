@@ -40,15 +40,14 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={cn("w-full overflow-x-auto rounded-lg border border-border bg-card", className)}>
+    <div className={cn("w-full overflow-x-auto rounded-md border border-line bg-panel", className)}>
       <Table>
         <TableHeader>
-          <TableRow className="bg-muted/50 hover:bg-muted/50">
+          <TableRow className="bg-panel-raised hover:bg-panel-raised">
             {columns.map((col) => (
               <TableHead
                 key={col.key}
                 className={cn(
-                  "text-xs font-semibold text-muted-foreground uppercase tracking-wider",
                   col.numeric && "text-right",
                   col.headerClassName
                 )}
@@ -65,14 +64,14 @@ export function DataTable<T>({
               onClick={() => onRowClick?.(row)}
               className={cn(
                 "transition-colors",
-                onRowClick && "cursor-pointer hover:bg-muted/40"
+                onRowClick && "cursor-pointer hover:bg-panel-raised"
               )}
             >
               {columns.map((col) => (
                 <TableCell
                   key={col.key}
                   className={cn(
-                    "py-3 text-sm text-foreground",
+                    "py-2 text-body text-ink",
                     col.numeric && "text-right font-mono tabular-nums",
                     col.className
                   )}

@@ -12,11 +12,12 @@ export function SectionLabel({
   dotClassName,
 }: SectionLabelProps) {
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className={cn("flex items-center gap-2.5", className)}>
       <span
-        className={cn("h-1.5 w-1.5 rounded-full bg-tf-signal", dotClassName)}
+        className={cn("h-1.5 w-1.5 rounded-full bg-signal", dotClassName)}
+        aria-hidden="true"
       />
-      <span className="font-mono text-caption font-semibold uppercase tracking-[0.1em] text-tf-muted">
+      <span className="font-mono text-caption font-semibold uppercase tracking-[0.14em] text-ink-faint">
         {children}
       </span>
     </div>

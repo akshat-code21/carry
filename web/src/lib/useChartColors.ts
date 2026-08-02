@@ -12,6 +12,10 @@ export interface ChartColors {
   mutedForeground: string;
   chart1: string;
   chart2: string;
+  canvas: string;
+  ink: string;
+  inkSecondary: string;
+  line: string;
 }
 
 function getVar(name: string, fallback: string): string {
@@ -34,25 +38,33 @@ export function useChartColors(): ChartColors {
     subscribe,
     () =>
       JSON.stringify({
-        success: getVar("--success", "#22c55e"),
-        danger: getVar("--danger", "#ef4444"),
-        warning: getVar("--warning", "#eab308"),
-        info: getVar("--info", "#3b82f6"),
-        primary: getVar("--primary", "#6366f1"),
-        mutedForeground: getVar("--muted-foreground", "#64748b"),
-        chart1: getVar("--chart-1", "#8884d8"),
-        chart2: getVar("--chart-2", "#82ca9d"),
+        success: getVar("--success", "#3CB173"),
+        danger: getVar("--danger", "#E3645E"),
+        warning: getVar("--warning", "#E6AC3D"),
+        info: getVar("--info", "#7EA9D5"),
+        primary: getVar("--primary", "#BED540"),
+        mutedForeground: getVar("--muted-foreground", "#9A9FA6"),
+        chart1: getVar("--chart-1", "#BED540"),
+        chart2: getVar("--chart-2", "#7EA9D5"),
+        canvas: getVar("--canvas", "#10141C"),
+        ink: getVar("--ink", "#E8EBF0"),
+        inkSecondary: getVar("--ink-secondary", "#9A9FA6"),
+        line: getVar("--line", "#3A4250"),
       }),
     () =>
       JSON.stringify({
-        success: "#22c55e",
-        danger: "#ef4444",
-        warning: "#eab308",
-        info: "#3b82f6",
-        primary: "#6366f1",
-        mutedForeground: "#64748b",
-        chart1: "#8884d8",
-        chart2: "#82ca9d",
+        success: "#3CB173",
+        danger: "#E3645E",
+        warning: "#E6AC3D",
+        info: "#7EA9D5",
+        primary: "#BED540",
+        mutedForeground: "#9A9FA6",
+        chart1: "#BED540",
+        chart2: "#7EA9D5",
+        canvas: "#10141C",
+        ink: "#E8EBF0",
+        inkSecondary: "#9A9FA6",
+        line: "#3A4250",
       })
   );
 

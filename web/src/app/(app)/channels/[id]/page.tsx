@@ -64,7 +64,7 @@ export default function ChannelPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-10">
-      <div>
+      <div className="mb-2 flex gap-2 flex-col items-start w-full">
         <Breadcrumbs
           items={[
             { label: "Channels", href: "/channels" },
@@ -72,6 +72,7 @@ export default function ChannelPage() {
           ]}
         />
         <PageHeader
+          className="w-full"
           title={data.channel.title}
           description={data.channel.description}
         >
@@ -101,13 +102,13 @@ export default function ChannelPage() {
           <CardHeader>
             <CardTitle>Ingest a Single Video</CardTitle>
             <CardDescription>
-              Enter a YouTube Video ID (e.g. <code className="text-xs bg-muted px-1 py-0.5 rounded">dQw4w9WgXcQ</code>) to ingest and process it for this channel.
+              Enter a YouTube Video ID (e.g. <code className="rounded bg-panel-raised px-1 py-0.5 font-mono text-micro text-signal">dQw4w9WgXcQ</code>) to ingest and process it for this channel.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleIngest} className="flex flex-col gap-4 sm:flex-row sm:items-end">
               <div className="flex-1 space-y-1.5">
-                <label htmlFor="youtubeVideoId" className="text-sm font-medium">
+                <label htmlFor="youtubeVideoId" className="text-small font-medium text-ink">
                   YouTube Video ID
                 </label>
                 <Input
@@ -131,9 +132,8 @@ export default function ChannelPage() {
 
             {ingestFeedback && (
               <p
-                className={`mt-3 text-sm ${
-                  ingestFeedback.type === "success" ? "text-success" : "text-danger"
-                }`}
+                className={`mt-3 text-small ${ingestFeedback.type === "success" ? "text-bullish" : "text-bearish"
+                  }`}
               >
                 {ingestFeedback.message}
               </p>
@@ -152,11 +152,11 @@ export default function ChannelPage() {
             <CardContent>
               <div className="grid gap-4">
                 {data.videos?.map((v) => (
-                  <div key={v.id} className="flex flex-col gap-2 rounded-lg border p-4">
-                    <Link href={`/videos/${v.id}`} className="font-semibold hover:underline text-lg">
+                  <div key={v.id} className="flex flex-col gap-2 rounded-md border border-line p-4">
+                    <Link href={`/videos/${v.id}`} className="font-medium text-ink hover:text-signal hover:underline">
                       {v.title}
                     </Link>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground font-mono">
+                    <div className="flex items-center gap-4 font-mono text-micro text-ink-secondary">
                       <span>Published: {new Date(v.published_at).toLocaleDateString()}</span>
                       <span>Duration: {Math.floor(v.duration_sec / 60)} mins</span>
                     </div>
@@ -178,12 +178,12 @@ export default function ChannelPage() {
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               {data.top_stocks?.slice(0, 15).map((s) => (
-                <div key={s.ticker} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+                <div key={s.ticker} className="flex items-center justify-between border-b border-line pb-2 last:border-0 last:pb-0">
                   <div className="flex flex-col">
-                    <Link href={`/tickers/${s.ticker}`} className="font-bold hover:underline">
+                    <Link href={`/tickers/${s.ticker}`} className="font-mono font-semibold text-ink hover:text-signal hover:underline">
                       ${s.ticker}
                     </Link>
-                    <span className="text-xs text-muted-foreground font-mono">
+                    <span className="font-mono text-micro text-ink-secondary">
                       Score: {(s.weighted_relevance * 100).toFixed(0)}
                     </span>
                   </div>
@@ -191,7 +191,7 @@ export default function ChannelPage() {
                 </div>
               ))}
               {(!data.top_stocks || data.top_stocks.length === 0) && (
-                <p className="text-sm text-muted-foreground">No stocks aggregated yet.</p>
+                <p className="text-small text-ink-secondary">No stocks aggregated yet.</p>
               )}
             </CardContent>
           </Card>

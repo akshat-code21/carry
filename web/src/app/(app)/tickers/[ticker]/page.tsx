@@ -28,27 +28,22 @@ import { DetailSkeleton } from "@/components/skeletons/LayoutSkeletons";
 import { useTicker, useTickerSentiment, useTickerPriceHistory } from "@/lib/hooks";
 import { useChartColors } from "@/lib/useChartColors";
 
-/**
- * Reads a CSS custom property from :root / .dark and returns its computed value.
- */
-function getCSSVar(name: string, fallback: string): string {
-  if (typeof window === "undefined") return fallback;
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
-}
-
 function SignalMarker({
   cx,
   cy,
   signal,
+  successColor,
+  dangerColor,
+  bgColor,
 }: {
   cx?: number;
   cy?: number;
   signal: "B" | "S";
+  successColor: string;
+  dangerColor: string;
+  bgColor: string;
 }) {
   if (cx == null || cy == null) return null;
-  const successColor = getCSSVar("--success", "#22c55e");
-  const dangerColor = getCSSVar("--danger", "#ef4444");
-  const bgColor = getCSSVar("--background", "#0a0a0a");
   const color = signal === "B" ? successColor : dangerColor;
   return (
     <g>
@@ -60,7 +55,8 @@ function SignalMarker({
         dominantBaseline="central"
         fontSize={11}
         fontWeight="bold"
-        fill="#fff"
+        fontFamily="var(--font-plex-mono)"
+        fill={bgColor}
       >
         {signal}
       </text>
@@ -68,7 +64,8 @@ function SignalMarker({
   );
 }
 
-/** Find the price point closest in time to a target date (within 5 days),
+/**
+ * Find the price point closest in time to a target date (within 5 days),
  * so a mention on a weekend/holiday still lands on the nearest trading day. */
 function findClosestPricePoint(targetDateStr: string, priceHistory: any[]) {
   if (priceHistory.length === 0) return null;
@@ -100,10 +97,10 @@ const PriceTooltip = ({ active, payload }: any) => {
   const closePrice = typeof data.close === "number" ? data.close.toFixed(2) : data.close;
 
   return (
-    <div className="z-50 rounded-lg border bg-popover px-3.5 py-2.5 text-popover-foreground shadow-md">
-      <p className="text-xs font-medium text-muted-foreground">{data.label || data.date}</p>
-      <p className="mt-1 text-sm font-bold font-mono text-foreground">
-        Close Price: <span className="text-primary">${closePrice}</span>
+    <div className="z-50 rounded-md border border-line bg-panel-raised px-3 py-2.5 text-ink shadow-md">
+      <p className="font-mono text-micro text-ink-secondary">{data.label || data.date}</p>
+      <p className="mt-1 font-mono text-small font-semibold text-ink">
+        Close Price: <span className="text-signal">${closePrice}</span>
       </p>
     </div>
   );
@@ -114,10 +111,10 @@ const PerfTooltip = ({ active, payload }: any) => {
   const data = payload[0].payload;
 
   return (
-    <div className="z-50 rounded-lg border bg-popover px-3.5 py-2.5 text-popover-foreground shadow-md space-y-1">
-      <p className="text-xs font-medium text-muted-foreground">{data.name}</p>
+    <div className="z-50 space-y-1 rounded-md border border-line bg-panel-raised px-3 py-2.5 text-ink shadow-md">
+      <p className="font-mono text-micro text-ink-secondary">{data.name}</p>
       {payload.map((entry: any, i: number) => (
-        <p key={i} className="text-xs font-mono" style={{ color: entry.color }}>
+        <p key={i} className="font-mono text-micro" style={{ color: entry.color }}>
           {entry.name}: ${typeof entry.value === "number" ? entry.value.toFixed(2) : entry.value}
         </p>
       ))}
@@ -130,11 +127,11 @@ const MentionsTooltip = ({ active, payload }: any) => {
   const data = payload[0].payload;
 
   return (
-    <div className="z-50 rounded-lg border bg-popover px-3.5 py-2.5 text-popover-foreground shadow-md space-y-1">
-      <p className="text-xs font-medium text-muted-foreground">{data.label || data.date}</p>
-      <div className="flex items-center gap-3 text-xs font-mono">
-        <span className="text-success font-semibold">Bullish: {data.bullish_count || 0}</span>
-        <span className="text-danger font-semibold">Bearish: {data.bearish_count || 0}</span>
+    <div className="z-50 space-y-1 rounded-md border border-line bg-panel-raised px-3 py-2.5 text-ink shadow-md">
+      <p className="font-mono text-micro text-ink-secondary">{data.label || data.date}</p>
+      <div className="flex items-center gap-3 font-mono text-micro">
+        <span className="font-semibold text-bullish">Bullish: {data.bullish_count || 0}</span>
+        <span className="font-semibold text-bearish">Bearish: {data.bearish_count || 0}</span>
       </div>
     </div>
   );
@@ -148,7 +145,7 @@ export default function TickerPage() {
 
   const { data, isLoading } = useTicker(ticker);
   const { data: sentimentTimeline = [] } = useTickerSentiment(ticker);
-  const { data: priceHistory = [] } = useTickerPriceHistory(ticker, priceRangeDays);
+  const { data: priceHistory = [], isFetching: isFetchingPrice } = useTickerPriceHistory(ticker, priceRangeDays);
 
   const chartColors = useChartColors();
   const successColor = chartColors.success;
@@ -156,6 +153,9 @@ export default function TickerPage() {
   const mutedFgColor = chartColors.mutedForeground;
   const chart1Color = chartColors.chart1;
   const chart2Color = chartColors.chart2;
+  const canvasColor = chartColors.canvas;
+  const lineColor = chartColors.line;
+  const inkSecondaryColor = chartColors.inkSecondary;
 
   if (isLoading) {
     return <DetailSkeleton />;
@@ -205,7 +205,7 @@ export default function TickerPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
+      <div className="mb-2 flex gap-2 flex-col items-start">
         <Breadcrumbs
           items={[
             { label: "Dashboard", href: "/dashboard" },
@@ -249,12 +249,12 @@ export default function TickerPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="h-[420px] w-full">
+            <div className={`h-[420px] w-full transition-opacity duration-200 ${isFetchingPrice ? "opacity-60" : "opacity-100"}`}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={priceChartData} margin={{ top: 30, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                  <XAxis dataKey="label" />
-                  <YAxis domain={["auto", "auto"]} />
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} stroke={lineColor} vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-plex-mono)" }} tickLine={false} axisLine={{ stroke: lineColor }} />
+                  <YAxis domain={["auto", "auto"]} tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-plex-mono)" }} tickLine={false} axisLine={false} width={56} />
                   <Tooltip content={<PriceTooltip />} wrapperStyle={{ outline: "none" }} />
                   <Line type="monotone" dataKey="close" stroke={chart1Color} dot={false} name="Close Price" strokeWidth={2} />
                   {signalMarkers.map((m, i) => (
@@ -263,7 +263,15 @@ export default function TickerPage() {
                       x={m.label}
                       y={m.price}
                       r={10}
-                      shape={(props: any) => <SignalMarker {...props} signal={m.signal} />}
+                      shape={(props: any) => (
+                        <SignalMarker
+                          {...props}
+                          signal={m.signal}
+                          successColor={successColor}
+                          dangerColor={dangerColor}
+                          bgColor={canvasColor}
+                        />
+                      )}
                     />
                   ))}
                 </LineChart>
@@ -284,11 +292,11 @@ export default function TickerPage() {
             <div className="h-[400px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={perfChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                  <XAxis dataKey="name" />
-                  <YAxis domain={["auto", "auto"]} />
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} stroke={lineColor} vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-plex-mono)" }} tickLine={false} axisLine={{ stroke: lineColor }} />
+                  <YAxis domain={["auto", "auto"]} tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-plex-mono)" }} tickLine={false} axisLine={false} width={56} />
                   <Tooltip content={<PerfTooltip />} wrapperStyle={{ outline: "none" }} />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontFamily: "var(--font-plex-mono)", fontSize: 10 }} />
                   <Line type="monotone" dataKey="price" stroke={chart1Color} name="Price at Prediction" strokeWidth={2} />
                   <Line type="monotone" dataKey="price_1w" stroke={chart2Color} name="Price 1W Later" strokeWidth={2} />
                   {data.predictions?.map((pred: any, i: number) => {
@@ -302,7 +310,7 @@ export default function TickerPage() {
                         y={perf.price_at_video}
                         r={7}
                         fill={pred.direction === "bullish" ? successColor : pred.direction === "bearish" ? dangerColor : mutedFgColor}
-                        stroke="#ffffff"
+                        stroke={canvasColor}
                         strokeWidth={2}
                       />
                     );
@@ -333,13 +341,13 @@ export default function TickerPage() {
                   }))}
                   margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="label" />
-                  <YAxis allowDecimals={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={lineColor} opacity={0.3} vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-plex-mono)" }} tickLine={false} axisLine={{ stroke: lineColor }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-plex-mono)" }} tickLine={false} axisLine={false} width={40} />
                   <Tooltip content={<MentionsTooltip />} wrapperStyle={{ outline: "none" }} />
-                  <Legend />
-                  <Bar dataKey="bullish_count" name="Bullish" fill={successColor} />
-                  <Bar dataKey="bearish_count" name="Bearish" fill={dangerColor} />
+                  <Legend wrapperStyle={{ fontFamily: "var(--font-plex-mono)", fontSize: 10 }} />
+                  <Bar dataKey="bullish_count" name="Bullish" fill={successColor} radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="bearish_count" name="Bearish" fill={dangerColor} radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -352,16 +360,16 @@ export default function TickerPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Video className="h-5 w-5 text-primary" />
+              <Video className="h-4 w-4 text-signal" />
               Video Level Predictions
             </CardTitle>
             <CardDescription>All extracted video predictions for {ticker}</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+          <CardContent className="flex flex-col gap-3">
             {data.predictions?.map((p: any) => {
               const dir = (p.direction || "neutral").toLowerCase();
               return (
-                <div key={p.id} className="flex flex-col gap-2.5 rounded-lg border p-4 hover:border-primary/50 transition-colors">
+                <div key={p.id} className="flex flex-col gap-2.5 rounded-md border border-line p-4 transition-colors hover:border-signal/40">
                   <div className="flex items-center justify-between gap-2">
                     <Badge
                       variant={
@@ -371,33 +379,33 @@ export default function TickerPage() {
                             ? "destructive"
                             : "secondary"
                       }
-                      className="capitalize"
+                      className="font-mono text-micro capitalize"
                     >
                       {dir === "bullish" && <TrendingUp className="mr-1 h-3 w-3 inline" />}
                       {dir === "bearish" && <TrendingDown className="mr-1 h-3 w-3 inline" />}
                       {dir === "neutral" && <Minus className="mr-1 h-3 w-3 inline" />}
                       {dir}
                     </Badge>
-                    <span className="text-xs text-muted-foreground font-medium">
+                    <span className="font-mono text-micro text-ink-secondary">
                       Confidence: {((p.confidence ?? 0.75) * 100).toFixed(0)}%
                     </span>
                   </div>
 
                   {p.video_title && (
                     <div>
-                      <p className="text-xs font-semibold text-foreground line-clamp-1">{p.video_title}</p>
-                      {p.channel_title && <p className="text-[11px] text-muted-foreground">{p.channel_title}</p>}
+                      <p className="line-clamp-1 text-small font-semibold text-ink">{p.video_title}</p>
+                      {p.channel_title && <p className="text-caption text-ink-secondary">{p.channel_title}</p>}
                     </div>
                   )}
 
-                  <p className="text-sm italic text-muted-foreground bg-muted/30 p-2.5 rounded border border-muted/50">
+                  <p className="rounded border border-line bg-panel-raised p-2.5 text-small italic text-ink-secondary">
                     &ldquo;{p.prediction_text}&rdquo;
                   </p>
 
                   <div className="flex items-center justify-between pt-1">
                     {p.accurate !== null && p.accurate !== undefined ? (
-                      <Badge variant="outline" className={p.accurate ? "border-success text-success bg-success/10 text-xs" : "border-danger text-danger bg-danger/10 text-xs"}>
-                        {p.accurate ? "Accurate ✅" : "Inaccurate ❌"}
+                      <Badge variant="outline" className={p.accurate ? "border-bullish/40 bg-bullish/10 text-micro text-bullish" : "border-bearish/40 bg-bearish/10 text-micro text-bearish"}>
+                        {p.accurate ? "✓ Direction verified" : "✕ Direction inaccurate"}
                       </Badge>
                     ) : <div />}
 
@@ -406,7 +414,7 @@ export default function TickerPage() {
                         href={`https://www.youtube.com/watch?v=${p.youtube_video_id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                        className="flex items-center gap-1 text-small font-medium text-signal hover:underline"
                       >
                         <PlayCircle className="h-3.5 w-3.5" />
                         Watch Video
@@ -418,7 +426,7 @@ export default function TickerPage() {
               );
             })}
             {(!data.predictions || data.predictions.length === 0) && (
-              <p className="text-sm text-muted-foreground">No explicit predictions found for {ticker}.</p>
+              <p className="text-small text-ink-secondary">No explicit predictions found for {ticker}.</p>
             )}
           </CardContent>
         </Card>
@@ -428,16 +436,16 @@ export default function TickerPage() {
             <CardTitle>Associated Themes</CardTitle>
             <CardDescription>Market themes mapped to {ticker}</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+          <CardContent className="flex flex-col gap-3">
             {data.themes?.map((t: any) => (
-              <div key={t.id} className="flex flex-col gap-1 border-b pb-3 last:border-0 last:pb-0">
-                <span className="font-medium">{t.name}</span>
-                <span className="text-xs text-muted-foreground capitalize">{t.level}</span>
-                {t.description && <p className="text-xs text-muted-foreground mt-0.5">{t.description}</p>}
+              <div key={t.id} className="flex flex-col gap-1 border-b border-line pb-3 last:border-0 last:pb-0">
+                <span className="text-small font-medium text-ink">{t.name}</span>
+                <span className="font-mono text-micro uppercase tracking-wider text-ink-faint">{t.level}</span>
+                {t.description && <p className="mt-0.5 text-small text-ink-secondary">{t.description}</p>}
               </div>
             ))}
             {(!data.themes || data.themes.length === 0) && (
-              <p className="text-sm text-muted-foreground">No themes mapped to this ticker.</p>
+              <p className="text-small text-ink-secondary">No themes mapped to this ticker.</p>
             )}
           </CardContent>
         </Card>
