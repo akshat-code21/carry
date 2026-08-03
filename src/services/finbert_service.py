@@ -6,6 +6,7 @@ calibrated sentiment scoring without PyTorch dependency.
 
 import logging
 import os
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -37,6 +38,11 @@ class FinBertService:
     sentiment classification for financial text.
     """
 
+    _shared_session = None
+    _shared_tokenizer = None
+    _shared_loaded = False
+    _class_lock = threading.Lock()
+
     def __init__(self, model_dir: str | Path | None = None) -> None:
         self._model_dir = Path(model_dir) if model_dir else DEFAULT_MODEL_DIR
         self._session = None
@@ -44,42 +50,53 @@ class FinBertService:
         self._loaded = False
 
     def _ensure_loaded(self) -> None:
-        """Lazily load the ONNX model and tokenizer on first use."""
+        """Lazily load the ONNX model and tokenizer on first use (thread-safe)."""
         if self._loaded:
             return
 
-        import onnxruntime as ort
+        with FinBertService._class_lock:
+            if self._loaded:
+                return
 
-        model_path = self._model_dir / "model.onnx"
+            if not FinBertService._shared_loaded:
+                import onnxruntime as ort
 
-        if not model_path.exists():
-            # Fallback: download and use model directly from HuggingFace
-            # (slower first run, but works without export step)
-            logger.warning(
-                f"ONNX model not found at {model_path}. "
-                "Falling back to downloading from HuggingFace and running export. "
-                "Run 'python scripts/export_finbert_onnx.py' to pre-export."
-            )
-            self._download_and_export()
+                model_path = self._model_dir / "model.onnx"
 
-        logger.info(f"Loading FinBERT ONNX model from {self._model_dir}")
+                if not model_path.exists():
+                    # Fallback: download and use model directly from HuggingFace
+                    # (slower first run, but works without export step)
+                    logger.warning(
+                        f"ONNX model not found at {model_path}. "
+                        "Falling back to downloading from HuggingFace and running export. "
+                        "Run 'python scripts/export_finbert_onnx.py' to pre-export."
+                    )
+                    self._download_and_export()
 
-        # Load ONNX session with CPU provider
-        sess_options = ort.SessionOptions()
-        sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-        sess_options.intra_op_num_threads = int(os.environ.get("FINBERT_THREADS", "4"))
+                logger.info(f"Loading FinBERT ONNX model from {self._model_dir}")
 
-        self._session = ort.InferenceSession(
-            str(model_path),
-            sess_options,
-            providers=["CPUExecutionProvider"],
-        )
+                # Load ONNX session with CPU provider
+                sess_options = ort.SessionOptions()
+                sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+                sess_options.intra_op_num_threads = int(os.environ.get("FINBERT_THREADS", "4"))
 
-        # Load tokenizer (uses only vocab.txt + config, no torch needed)
-        self._tokenizer = AutoTokenizer.from_pretrained(str(self._model_dir))
-        self._loaded = True
+                FinBertService._shared_session = ort.InferenceSession(
+                    str(model_path),
+                    sess_options,
+                    providers=["CPUExecutionProvider"],
+                )
 
-        logger.info("FinBERT ONNX model loaded successfully")
+                # Load tokenizer (uses only vocab.txt + config, no torch needed)
+                FinBertService._shared_tokenizer = AutoTokenizer.from_pretrained(
+                    str(self._model_dir)
+                )
+                FinBertService._shared_loaded = True
+
+                logger.info("FinBERT ONNX model loaded successfully")
+
+            self._session = FinBertService._shared_session
+            self._tokenizer = FinBertService._shared_tokenizer
+            self._loaded = True
 
     def _download_and_export(self) -> None:
         """Download ProsusAI/finbert and convert to ONNX on the fly.
