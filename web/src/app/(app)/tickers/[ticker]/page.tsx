@@ -323,7 +323,7 @@ export default function TickerPage() {
       )}
 
       {/* Daily Bullish vs Bearish Mentions Bar Chart */}
-      {sentimentTimeline.length > 0 && (
+      {/* {sentimentTimeline.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Daily Bullish vs Bearish Mentions</CardTitle>
@@ -353,7 +353,7 @@ export default function TickerPage() {
             </div>
           </CardContent>
         </Card>
-      )}
+      )} */}
 
       {/* Video Level Predictions & Associated Themes */}
       <div className="grid gap-6 md:grid-cols-2">

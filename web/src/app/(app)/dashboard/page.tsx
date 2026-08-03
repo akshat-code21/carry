@@ -34,6 +34,8 @@ export default function DashboardPage() {
       key: "mentions",
       header: "Mentions",
       numeric: true,
+      headerClassName: "w-24 text-right",
+      className: "w-24 text-right",
       render: (t) => (
         <Badge variant="secondary" className="font-mono">
           {t.total_mentions}
@@ -47,7 +49,7 @@ export default function DashboardPage() {
       key: "ticker",
       header: "ETF",
       render: (etf) => (
-        <div className="flex flex-col">
+        <div className="flex flex-col min-w-0">
           <Link href={`/tickers/${etf.ticker}`} className="flex items-center gap-1.5 font-mono font-semibold text-ink hover:text-signal hover:underline">
             ${etf.ticker}
             <Badge variant="outline" className="bg-warning/10 px-1 py-0 text-micro text-warning">
@@ -55,7 +57,10 @@ export default function DashboardPage() {
             </Badge>
           </Link>
           {etf.themes && etf.themes.length > 0 && (
-            <span className="line-clamp-1 text-small capitalize text-ink-secondary">
+            <span
+              className="truncate text-small capitalize text-ink-secondary"
+              title={etf.themes.join(", ")}
+            >
               {etf.themes.join(", ")}
             </span>
           )}
@@ -66,6 +71,8 @@ export default function DashboardPage() {
       key: "mentions",
       header: "Mentions",
       numeric: true,
+      headerClassName: "w-24 text-right",
+      className: "w-24 text-right",
       render: (etf) => (
         <Badge variant="secondary" className="shrink-0 font-mono">
           {etf.total_mentions || 0}

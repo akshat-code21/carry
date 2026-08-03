@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import {
   CartesianGrid,
+  Label,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -355,19 +356,43 @@ function DualLineChart({
             tick={{ fill: inkSecondaryColor, fontSize: 10, fontFamily: "var(--font-plex-mono)" }}
             axisLine={false}
             tickLine={false}
-            width={42}
+            width={54}
             allowDecimals={false}
-          />
+          >
+            <Label
+              value={metricLabel}
+              angle={-90}
+              position="insideLeft"
+              style={{
+                fill: inkSecondaryColor,
+                fontSize: 10,
+                fontFamily: "var(--font-plex-mono)",
+                textAnchor: "middle",
+              }}
+            />
+          </YAxis>
           <YAxis
             yAxisId="price"
             orientation="right"
             tick={{ fill: inkSecondaryColor, fontSize: 10, fontFamily: "var(--font-plex-mono)" }}
             axisLine={false}
             tickLine={false}
-            width={48}
+            width={60}
             tickFormatter={(value: number) => `$${formatNumber(value, 0)}`}
             domain={["auto", "auto"]}
-          />
+          >
+            <Label
+              value="Closing Price ($)"
+              angle={90}
+              position="insideRight"
+              style={{
+                fill: inkSecondaryColor,
+                fontSize: 10,
+                fontFamily: "var(--font-plex-mono)",
+                textAnchor: "middle",
+              }}
+            />
+          </YAxis>
           <Tooltip
             content={<ChartTooltip />}
             cursor={{
@@ -784,7 +809,7 @@ export default function TickerFlowPage() {
                     <h2 className="font-mono text-display font-medium tracking-[-0.05em] text-tf-ink">
                       ${data.symbol}
                     </h2>
-                    <StatusBadge status={data.data_status} />
+                    {/* <StatusBadge status={data.data_status} /> */}
                   </div>
                   <p className="mt-1 text-body text-tf-muted">
                     {data.company_name ?? "Company data unavailable"}

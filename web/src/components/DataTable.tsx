@@ -25,6 +25,7 @@ interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
   emptyState?: React.ReactNode;
   className?: string;
+  tableLayout?: "auto" | "fixed";
 }
 
 export function DataTable<T>({
@@ -34,6 +35,7 @@ export function DataTable<T>({
   onRowClick,
   emptyState,
   className,
+  tableLayout = "fixed",
 }: DataTableProps<T>) {
   if (data.length === 0 && emptyState) {
     return <>{emptyState}</>;
@@ -41,7 +43,7 @@ export function DataTable<T>({
 
   return (
     <div className={cn("w-full overflow-x-auto rounded-md border border-line bg-panel", className)}>
-      <Table>
+      <Table className={cn(tableLayout === "fixed" && "table-fixed")}>
         <TableHeader>
           <TableRow className="bg-panel-raised hover:bg-panel-raised">
             {columns.map((col) => (
