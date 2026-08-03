@@ -1,4 +1,4 @@
-# YT Chatter 📈
+# YT Chatter 📈 
 
 > **Search Engine for Financial Market Commentary from YouTube**
 
