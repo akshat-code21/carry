@@ -2,7 +2,6 @@ import asyncio
 import logging
 from typing import Any
 
-from src.pipeline.agents.agent_cleaner import CleanedItem
 from src.schemas.agent_pipeline import FinBertSentiment, PipelineGraphState
 from src.services.finbert_service import FinBertService
 
@@ -55,10 +54,14 @@ async def agent_finbert_node(state: PipelineGraphState) -> dict[str, Any]:
         for item in cleaned_items:
             item_id = str(item.get("id"))
             text = str(item.get("cleaned_text", "")).lower()
-            if any(w in text for w in ["rally", "call", "buy", "bull", "growth", "high", "upgrade"]):
+            if any(
+                w in text for w in ["rally", "call", "buy", "bull", "growth", "high", "upgrade"]
+            ):
                 sent = "bullish"
                 probs = {"positive": 0.8, "negative": 0.1, "neutral": 0.1}
-            elif any(w in text for w in ["drop", "put", "sell", "bear", "down", "risk", "downgrade"]):
+            elif any(
+                w in text for w in ["drop", "put", "sell", "bear", "down", "risk", "downgrade"]
+            ):
                 sent = "bearish"
                 probs = {"positive": 0.1, "negative": 0.8, "neutral": 0.1}
             else:

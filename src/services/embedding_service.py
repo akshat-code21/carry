@@ -22,9 +22,7 @@ class OpenAIEmbeddingService(EmbeddingProvider):
         """Lazily initialize the OpenAI client."""
         if self._client is None:
             if not self._api_key:
-                raise ValueError(
-                    "OPENAI_API_KEY is not set. Please set it in your .env file."
-                )
+                raise ValueError("OPENAI_API_KEY is not set. Please set it in your .env file.")
             from openai import OpenAI
 
             self._client = OpenAI(api_key=self._api_key)

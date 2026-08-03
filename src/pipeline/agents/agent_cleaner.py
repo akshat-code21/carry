@@ -88,7 +88,12 @@ def agent_cleaner_node(state: PipelineGraphState) -> dict[str, Any]:
         )
         cleaned_records.append(record.model_dump(mode="json"))
 
-    log.info("Agent 3 Cleaner: %d of %d items retained after near-deduplication for %s", len(cleaned_records), len(validated_items), symbol)
+    log.info(
+        "Agent 3 Cleaner: %d of %d items retained after near-deduplication for %s",
+        len(cleaned_records),
+        len(validated_items),
+        symbol,
+    )
     res = {"cleaned_items": cleaned_records}
     if errors:
         res["errors"] = errors

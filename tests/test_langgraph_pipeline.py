@@ -8,10 +8,8 @@ import pytest
 
 from src.pipeline.agents.agent_cleaner import agent_cleaner_node
 from src.pipeline.agents.agent_finbert import agent_finbert_node
-from src.pipeline.agents.agent_llm import agent_llm_node
-from src.pipeline.agents.agent_scoring import agent_scoring_node
 from src.pipeline.agents.agent_validation import agent_validation_node
-from src.pipeline.graph import pipeline_graph, run_pipeline_for_raw_items
+from src.pipeline.graph import run_pipeline_for_raw_items
 
 
 @pytest.fixture
@@ -22,7 +20,10 @@ def sample_raw_items() -> list[dict]:
             "id": "reddit:p1",
             "symbol": "NVDA",
             "source": "reddit",
-            "text": "Why $NVDA is poised for a massive rally this quarter! Revenue growth looks unstoppable.",
+            "text": (
+                "Why $NVDA is poised for a massive rally this quarter! "
+                "Revenue growth looks unstoppable."
+            ),
             "title": "$NVDA Rally",
             "author": "bullish_trader",
             "created_at": now.isoformat(),
@@ -41,7 +42,10 @@ def sample_raw_items() -> list[dict]:
             "id": "reddit:p2_dup",
             "symbol": "NVDA",
             "source": "reddit",
-            "text": "Why $NVDA is poised for a massive rally this quarter! Revenue growth looks unstoppable.",
+            "text": (
+                "Why $NVDA is poised for a massive rally this quarter! "
+                "Revenue growth looks unstoppable."
+            ),
             "title": "$NVDA Rally",
             "author": "bullish_trader",
             "created_at": now.isoformat(),
@@ -83,12 +87,14 @@ def test_agent_validation_node(sample_raw_items: list[dict]) -> None:
 
 
 def test_agent_cleaner_node(sample_raw_items: list[dict]) -> None:
-    val_state = agent_validation_node({
-        "symbol": "NVDA",
-        "period_days": 7,
-        "raw_items": sample_raw_items,
-        "errors": [],
-    })
+    val_state = agent_validation_node(
+        {
+            "symbol": "NVDA",
+            "period_days": 7,
+            "raw_items": sample_raw_items,
+            "errors": [],
+        }
+    )
     result = agent_cleaner_node(val_state)
     cleaned = result["cleaned_items"]
     # MinHash deduplication should drop the near-duplicate p2_dup
@@ -98,7 +104,14 @@ def test_agent_cleaner_node(sample_raw_items: list[dict]) -> None:
 
 @pytest.mark.asyncio
 async def test_agent_finbert_node(sample_raw_items: list[dict]) -> None:
-    val_state = agent_validation_node({"symbol": "NVDA", "period_days": 7, "raw_items": sample_raw_items, "errors": []})
+    val_state = agent_validation_node(
+        {
+            "symbol": "NVDA",
+            "period_days": 7,
+            "raw_items": sample_raw_items,
+            "errors": [],
+        }
+    )
     clean_state = agent_cleaner_node(val_state)
     result = await agent_finbert_node(clean_state)
     finbert_results = result["finbert_results"]

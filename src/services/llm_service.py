@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # System prompt for transcript analysis (cached across calls)
-ANALYSIS_SYSTEM_PROMPT = """You are an expert financial analyst extracting structured data from YouTube financial commentary transcripts.
+ANALYSIS_SYSTEM_PROMPT = """You are an expert financial analyst extracting structured data \
+from YouTube financial commentary transcripts.
 
 For the given transcript chunk, extract ALL of the following:
 
@@ -30,13 +31,22 @@ For the given transcript chunk, extract ALL of the following:
    - sentiment: "bullish", "bearish", or "neutral"
    - confidence: 0.0 to 1.0 — how confident the speaker seemed
 
-2. **Explicit Tickers**: Stock tickers explicitly mentioned by name or company name by the speaker (e.g., speaker says "Nvidia" or "NVDA"). Do NOT include competitor tickers here unless they were explicitly named by the speaker.
+2. **Explicit Tickers**: Stock tickers explicitly mentioned by name or company name by \
+the speaker (e.g., speaker says "Nvidia" or "NVDA"). Do NOT include competitor tickers \
+here unless they were explicitly named by the speaker.
 
-3. **Implicit Tickers**: Stock tickers implicitly relevant based on the general sector topic discussed (e.g., discussing "AI chips" implies NVDA, AMD, etc.). These are background sector context only.
+3. **Implicit Tickers**: Stock tickers implicitly relevant based on the general sector \
+topic discussed (e.g., discussing "AI chips" implies NVDA, AMD, etc.). These are background \
+sector context only.
 
 4. **Predictions**: Concrete, testable predictions or calls. For each:
    - text: What was predicted, in plain English
-   - ticker: The stock ticker symbol (e.g. "NVDA", "AAPL", "MSFT", "TSLA", "AMZN", "GOOGL", "XOM") corresponding ONLY to the specific company being predicted. If a company name (e.g. "Apple", "Nvidia") is mentioned in relation to the prediction, convert it to its official stock ticker symbol. If a private company backed by a major public company is mentioned (e.g. "OpenAI" -> "MSFT", "Anthropic" -> "AMZN"), use the primary public ticker symbol. Use null for macro calls or when no specific company was target of the call.
+   - ticker: The stock ticker symbol (e.g. "NVDA", "AAPL", "MSFT", "TSLA", "AMZN", \
+"GOOGL", "XOM") corresponding ONLY to the specific company being predicted. If a company \
+name (e.g. "Apple", "Nvidia") is mentioned in relation to the prediction, convert it to its \
+official stock ticker symbol. If a private company backed by a major public company is \
+mentioned (e.g. "OpenAI" -> "MSFT", "Anthropic" -> "AMZN"), use the primary public ticker \
+symbol. Use null for macro calls or when no specific company was target of the call.
    - direction: "bullish", "bearish", or "neutral"
    - timeframe: The timeframe if mentioned (e.g., "by end of year", "next quarter")
    - confidence: 0.0 to 1.0
@@ -58,16 +68,20 @@ Return ONLY valid JSON matching this exact schema:
 Rules:
 - Skip generic banter, intros, ads, and non-financial discussion
 - Be conservative with predictions — only extract clear, testable calls
-- Never assign a competitor stock ticker to a prediction unless that company was specifically discussed for that prediction call
+- Never assign a competitor stock ticker to a prediction unless that company was specifically \
+discussed for that prediction call
 - Never invent tickers or timeframes not mentioned in the transcript
 - If a chunk has no financial content, return empty arrays
 """
 
-THEME_TICKER_ENRICHMENT_PROMPT = """You are a financial market expert. Given a theme and its narrative context from a financial commentary, suggest additional single-name stock (equity) tickers that are most relevant to this theme.
+THEME_TICKER_ENRICHMENT_PROMPT = """You are a financial market expert. Given a theme and \
+its narrative context from a financial commentary, suggest additional single-name stock \
+(equity) tickers that are most relevant to this theme.
 
 For each ticker, provide:
 - ticker: The stock symbol of a public company (NOT an ETF, index fund, or bond fund)
-- relevance_score: 0.0 to 1.0 (how core and directly relevant this ticker is to the theme — assign >= 0.85 only for essential core tickers)
+- relevance_score: 0.0 to 1.0 (how core and directly relevant this ticker is to the theme — \
+assign >= 0.85 only for essential core tickers)
 - reason: A brief explanation of why this ticker maps to this theme
 
 Return ONLY valid JSON as an array:
@@ -92,9 +106,7 @@ class AnthropicLLMService(LLMProvider):
         """Lazily initialize the Anthropic client."""
         if self._client is None:
             if not self._api_key:
-                raise ValueError(
-                    "ANTHROPIC_API_KEY is not set. Please set it in your .env file."
-                )
+                raise ValueError("ANTHROPIC_API_KEY is not set. Please set it in your .env file.")
             import anthropic
 
             self._client = anthropic.Anthropic(api_key=self._api_key)
@@ -108,8 +120,7 @@ class AnthropicLLMService(LLMProvider):
 
         # Format segments into a readable transcript block
         transcript_text = "\n".join(
-            f"[{seg.start_sec:.0f}s - {seg.end_sec:.0f}s] {seg.text}"
-            for seg in segments
+            f"[{seg.start_sec:.0f}s - {seg.end_sec:.0f}s] {seg.text}" for seg in segments
         )
 
         user_prompt = f"""Video Title: "{video_title}"
@@ -168,9 +179,7 @@ Extract all themes, tickers, predictions, and entities from this transcript chun
             logger.error(f"LLM analysis failed: {e}")
             raise
 
-    async def enrich_theme_tickers(
-        self, theme_name: str, narrative: str
-    ) -> list[TickerMapping]:
+    async def enrich_theme_tickers(self, theme_name: str, narrative: str) -> list[TickerMapping]:
         """Ask Claude to suggest additional tickers for a theme."""
         client = self._get_client()
 
@@ -218,9 +227,7 @@ class OpenAILLMService(LLMProvider):
         """Lazily initialize the OpenAI client."""
         if self._client is None:
             if not self._api_key:
-                raise ValueError(
-                    "OPENAI_API_KEY is not set. Please set it in your .env file."
-                )
+                raise ValueError("OPENAI_API_KEY is not set. Please set it in your .env file.")
             from openai import OpenAI
 
             self._client = OpenAI(api_key=self._api_key)
@@ -233,8 +240,7 @@ class OpenAILLMService(LLMProvider):
         client = self._get_client()
 
         transcript_text = "\n".join(
-            f"[{seg.start_sec:.0f}s - {seg.end_sec:.0f}s] {seg.text}"
-            for seg in segments
+            f"[{seg.start_sec:.0f}s - {seg.end_sec:.0f}s] {seg.text}" for seg in segments
         )
 
         user_prompt = f"""Video Title: "{video_title}"
@@ -302,9 +308,7 @@ Extract all themes, tickers, predictions, and entities from this transcript chun
             logger.error(f"OpenAI analysis failed: {e}")
             raise
 
-    async def enrich_theme_tickers(
-        self, theme_name: str, narrative: str
-    ) -> list[TickerMapping]:
+    async def enrich_theme_tickers(self, theme_name: str, narrative: str) -> list[TickerMapping]:
         """Ask OpenAI to suggest additional tickers for a theme."""
         client = self._get_client()
 
@@ -355,4 +359,3 @@ What additional stock tickers are most relevant to this theme and narrative?"""
         except Exception as e:
             logger.error(f"OpenAI ticker enrichment failed: {e}")
             raise
-

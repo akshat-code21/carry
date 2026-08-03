@@ -80,10 +80,10 @@ class DiscoveryService:
             channel.last_checked_at = datetime.now(UTC)
             # Update-only WebSub pushes: ignore fully done / in-flight videos.
             # Re-enqueue only if still mid auto-ingest (e.g. awaiting captions).
-            enqueue = (
-                not video.processed
-                and video.ingest_status
-                not in ("processing", "completed", "failed")
+            enqueue = not video.processed and video.ingest_status not in (
+                "processing",
+                "completed",
+                "failed",
             )
             return {
                 "status": "already_exists",
@@ -247,9 +247,7 @@ class DiscoveryService:
         channel_id: uuid.UUID | None,
     ) -> Channel | None:
         if channel_id is not None:
-            result = await self.db.execute(
-                select(Channel).where(Channel.id == channel_id)
-            )
+            result = await self.db.execute(select(Channel).where(Channel.id == channel_id))
             return result.scalar_one_or_none()
 
         if youtube_channel_id:
@@ -261,9 +259,7 @@ class DiscoveryService:
         return None
 
     @staticmethod
-    def _is_short(
-        duration_sec: int | None, title: str, is_short_flag: bool = False
-    ) -> bool:
+    def _is_short(duration_sec: int | None, title: str, is_short_flag: bool = False) -> bool:
         if is_short_flag:
             return True
         if duration_sec is not None and 0 < duration_sec <= 180:

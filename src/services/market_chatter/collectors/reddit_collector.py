@@ -26,9 +26,7 @@ class RedditCollector(BaseCollector):
 
     name = SourceName.REDDIT
 
-    def __init__(
-        self, settings: Settings, client: httpx.AsyncClient | None = None
-    ) -> None:
+    def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None) -> None:
         self.client_id = settings.reddit_client_id
         self.client_secret = settings.reddit_client_secret
         self.user_agent = settings.reddit_user_agent or "yt-chatter:v1.0"
@@ -61,7 +59,8 @@ class RedditCollector(BaseCollector):
         token = await self._ensure_token()
 
         if not token:
-            # When unauthenticated, bypass blocked www.reddit.com search and use live PullPush API directly
+            # When unauthenticated, bypass blocked www.reddit.com search and use
+            # live PullPush API directly
             pullpush_items = await self._fetch_pullpush(symbol, period_days)
             if pullpush_items:
                 return pullpush_items
@@ -158,16 +157,22 @@ class RedditCollector(BaseCollector):
                     author = post.get("author", "anonymous")
                     sub = post.get("subreddit", "wallstreetbets")
                     score = max(1, int(post.get("score", 1))) + int(post.get("num_comments", 0))
-                    
+
                     try:
                         created_dt = datetime.fromtimestamp(float(created_utc), tz=UTC)
                     except (ValueError, TypeError, OverflowError):
                         created_dt = now - timedelta(hours=idx)
 
                     if created_dt < cutoff or created_dt > now:
-                        created_dt = now - timedelta(days=idx % max(1, period_days), hours=(idx * 2) % 24)
+                        created_dt = now - timedelta(
+                            days=idx % max(1, period_days), hours=(idx * 2) % 24
+                        )
                     permalink = post.get("permalink") or f"/r/{sub}/comments/{post_id}"
-                    full_url = f"https://www.reddit.com{permalink}" if permalink.startswith("/") else permalink
+                    full_url = (
+                        f"https://www.reddit.com{permalink}"
+                        if permalink.startswith("/")
+                        else permalink
+                    )
 
                     items.append(
                         RawItem(
@@ -185,7 +190,11 @@ class RedditCollector(BaseCollector):
                         )
                     )
                 if items:
-                    log.info("Fetched %d real live Reddit posts from PullPush API for %s", len(items), symbol)
+                    log.info(
+                        "Fetched %d real live Reddit posts from PullPush API for %s",
+                        len(items),
+                        symbol,
+                    )
                     return items
         except Exception as exc:
             log.warning("PullPush API fetch failed for %s: %s", symbol, exc)
@@ -206,7 +215,10 @@ class RedditCollector(BaseCollector):
             ),
             (
                 "${symbol} earnings discussion thread: What are your plays?",
-                "Implied volatility is through the roof. Are you holding calls or puts into the print?",
+                (
+                    "Implied volatility is through the roof. "
+                    "Are you holding calls or puts into the print?"
+                ),
                 "wsb_autist",
                 310,
             ),

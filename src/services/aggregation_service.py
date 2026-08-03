@@ -35,9 +35,7 @@ class AggregationService:
         # on wipe+insert and hit the unique (channel_id, ticker) constraint.
         # pg_advisory_xact_lock is released automatically at transaction end.
         lock_key = channel_id.int % (2**63)
-        await self.db.execute(
-            text("SELECT pg_advisory_xact_lock(:k)"), {"k": lock_key}
-        )
+        await self.db.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": lock_key})
 
         # Look up channel type
         ch_result = await self.db.execute(
@@ -145,9 +143,7 @@ class AggregationService:
                             "sentiments": [],
                         }
                     implicit_counts[ticker]["count"] += 1
-                    implicit_counts[ticker]["relevance_sum"] += (
-                        mapping.relevance_score or 0.5
-                    )
+                    implicit_counts[ticker]["relevance_sum"] += mapping.relevance_score or 0.5
                     if mention.sentiment:
                         implicit_counts[ticker]["sentiments"].append(mention.sentiment)
 
@@ -165,9 +161,7 @@ class AggregationService:
             all_sentiments = explicit["sentiments"] + implicit["sentiments"]
             avg_sentiment = self._compute_avg_sentiment(all_sentiments)
             weighted_relevance = (
-                implicit["relevance_sum"] / implicit["count"]
-                if implicit["count"] > 0
-                else 0.5
+                implicit["relevance_sum"] / implicit["count"] if implicit["count"] > 0 else 0.5
             )
 
             self.db.add(
@@ -243,9 +237,7 @@ class AggregationService:
             for a in ranked[:limit]
         ][:limit]
 
-    async def get_video_top_stocks(
-        self, video_id: uuid_mod.UUID, limit: int = 10
-    ) -> list[dict]:
+    async def get_video_top_stocks(self, video_id: uuid_mod.UUID, limit: int = 10) -> list[dict]:
         """Get top stocks for a specific video based on theme mentions and predictions.
 
         Respects the parent channel's type: individual channels get stocks only,
@@ -305,9 +297,7 @@ class AggregationService:
         )
         for mention in mention_result.scalars().all():
             ticker_result = await self.db.execute(
-                select(ThemeTickerMapping).where(
-                    ThemeTickerMapping.theme_id == mention.theme_id
-                )
+                select(ThemeTickerMapping).where(ThemeTickerMapping.theme_id == mention.theme_id)
             )
             for mapping in ticker_result.scalars().all():
                 ticker = mapping.ticker.upper()
@@ -340,9 +330,7 @@ class AggregationService:
         results.sort(key=lambda x: x["mentions"], reverse=True)
         return results[:limit]
 
-    async def get_ticker_daily_sentiment(
-        self, ticker: str, days: int | None = None
-    ) -> list[dict]:
+    async def get_ticker_daily_sentiment(self, ticker: str, days: int | None = None) -> list[dict]:
         """Get daily bullish/bearish/neutral mention counts for a ticker.
 
         Combines explicit mentions (Prediction.direction, tied directly to
@@ -356,9 +344,7 @@ class AggregationService:
         def _bump(day: date | None, sentiment: str | None) -> None:
             if day is None:
                 return
-            bucket = daily_counts.setdefault(
-                day, {"bullish": 0, "bearish": 0, "neutral": 0}
-            )
+            bucket = daily_counts.setdefault(day, {"bullish": 0, "bearish": 0, "neutral": 0})
             key = (sentiment or "neutral").lower()
             if key not in bucket:
                 key = "neutral"
@@ -375,9 +361,7 @@ class AggregationService:
 
         # Implicit mentions: theme mentions mapped to this ticker
         mapping_result = await self.db.execute(
-            select(ThemeTickerMapping.theme_id).where(
-                ThemeTickerMapping.ticker == ticker
-            )
+            select(ThemeTickerMapping.theme_id).where(ThemeTickerMapping.ticker == ticker)
         )
         theme_ids = [row[0] for row in mapping_result.all()]
 

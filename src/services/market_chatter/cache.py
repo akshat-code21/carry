@@ -19,7 +19,7 @@ class JsonCache:
         self._redis = redis
 
     @classmethod
-    async def connect(cls, url: str | None) -> "JsonCache":
+    async def connect(cls, url: str | None) -> JsonCache:
         if not url:
             return cls()
         client = Redis.from_url(url, encoding="utf-8", decode_responses=True)

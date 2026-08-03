@@ -53,7 +53,12 @@ def agent_validation_node(state: PipelineGraphState) -> dict[str, Any]:
 
         validated.append(item)
 
-    log.info("Agent 2 Validation: %d of %d items validated for %s", len(validated), len(raw_items), symbol)
+    log.info(
+        "Agent 2 Validation: %d of %d items validated for %s",
+        len(validated),
+        len(raw_items),
+        symbol,
+    )
     res = {"validated_items": validated}
     if errors:
         res["errors"] = errors

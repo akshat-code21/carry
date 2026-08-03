@@ -150,7 +150,9 @@ class WebSubService:
             atom_entries = [el for el in root.iter() if el.tag.endswith("entry")]
 
         for entry in atom_entries:
-            video_id = _child_text(entry, "videoId", ns_uri="http://www.youtube.com/xml/schemas/2015")
+            video_id = _child_text(
+                entry, "videoId", ns_uri="http://www.youtube.com/xml/schemas/2015"
+            )
             channel_id = _child_text(
                 entry, "channelId", ns_uri="http://www.youtube.com/xml/schemas/2015"
             )
@@ -261,7 +263,9 @@ class WebSubService:
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
             "Accept-Encoding": "identity",
         }
-        async with httpx.AsyncClient(timeout=30.0, headers=headers, follow_redirects=True) as client:
+        async with httpx.AsyncClient(
+            timeout=30.0, headers=headers, follow_redirects=True
+        ) as client:
             response = await client.get(url)
             response.raise_for_status()
             return self.parse_atom_notification(response.content)

@@ -49,9 +49,7 @@ class ActivityService:
                 message=message,
                 payload=payload,
             )
-            .on_conflict_do_nothing(
-                constraint="uq_activity_event_type_youtube_video"
-            )
+            .on_conflict_do_nothing(constraint="uq_activity_event_type_youtube_video")
             .returning(ActivityEvent)
         )
         result = await self.db.execute(stmt)
@@ -64,9 +62,7 @@ class ActivityService:
                 title,
             )
         else:
-            logger.debug(
-                "Activity already exists: %s / %s", event_type, youtube_video_id
-            )
+            logger.debug("Activity already exists: %s / %s", event_type, youtube_video_id)
         return event
 
     async def list_events(
@@ -85,16 +81,12 @@ class ActivityService:
 
     async def unread_count(self) -> int:
         result = await self.db.execute(
-            select(func.count())
-            .select_from(ActivityEvent)
-            .where(ActivityEvent.read_at.is_(None))
+            select(func.count()).select_from(ActivityEvent).where(ActivityEvent.read_at.is_(None))
         )
         return int(result.scalar_one() or 0)
 
     async def mark_read(self, event_id: uuid.UUID) -> ActivityEvent | None:
-        result = await self.db.execute(
-            select(ActivityEvent).where(ActivityEvent.id == event_id)
-        )
+        result = await self.db.execute(select(ActivityEvent).where(ActivityEvent.id == event_id))
         event = result.scalar_one_or_none()
         if not event:
             return None

@@ -97,9 +97,7 @@ def process_video_task(self, video_id: str) -> dict:
             try:
                 # Step 2: LLM Analysis
                 theme_service = ThemeService(db)
-                analysis = AnalysisPipeline(
-                    db, services["llm"], theme_service, services["finbert"]
-                )
+                analysis = AnalysisPipeline(db, services["llm"], theme_service, services["finbert"])
                 results["analysis"] = await analysis.analyze_video(vid)
 
                 # Step 3: Theme→Ticker Mapping
@@ -167,12 +165,8 @@ def backfill_channel_task(self, youtube_channel_id: str, max_videos: int = 20) -
             from src.pipeline.ingestion import IngestionPipeline
 
             # Step 1: Ingestion
-            ingestion = IngestionPipeline(
-                db, services["youtube"], services["transcript"]
-            )
-            ingestion_result = await ingestion.ingest_and_backfill(
-                youtube_channel_id, max_videos
-            )
+            ingestion = IngestionPipeline(db, services["youtube"], services["transcript"])
+            ingestion_result = await ingestion.ingest_and_backfill(youtube_channel_id, max_videos)
             await db.commit()
             channel_db_id = ingestion_result.get("channel", {}).get("id")
 
@@ -216,9 +210,7 @@ def ingest_single_video_task(self, channel_id: str, youtube_video_id: str) -> di
         async with _get_db_session() as db:
             from src.pipeline.ingestion import IngestionPipeline
 
-            ingestion = IngestionPipeline(
-                db, services["youtube"], services["transcript"]
-            )
+            ingestion = IngestionPipeline(db, services["youtube"], services["transcript"])
             c_uuid = uuid.UUID(channel_id)
             video = await ingestion.ingest_single_video(c_uuid, youtube_video_id)
             if video.transcript_status == "fetched":
@@ -241,9 +233,7 @@ def ingest_single_video_task(self, channel_id: str, youtube_video_id: str) -> di
         return {
             "video_id": video_id_str,
             "youtube_video_id": youtube_video_id,
-            "status": "queued_for_processing"
-            if not already_processed
-            else "already_processed",
+            "status": "queued_for_processing" if not already_processed else "already_processed",
         }
 
     return asyncio.run(_run_and_cleanup(_run()))
@@ -293,9 +283,7 @@ def auto_ingest_video_task(self, video_id: str) -> dict:
             attempt = video.transcript_attempts
             await db.flush()
 
-            ingestion = IngestionPipeline(
-                db, services["youtube"], services["transcript"]
-            )
+            ingestion = IngestionPipeline(db, services["youtube"], services["transcript"])
             try:
                 await ingestion.fetch_transcript(video)
                 video.ingest_status = "ready_for_analysis"
@@ -327,9 +315,7 @@ def auto_ingest_video_task(self, video_id: str) -> dict:
                         delay_minutes,
                         attempt + 1,
                     )
-                    auto_ingest_video_task.apply_async(
-                        args=[video_id], countdown=countdown
-                    )
+                    auto_ingest_video_task.apply_async(args=[video_id], countdown=countdown)
                     return {
                         "status": "retry_scheduled",
                         "video_id": video_id,
@@ -347,10 +333,7 @@ def auto_ingest_video_task(self, video_id: str) -> dict:
                     video_id=video.id,
                     youtube_video_id=video.youtube_video_id,
                     title=video.title,
-                    message=(
-                        f"Transcript unavailable after {attempt} attempts "
-                        f"for {video.title}"
-                    ),
+                    message=(f"Transcript unavailable after {attempt} attempts for {video.title}"),
                     payload={
                         "error": str(e),
                         "stage": "transcript",
@@ -439,9 +422,7 @@ def subscribe_channel_websub_task(self, channel_id: str) -> dict:
             return {"status": "skipped_no_public_url", "channel_id": channel_id}
 
         async with _get_db_session() as db:
-            result = await db.execute(
-                select(Channel).where(Channel.id == uuid.UUID(channel_id))
-            )
+            result = await db.execute(select(Channel).where(Channel.id == uuid.UUID(channel_id)))
             channel = result.scalar_one_or_none()
             if not channel:
                 return {"status": "not_found", "channel_id": channel_id}
@@ -533,9 +514,7 @@ def poll_channels_for_new_videos_task(self) -> dict:
         errors = 0
 
         async with _get_db_session() as db:
-            result = await db.execute(
-                select(Channel).where(Channel.websub_status != "disabled")
-            )
+            result = await db.execute(select(Channel).where(Channel.websub_status != "disabled"))
             channels = list(result.scalars().all())
 
         for channel in channels:
@@ -547,8 +526,7 @@ def poll_channels_for_new_videos_task(self) -> dict:
                     tagged.append(
                         type(e)(
                             youtube_video_id=e.youtube_video_id,
-                            youtube_channel_id=e.youtube_channel_id
-                            or channel.youtube_channel_id,
+                            youtube_channel_id=e.youtube_channel_id or channel.youtube_channel_id,
                             title=e.title,
                             published_at=e.published_at,
                         )
@@ -556,16 +534,12 @@ def poll_channels_for_new_videos_task(self) -> dict:
 
                 async with _get_db_session() as db:
                     discovery = DiscoveryService(db, services["youtube"])
-                    results = await discovery.handle_websub_entries(
-                        tagged, source="rss_fallback"
-                    )
+                    results = await discovery.handle_websub_entries(tagged, source="rss_fallback")
                     # Update last_checked even if nothing new
                     from sqlalchemy import select as sa_select
 
                     ch = (
-                        await db.execute(
-                            sa_select(Channel).where(Channel.id == channel.id)
-                        )
+                        await db.execute(sa_select(Channel).where(Channel.id == channel.id))
                     ).scalar_one()
                     ch.last_checked_at = datetime.now(UTC)
                     await db.commit()
@@ -639,7 +613,7 @@ def tickerflow_watchlist_collect_task(self) -> dict:
     """
 
     async def _run():
-        from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession as AS
+        from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
         from src.config import get_settings
         from src.database import engine
@@ -662,8 +636,8 @@ def tickerflow_watchlist_collect_task(self) -> dict:
         sentiment_provider = build_sentiment_provider(settings)
         price_provider = build_price_provider(settings)
 
-        session_factory: async_sessionmaker[AS] = async_sessionmaker(
-            engine, class_=AS, expire_on_commit=False
+        session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
         )
 
         service = CollectionService(
@@ -693,4 +667,3 @@ def tickerflow_watchlist_collect_task(self) -> dict:
         return {"status": "completed", "symbols": results}
 
     return asyncio.run(_run_and_cleanup(_run()))
-

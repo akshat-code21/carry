@@ -48,14 +48,15 @@ def agent_scoring_node(state: PipelineGraphState) -> dict[str, Any]:
         neg = float(probs.get("negative", 0.33))
         engagement = max(1, int(item.get("engagement_score", 1)))
 
-        weight = engagement ** 0.5
+        weight = engagement**0.5
         score = (pos - neg + 1.0) / 2.0  # normalize [-1, 1] to [0, 1]
         bullish_weight += score * weight
         total_weight += weight
 
     riss_score = round((bullish_weight / total_weight) * 100.0 if total_weight > 0 else 50.0, 1)
 
-    # Compute SMS (30% weight in OCS v0.1) — mention volume vs 30-day baseline benchmark (e.g. 50 mentions/day)
+    # Compute SMS (30% weight in OCS v0.1) — mention volume vs 30-day baseline
+    # benchmark (e.g. 50 mentions/day)
     expected_mentions = 30.0
     sms_score = round(min(100.0, (total_mentions / expected_mentions) * 50.0), 1)
 
@@ -77,11 +78,17 @@ def agent_scoring_node(state: PipelineGraphState) -> dict[str, Any]:
 
     for analysis in llm_analyses[:3]:
         sentiment_label = analysis.get("sentiment_label", "bullish")
-        driver_type = "bullish" if sentiment_label == "bullish" else ("bearish" if sentiment_label == "bearish" else "neutral")
+        driver_type = (
+            "bullish"
+            if sentiment_label == "bullish"
+            else ("bearish" if sentiment_label == "bearish" else "neutral")
+        )
         card = ScoreDriverCard(
             title=str(analysis.get("catalyst_theme", "Market Chatter Catalyst")),
             driver_type=driver_type,
-            impact=+15.0 if driver_type == "bullish" else (-15.0 if driver_type == "bearish" else 0.0),
+            impact=+15.0
+            if driver_type == "bullish"
+            else (-15.0 if driver_type == "bearish" else 0.0),
             summary=str(analysis.get("explanation", "Community discussion driver")),
             source_links=[],
         )
@@ -109,7 +116,14 @@ def agent_scoring_node(state: PipelineGraphState) -> dict[str, Any]:
         driver_cards=driver_cards,
     )
 
-    log.info("Agent 8/9 Scoring: %s final OCS=%.1f (RISS=%.1f, SMS=%.1f) trend=%s", symbol, ocs_score, riss_score, sms_score, trend)
+    log.info(
+        "Agent 8/9 Scoring: %s final OCS=%.1f (RISS=%.1f, SMS=%.1f) trend=%s",
+        symbol,
+        ocs_score,
+        riss_score,
+        sms_score,
+        trend,
+    )
     res = {"final_score": output.model_dump(mode="json")}
     if errors:
         res["errors"] = errors

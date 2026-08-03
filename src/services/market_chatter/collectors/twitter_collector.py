@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
+import xml.etree.ElementTree as ET
 from datetime import UTC, datetime, timedelta
+from email.utils import parsedate_to_datetime
 
 import httpx
-
-import asyncio
-import xml.etree.ElementTree as ET
-from email.utils import parsedate_to_datetime
 
 from src.config import Settings
 from src.schemas.market_chatter import SourceName
@@ -28,9 +27,7 @@ class TwitterCollector(BaseCollector):
 
     name = SourceName.X
 
-    def __init__(
-        self, settings: Settings, client: httpx.AsyncClient | None = None
-    ) -> None:
+    def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None) -> None:
         self.username = settings.twitter_username
         self.password = settings.twitter_password
         self._client = client or httpx.AsyncClient(timeout=10.0)
@@ -48,6 +45,7 @@ class TwitterCollector(BaseCollector):
         url = f"https://news.google.com/rss/search?q=%24{symbol}+site%3Ax.com"
         try:
             from curl_cffi import requests
+
             resp = requests.get(url, impersonate="chrome120", timeout=10)
             if resp.status_code == 200:
                 root = ET.fromstring(resp.text)
@@ -101,12 +99,18 @@ class TwitterCollector(BaseCollector):
 
         tweets = [
             (
-                f"Breakout confirmed on ${symbol}! Target $1,200 by end of month. Long and strong 🚀📈 #FinTwit",
+                (
+                    f"Breakout confirmed on ${symbol}! "
+                    "Target $1,200 by end of month. Long and strong 🚀📈 #FinTwit"
+                ),
                 "alpha_seeker_x",
                 1420,
             ),
             (
-                f"Institutional accumulation patterns showing strong buy volume in ${symbol} today. 📊",
+                (
+                    f"Institutional accumulation patterns showing strong buy volume "
+                    f"in ${symbol} today. 📊"
+                ),
                 "quant_trader_pro",
                 890,
             ),

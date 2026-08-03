@@ -115,9 +115,7 @@ class CollectionService:
     def _assert_supported(self, symbol: str) -> str:
         normalized = normalize_symbol(symbol)
         if not is_supported_symbol(normalized):
-            raise UnsupportedTickerError(
-                f"{normalized} is not in the configured S&P 100 universe"
-            )
+            raise UnsupportedTickerError(f"{normalized} is not in the configured S&P 100 universe")
         return normalized
 
     def _cache_key(self, symbol: str, source: SourceName) -> str:
@@ -178,9 +176,7 @@ class CollectionService:
         daily_trend = await self._stored_daily_metrics(
             session, symbol, source, self._collection_period_days()
         )
-        snapshot = self._from_record(record).model_copy(
-            update={"daily_trend": daily_trend}
-        )
+        snapshot = self._from_record(record).model_copy(update={"daily_trend": daily_trend})
         await self._cache.set(
             self._cache_key(symbol, source),
             snapshot.model_dump(mode="json"),
@@ -293,9 +289,7 @@ class CollectionService:
             self._settings.source_ttl_seconds(snapshot.source.value),
         )
 
-    async def collect(
-        self, symbol: str, force: bool = False
-    ) -> CollectionOutcome:
+    async def collect(self, symbol: str, force: bool = False) -> CollectionOutcome:
         symbol = self._assert_supported(symbol)
         snapshots: dict[SourceName, ProviderSnapshot] = {}
         statuses: dict[SourceName, str] = {}
@@ -313,6 +307,7 @@ class CollectionService:
             await session.flush()
 
             collection_period_days = self._collection_period_days()
+
             async def _process_source(src: SourceName):
                 latest = await self._latest_snapshot(session, symbol, src)
                 has_required_history = await self._has_metric_coverage(
@@ -350,33 +345,21 @@ class CollectionService:
             run.error_summary = "; ".join(errors.values()) or None
             run.completed_at = utcnow()
             run.status = (
-                "completed"
-                if len(snapshots) == 3
-                else "partial"
-                if snapshots
-                else "failed"
+                "completed" if len(snapshots) == 3 else "partial" if snapshots else "failed"
             )
             await session.commit()
 
-        return CollectionOutcome(
-            snapshots, statuses, errors, request_count, quota_limited
-        )
+        return CollectionOutcome(snapshots, statuses, errors, request_count, quota_limited)
 
-    async def _ensure_prices(
-        self, symbol: str, period_days: int
-    ) -> list[PriceBar]:
+    async def _ensure_prices(self, symbol: str, period_days: int) -> list[PriceBar]:
         async with self._session_factory() as session:
             newest = await session.scalar(
-                select(func.max(PriceBarRecord.fetched_at)).where(
-                    PriceBarRecord.symbol == symbol
-                )
+                select(func.max(PriceBarRecord.fetched_at)).where(PriceBarRecord.symbol == symbol)
             )
             is_fresh = newest and utcnow() - _as_utc(newest) <= timedelta(hours=24)
             if not is_fresh:
                 try:
-                    bars = await self._price_provider.get_daily_bars(
-                        symbol, max(period_days, 30)
-                    )
+                    bars = await self._price_provider.get_daily_bars(symbol, max(period_days, 30))
                 except Exception:
                     bars = []
                 fetched_at = utcnow()
@@ -407,8 +390,7 @@ class CollectionService:
                     select(PriceBarRecord)
                     .where(
                         PriceBarRecord.symbol == symbol,
-                        PriceBarRecord.trade_date
-                        >= self._history_start(period_days),
+                        PriceBarRecord.trade_date >= self._history_start(period_days),
                     )
                     .order_by(PriceBarRecord.trade_date)
                 )
@@ -593,13 +575,9 @@ class CollectionService:
                 )
             )
         chart_metric = (
-            "mentions"
-            if any(metric.mentions is not None for metric in metrics)
-            else "buzz_score"
+            "mentions" if any(metric.mentions is not None for metric in metrics) else "buzz_score"
         )
-        as_of_values = [
-            snapshot.fetched_at for snapshot in collection.snapshots.values()
-        ]
+        as_of_values = [snapshot.fetched_at for snapshot in collection.snapshots.values()]
         data_status = (
             "unavailable"
             if not collection.snapshots

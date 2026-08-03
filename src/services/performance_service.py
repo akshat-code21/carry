@@ -2,7 +2,7 @@
 
 import logging
 import uuid as uuid_mod
-from datetime import date, timedelta
+from datetime import timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,9 +35,7 @@ class PerformanceService:
         if not prediction or not prediction.ticker:
             return None
 
-        video_result = await self.db.execute(
-            select(Video).where(Video.id == prediction.video_id)
-        )
+        video_result = await self.db.execute(select(Video).where(Video.id == prediction.video_id))
         video = video_result.scalar_one_or_none()
         if not video or not video.published_at:
             return None
@@ -48,20 +46,12 @@ class PerformanceService:
         # Fetch prices at different time horizons
         price_at_video = await self.market_data.get_price_at_date(ticker, video_date)
         if price_at_video is None:
-            logger.warning(
-                f"No price data for {ticker} at {video_date} — skipping performance"
-            )
+            logger.warning(f"No price data for {ticker} at {video_date} — skipping performance")
             return None
 
-        price_1d = await self.market_data.get_price_at_date(
-            ticker, video_date + timedelta(days=1)
-        )
-        price_1w = await self.market_data.get_price_at_date(
-            ticker, video_date + timedelta(days=7)
-        )
-        price_1m = await self.market_data.get_price_at_date(
-            ticker, video_date + timedelta(days=30)
-        )
+        price_1d = await self.market_data.get_price_at_date(ticker, video_date + timedelta(days=1))
+        price_1w = await self.market_data.get_price_at_date(ticker, video_date + timedelta(days=7))
+        price_1m = await self.market_data.get_price_at_date(ticker, video_date + timedelta(days=30))
 
         # Compute returns
         return_1d = self._compute_return(price_at_video, price_1d)
@@ -69,15 +59,11 @@ class PerformanceService:
         return_1m = self._compute_return(price_at_video, price_1m)
 
         # Evaluate direction accuracy
-        direction_accurate = self._evaluate_direction(
-            prediction.direction, return_1w
-        )
+        direction_accurate = self._evaluate_direction(prediction.direction, return_1w)
 
         # Check if performance record already exists
         exist_result = await self.db.execute(
-            select(PerformanceRecord).where(
-                PerformanceRecord.prediction_id == prediction.id
-            )
+            select(PerformanceRecord).where(PerformanceRecord.prediction_id == prediction.id)
         )
         record = exist_result.scalar_one_or_none()
 
@@ -120,8 +106,7 @@ class PerformanceService:
         """Compute performance for all predictions that don't have records yet."""
         # Find predictions with tickers that have no performance records
         result = await self.db.execute(
-            select(Prediction)
-            .where(
+            select(Prediction).where(
                 Prediction.ticker.isnot(None),
                 Prediction.accurate.is_(None),
             )
@@ -137,9 +122,7 @@ class PerformanceService:
         return records
 
     @staticmethod
-    def _compute_return(
-        base_price: float, future_price: float | None
-    ) -> float | None:
+    def _compute_return(base_price: float, future_price: float | None) -> float | None:
         """Compute percentage return."""
         if future_price is None or base_price == 0:
             return None

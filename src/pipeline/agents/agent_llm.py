@@ -30,7 +30,7 @@ def agent_llm_node(state: PipelineGraphState) -> dict[str, Any]:
     for item in top_items:
         item_id = str(item.get("id"))
         text = str(item.get("cleaned_text", ""))
-        title = item.get("title") or f"{symbol} Discussion"
+        item.get("title") or f"{symbol} Discussion"
         fb_sent = finbert_results.get(item_id, {}).get("sentiment", "neutral")
 
         if fb_sent == "bullish":
@@ -54,7 +54,9 @@ def agent_llm_node(state: PipelineGraphState) -> dict[str, Any]:
         )
         llm_analyses.append(narrative.model_dump(mode="json"))
 
-    log.info("Agent 5 LLM: Generated %d narrative analyses for symbol %s", len(llm_analyses), symbol)
+    log.info(
+        "Agent 5 LLM: Generated %d narrative analyses for symbol %s", len(llm_analyses), symbol
+    )
     res = {"llm_analyses": llm_analyses}
     if errors:
         res["errors"] = errors

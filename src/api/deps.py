@@ -1,24 +1,19 @@
 """FastAPI dependency injection — provides services and DB sessions to route handlers."""
 
-from collections.abc import AsyncGenerator
-
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import get_settings
 from src.database import get_db
 from src.services.aggregation_service import AggregationService
 from src.services.embedding_service import OpenAIEmbeddingService
 from src.services.finbert_service import FinBertService
 from src.services.interfaces import EmbeddingProvider, LLMProvider, MarketDataSource
-from src.services.llm_service import AnthropicLLMService
-from src.services.llm_service import OpenAILLMService
+from src.services.llm_service import AnthropicLLMService, OpenAILLMService
 from src.services.market_data_service import YFinanceMarketDataService
 from src.services.query_router import QueryRouter
 from src.services.search_service import SearchService
 from src.services.theme_service import ThemeService
-
-
-from src.config import get_settings
 
 settings = get_settings()
 
@@ -87,4 +82,3 @@ def get_aggregation_service(
     db: AsyncSession = Depends(get_db),
 ) -> AggregationService:
     return AggregationService(db)
-

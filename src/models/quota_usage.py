@@ -8,9 +8,7 @@ from src.database import Base
 
 class QuotaUsage(Base):
     __tablename__ = "quota_usage"
-    __table_args__ = (
-        UniqueConstraint("provider", "period", name="uq_quota_period"),
-    )
+    __table_args__ = (UniqueConstraint("provider", "period", name="uq_quota_period"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     provider: Mapped[str] = mapped_column(String(32))

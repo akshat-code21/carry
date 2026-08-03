@@ -14,9 +14,7 @@ from src.database import Base
 class Video(Base):
     __tablename__ = "videos"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     channel_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("channels.id"), nullable=False, index=True
     )
@@ -37,23 +35,13 @@ class Video(Base):
     ingest_status: Mapped[str] = mapped_column(
         String(50), default="discovered", server_default="discovered"
     )  # discovered | awaiting_transcript | ready_for_analysis | processing | completed | failed
-    transcript_attempts: Mapped[int] = mapped_column(
-        Integer, default=0, server_default="0"
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    transcript_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
     channel = relationship("Channel", back_populates="videos")
-    transcript_segments = relationship(
-        "TranscriptSegment", back_populates="video", lazy="selectin"
-    )
+    transcript_segments = relationship("TranscriptSegment", back_populates="video", lazy="selectin")
     theme_mentions = relationship("ThemeMention", back_populates="video", lazy="selectin")
     predictions = relationship("Prediction", back_populates="video", lazy="selectin")
-    performance_records = relationship(
-        "PerformanceRecord", back_populates="video", lazy="selectin"
-    )
-    activity_events = relationship(
-        "ActivityEvent", back_populates="video", lazy="noload"
-    )
+    performance_records = relationship("PerformanceRecord", back_populates="video", lazy="selectin")
+    activity_events = relationship("ActivityEvent", back_populates="video", lazy="noload")

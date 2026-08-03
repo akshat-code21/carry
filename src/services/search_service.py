@@ -2,14 +2,15 @@
 
 import logging
 import uuid as uuid_mod
+from datetime import UTC
 
 from sqlalchemy import func, select, text
-from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from src.models.prediction import Prediction
 from src.models.speaker_ticker import SpeakerTickerAggregation
-from src.models.theme import ThemeHierarchy, ThemeMention, ThemeTickerMapping
+from src.models.theme import ThemeHierarchy, ThemeTickerMapping
 from src.models.transcript_segment import TranscriptSegment
 from src.models.video import Video
 from src.services.etf_mapping_service import ETFMappingService
@@ -19,7 +20,9 @@ logger = logging.getLogger(__name__)
 
 
 class SearchService:
-    """Hybrid search combining PostgreSQL full-text search (tsvector) and pgvector semantic search."""
+    """Hybrid search combining PostgreSQL full-text search (tsvector)
+    and pgvector semantic search.
+    """
 
     def __init__(self, db: AsyncSession, embedding_provider: EmbeddingProvider) -> None:
         self.db = db
@@ -55,9 +58,7 @@ class SearchService:
         }
 
         if search_type in ("keyword", "hybrid"):
-            keyword_segments = await self._keyword_search_segments(
-                query, channel_id, limit, offset
-            )
+            keyword_segments = await self._keyword_search_segments(query, channel_id, limit, offset)
             keyword_predictions = await self._keyword_search_predictions(
                 query, ticker, limit, offset
             )
@@ -126,9 +127,7 @@ class SearchService:
                         "youtube_video_id": v.youtube_video_id,
                         "title": v.title,
                         "thumbnail_url": v.thumbnail_url,
-                        "published_at": (
-                            v.published_at.isoformat() if v.published_at else None
-                        ),
+                        "published_at": (v.published_at.isoformat() if v.published_at else None),
                     }
             except Exception as exc:
                 logger.warning(f"Error loading video metadata for search: {exc}")
@@ -173,9 +172,7 @@ class SearchService:
                     ts_query,
                 ).label("rank"),
             )
-            .where(
-                func.to_tsvector("english", TranscriptSegment.text).op("@@")(ts_query)
-            )
+            .where(func.to_tsvector("english", TranscriptSegment.text).op("@@")(ts_query))
             .order_by(text("rank DESC"))
             .limit(limit)
             .offset(offset)
@@ -220,11 +217,7 @@ class SearchService:
                     ts_query,
                 ).label("rank"),
             )
-            .where(
-                func.to_tsvector("english", Prediction.prediction_text).op("@@")(
-                    ts_query
-                )
-            )
+            .where(func.to_tsvector("english", Prediction.prediction_text).op("@@")(ts_query))
             .order_by(text("rank DESC"))
             .limit(limit)
             .offset(offset)
@@ -267,9 +260,7 @@ class SearchService:
         stmt = (
             select(
                 TranscriptSegment,
-                TranscriptSegment.embedding.cosine_distance(query_embedding).label(
-                    "distance"
-                ),
+                TranscriptSegment.embedding.cosine_distance(query_embedding).label("distance"),
             )
             .where(TranscriptSegment.embedding.isnot(None))
             .order_by(text("distance ASC"))
@@ -316,16 +307,16 @@ class SearchService:
 
         # --- Standard stock narrative (existing logic) ---
         # --- Get predictions for this ticker ---
-        pred_stmt = select(Prediction).where(
-            Prediction.ticker == ticker
-        ).order_by(Prediction.created_at.desc())
+        pred_stmt = (
+            select(Prediction)
+            .where(Prediction.ticker == ticker)
+            .order_by(Prediction.created_at.desc())
+        )
         pred_result = await self.db.execute(pred_stmt)
         predictions = pred_result.scalars().all()
 
         # --- Get aggregation stats ---
-        agg_stmt = select(SpeakerTickerAggregation).where(
-            SpeakerTickerAggregation.ticker == ticker
-        )
+        agg_stmt = select(SpeakerTickerAggregation).where(SpeakerTickerAggregation.ticker == ticker)
         agg_result = await self.db.execute(agg_stmt)
         aggregations = agg_result.scalars().all()
 
@@ -351,11 +342,13 @@ class SearchService:
         # --- Compute stats ---
         sample_predictions = []
         for pred in predictions[:3]:
-            sample_predictions.append({
-                "text": pred.prediction_text[:200],
-                "direction": pred.direction,
-                "confidence": pred.confidence,
-            })
+            sample_predictions.append(
+                {
+                    "text": pred.prediction_text[:200],
+                    "direction": pred.direction,
+                    "confidence": pred.confidence,
+                }
+            )
 
         prediction_count = len(predictions)
         confidences = [p.confidence for p in predictions if p.confidence is not None]
@@ -365,20 +358,24 @@ class SearchService:
         bullish_pct = 0.0
         bearish_pct = 0.0
         if directions:
-            bullish_pct = round(sum(1 for d in directions if d == "bullish") / len(directions) * 100)
-            bearish_pct = round(sum(1 for d in directions if d == "bearish") / len(directions) * 100)
+            bullish_pct = round(
+                sum(1 for d in directions if d == "bullish") / len(directions) * 100
+            )
+            bearish_pct = round(
+                sum(1 for d in directions if d == "bearish") / len(directions) * 100
+            )
 
         # --- Compute composite score ---
         import math
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         mention_score = min(math.log1p(total_mentions) / 5.0, 1.0)
         sentiment_score = abs(avg_sentiment)
         confidence_score = avg_confidence
         recency_score = 0.3
         if last_mentioned:
-            days_ago = (now - last_mentioned.replace(tzinfo=timezone.utc)).days
+            days_ago = (now - last_mentioned.replace(tzinfo=UTC)).days
             recency_score = max(0.1, 1.0 - (days_ago / 90.0))
 
         composite_score = round(
@@ -390,21 +387,23 @@ class SearchService:
             4,
         )
 
-        return [{
-            "ticker": ticker,
-            "composite_score": composite_score,
-            "theme_relevance": len(themes) * 0.5,
-            "themes": themes,
-            "mention_count": total_mentions,
-            "avg_sentiment": avg_sentiment,
-            "prediction_count": prediction_count,
-            "avg_confidence": avg_confidence,
-            "bullish_pct": bullish_pct,
-            "bearish_pct": bearish_pct,
-            "sample_predictions": sample_predictions,
-            "last_mentioned_at": last_mentioned.isoformat() if last_mentioned else None,
-            "is_etf": False,
-        }]
+        return [
+            {
+                "ticker": ticker,
+                "composite_score": composite_score,
+                "theme_relevance": len(themes) * 0.5,
+                "themes": themes,
+                "mention_count": total_mentions,
+                "avg_sentiment": avg_sentiment,
+                "prediction_count": prediction_count,
+                "avg_confidence": avg_confidence,
+                "bullish_pct": bullish_pct,
+                "bearish_pct": bearish_pct,
+                "sample_predictions": sample_predictions,
+                "last_mentioned_at": last_mentioned.isoformat() if last_mentioned else None,
+                "is_etf": False,
+            }
+        ]
 
     async def _search_etf_narrative(self, etf_ticker: str) -> list[dict]:
         """Build narrative intelligence for an ETF by aggregating its underlying themes.
@@ -413,26 +412,28 @@ class SearchService:
         pulls all predictions from the constituent stocks of those themes.
         """
         import math
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         related_theme_names = self.etf_service.get_themes_for_etf(etf_ticker)
         if not related_theme_names:
             # No mapping found — return a minimal result
-            return [{
-                "ticker": etf_ticker,
-                "composite_score": 0.0,
-                "theme_relevance": 0.0,
-                "themes": [],
-                "mention_count": 0,
-                "avg_sentiment": 0.0,
-                "prediction_count": 0,
-                "avg_confidence": 0.0,
-                "bullish_pct": 0.0,
-                "bearish_pct": 0.0,
-                "sample_predictions": [],
-                "last_mentioned_at": None,
-                "is_etf": True,
-            }]
+            return [
+                {
+                    "ticker": etf_ticker,
+                    "composite_score": 0.0,
+                    "theme_relevance": 0.0,
+                    "themes": [],
+                    "mention_count": 0,
+                    "avg_sentiment": 0.0,
+                    "prediction_count": 0,
+                    "avg_confidence": 0.0,
+                    "bullish_pct": 0.0,
+                    "bearish_pct": 0.0,
+                    "sample_predictions": [],
+                    "last_mentioned_at": None,
+                    "is_etf": True,
+                }
+            ]
 
         # Find theme IDs matching the related theme names
         theme_stmt = select(ThemeHierarchy).where(
@@ -444,35 +445,41 @@ class SearchService:
         theme_names = [t.name for t in themes_db]
 
         if not theme_ids:
-            return [{
-                "ticker": etf_ticker,
-                "composite_score": 0.1,
-                "theme_relevance": len(related_theme_names) * 0.5,
-                "themes": related_theme_names,
-                "mention_count": 0,
-                "avg_sentiment": 0.0,
-                "prediction_count": 0,
-                "avg_confidence": 0.0,
-                "bullish_pct": 0.0,
-                "bearish_pct": 0.0,
-                "sample_predictions": [],
-                "last_mentioned_at": None,
-                "is_etf": True,
-            }]
+            return [
+                {
+                    "ticker": etf_ticker,
+                    "composite_score": 0.1,
+                    "theme_relevance": len(related_theme_names) * 0.5,
+                    "themes": related_theme_names,
+                    "mention_count": 0,
+                    "avg_sentiment": 0.0,
+                    "prediction_count": 0,
+                    "avg_confidence": 0.0,
+                    "bullish_pct": 0.0,
+                    "bearish_pct": 0.0,
+                    "sample_predictions": [],
+                    "last_mentioned_at": None,
+                    "is_etf": True,
+                }
+            ]
 
         # Get all tickers mapped to these themes
-        ticker_stmt = select(ThemeTickerMapping.ticker).where(
-            ThemeTickerMapping.theme_id.in_(theme_ids)
-        ).distinct()
+        ticker_stmt = (
+            select(ThemeTickerMapping.ticker)
+            .where(ThemeTickerMapping.theme_id.in_(theme_ids))
+            .distinct()
+        )
         ticker_result = await self.db.execute(ticker_stmt)
         constituent_tickers = [row[0].upper() for row in ticker_result.all()]
 
         # Get predictions for all constituent tickers
         predictions = []
         if constituent_tickers:
-            pred_stmt = select(Prediction).where(
-                Prediction.ticker.in_(constituent_tickers)
-            ).order_by(Prediction.created_at.desc())
+            pred_stmt = (
+                select(Prediction)
+                .where(Prediction.ticker.in_(constituent_tickers))
+                .order_by(Prediction.created_at.desc())
+            )
             pred_result = await self.db.execute(pred_stmt)
             predictions = pred_result.scalars().all()
 
@@ -495,11 +502,13 @@ class SearchService:
         # Compute stats from predictions
         sample_predictions = []
         for pred in predictions[:3]:
-            sample_predictions.append({
-                "text": pred.prediction_text[:200],
-                "direction": pred.direction,
-                "confidence": pred.confidence,
-            })
+            sample_predictions.append(
+                {
+                    "text": pred.prediction_text[:200],
+                    "direction": pred.direction,
+                    "confidence": pred.confidence,
+                }
+            )
 
         prediction_count = len(predictions)
         confidences = [p.confidence for p in predictions if p.confidence is not None]
@@ -509,17 +518,21 @@ class SearchService:
         bullish_pct = 0.0
         bearish_pct = 0.0
         if directions:
-            bullish_pct = round(sum(1 for d in directions if d == "bullish") / len(directions) * 100)
-            bearish_pct = round(sum(1 for d in directions if d == "bearish") / len(directions) * 100)
+            bullish_pct = round(
+                sum(1 for d in directions if d == "bullish") / len(directions) * 100
+            )
+            bearish_pct = round(
+                sum(1 for d in directions if d == "bearish") / len(directions) * 100
+            )
 
         # Composite score
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         mention_score = min(math.log1p(total_mentions) / 5.0, 1.0)
         sentiment_score = abs(avg_sentiment)
         confidence_score = avg_confidence
         recency_score = 0.3
         if last_mentioned:
-            days_ago = (now - last_mentioned.replace(tzinfo=timezone.utc)).days
+            days_ago = (now - last_mentioned.replace(tzinfo=UTC)).days
             recency_score = max(0.1, 1.0 - (days_ago / 90.0))
 
         composite_score = round(
@@ -531,21 +544,23 @@ class SearchService:
             4,
         )
 
-        return [{
-            "ticker": etf_ticker,
-            "composite_score": composite_score,
-            "theme_relevance": len(theme_names) * 0.5,
-            "themes": theme_names,
-            "mention_count": total_mentions,
-            "avg_sentiment": avg_sentiment,
-            "prediction_count": prediction_count,
-            "avg_confidence": avg_confidence,
-            "bullish_pct": bullish_pct,
-            "bearish_pct": bearish_pct,
-            "sample_predictions": sample_predictions,
-            "last_mentioned_at": last_mentioned.isoformat() if last_mentioned else None,
-            "is_etf": True,
-        }]
+        return [
+            {
+                "ticker": etf_ticker,
+                "composite_score": composite_score,
+                "theme_relevance": len(theme_names) * 0.5,
+                "themes": theme_names,
+                "mention_count": total_mentions,
+                "avg_sentiment": avg_sentiment,
+                "prediction_count": prediction_count,
+                "avg_confidence": avg_confidence,
+                "bullish_pct": bullish_pct,
+                "bearish_pct": bearish_pct,
+                "sample_predictions": sample_predictions,
+                "last_mentioned_at": last_mentioned.isoformat() if last_mentioned else None,
+                "is_etf": True,
+            }
+        ]
 
     @staticmethod
     def resolve_discovery_mode(
@@ -605,9 +620,7 @@ class SearchService:
 
             if theme_obj.parent_id:
                 parent_result = await self.db.execute(
-                    select(ThemeHierarchy).where(
-                        ThemeHierarchy.id == theme_obj.parent_id
-                    )
+                    select(ThemeHierarchy).where(ThemeHierarchy.id == theme_obj.parent_id)
                 )
                 parent = parent_result.scalar_one_or_none()
                 if parent:
@@ -690,9 +703,7 @@ class SearchService:
 
         # --- ETF discovery path (institutional channel or ETF-intent global query) ---
         if mode == "etfs":
-            etf_results = await self._build_etf_discovery_results(
-                matched_themes, limit=limit
-            )
+            etf_results = await self._build_etf_discovery_results(matched_themes, limit=limit)
             logger.info(
                 f"ETF discovery for '{query}' returned {len(etf_results)} results "
                 f"(channel_type={channel_type}, instrument_type={instrument_type})"
@@ -704,9 +715,7 @@ class SearchService:
         theme_names_map = {t["id"]: t["name"] for t in matched_themes}
 
         # --- Step 2: Get ticker mappings from matched themes ---
-        ticker_stmt = select(ThemeTickerMapping).where(
-            ThemeTickerMapping.theme_id.in_(theme_ids)
-        )
+        ticker_stmt = select(ThemeTickerMapping).where(ThemeTickerMapping.theme_id.in_(theme_ids))
         ticker_result = await self.db.execute(ticker_stmt)
         mappings = ticker_result.scalars().all()
 
@@ -742,9 +751,7 @@ class SearchService:
                 ticker_data[ticker]["themes"].append(theme_name)
 
         if not ticker_data:
-            logger.info(
-                f"No non-ETF ticker mappings for stock discovery query: '{query}'"
-            )
+            logger.info(f"No non-ETF ticker mappings for stock discovery query: '{query}'")
             return []
 
         # --- Step 3: Enrich with aggregation stats (mentions, sentiment, recency) ---
@@ -768,9 +775,7 @@ class SearchService:
                         ticker_data[ticker]["last_mentioned_at"] = agg.last_mentioned_at
 
         # --- Step 4: Enrich with prediction data ---
-        pred_stmt = select(Prediction).where(
-            Prediction.ticker.in_(all_tickers)
-        )
+        pred_stmt = select(Prediction).where(Prediction.ticker.in_(all_tickers))
         pred_result = await self.db.execute(pred_stmt)
         predictions = pred_result.scalars().all()
 
@@ -779,11 +784,13 @@ class SearchService:
             if ticker in ticker_data:
                 ticker_data[ticker]["prediction_count"] += 1
                 if len(ticker_data[ticker]["sample_predictions"]) < 2:
-                    ticker_data[ticker]["sample_predictions"].append({
-                        "text": pred.prediction_text[:200],
-                        "direction": pred.direction,
-                        "confidence": pred.confidence,
-                    })
+                    ticker_data[ticker]["sample_predictions"].append(
+                        {
+                            "text": pred.prediction_text[:200],
+                            "direction": pred.direction,
+                            "confidence": pred.confidence,
+                        }
+                    )
 
         # Compute avg confidence and sentiment percentages
         for ticker in all_tickers:
@@ -804,9 +811,9 @@ class SearchService:
 
         # --- Step 5: Compute composite score ---
         import math
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         for ticker, td in ticker_data.items():
             # Normalize components to 0-1 range
             theme_score = min(td["theme_relevance"] / 3.0, 1.0)  # cap at 3.0
@@ -817,7 +824,7 @@ class SearchService:
             # Recency score: 1.0 for today, decaying to 0.1 over 90 days
             recency_score = 0.3  # default if no date
             if td["last_mentioned_at"]:
-                days_ago = (now - td["last_mentioned_at"].replace(tzinfo=timezone.utc)).days
+                days_ago = (now - td["last_mentioned_at"].replace(tzinfo=UTC)).days
                 recency_score = max(0.1, 1.0 - (days_ago / 90.0))
 
             # Weighted composite: theme relevance matters most, then mentions + sentiment
@@ -886,9 +893,7 @@ class SearchService:
                 query_vec = query_embeddings[0]
 
                 # Embed all theme names (batch)
-                theme_texts = [
-                    f"{t.name}: {t.description or ''}" for t in all_themes
-                ]
+                theme_texts = [f"{t.name}: {t.description or ''}" for t in all_themes]
                 theme_embeddings = await self.embedding_provider.embed(theme_texts)
 
                 # Compute cosine similarity (pure Python, no numpy needed)

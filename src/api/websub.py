@@ -100,15 +100,11 @@ async def simulate_websub_push(
 
     channel: Channel | None = None
     if request.channel_id:
-        result = await db.execute(
-            select(Channel).where(Channel.id == request.channel_id)
-        )
+        result = await db.execute(select(Channel).where(Channel.id == request.channel_id))
         channel = result.scalar_one_or_none()
     else:
         result = await db.execute(
-            select(Channel).where(
-                Channel.youtube_channel_id == request.youtube_channel_id
-            )
+            select(Channel).where(Channel.youtube_channel_id == request.youtube_channel_id)
         )
         channel = result.scalar_one_or_none()
 

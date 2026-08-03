@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import Settings
 from src.models.raw_content import RawContent
-from src.schemas.market_chatter import SourceName
 from src.services.market_chatter.collectors import (
     BaseCollector,
     NewsCollector,

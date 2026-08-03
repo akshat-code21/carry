@@ -48,9 +48,7 @@ class AnalysisPipeline:
         Returns a summary of what was extracted.
         """
         # Fetch video and its transcript segments
-        video_result = await self.db.execute(
-            select(Video).where(Video.id == video_id)
-        )
+        video_result = await self.db.execute(select(Video).where(Video.id == video_id))
         video = video_result.scalar_one_or_none()
         if not video:
             raise ValueError(f"Video not found: {video_id}")
@@ -97,9 +95,7 @@ class AnalysisPipeline:
         for chunk_segments, chunk_db_segments in chunks:
             try:
                 # Send chunk to LLM for analysis
-                result = await self.llm.analyze_transcript_chunk(
-                    chunk_segments, video.title
-                )
+                result = await self.llm.analyze_transcript_chunk(chunk_segments, video.title)
 
                 first_matched_theme_id = None
 
@@ -146,9 +142,7 @@ class AnalysisPipeline:
 
                 # Process extracted themes
                 for extracted_theme in result.themes:
-                    matched_theme = await self.theme_service.match_theme(
-                        extracted_theme
-                    )
+                    matched_theme = await self.theme_service.match_theme(extracted_theme)
                     if matched_theme:
                         if not first_matched_theme_id:
                             first_matched_theme_id = matched_theme.id
@@ -178,9 +172,7 @@ class AnalysisPipeline:
                     # Enforce instrument policy at write time so ETFs are never
                     # recorded for individual channels (and stocks not for institutional).
                     if ticker_symbol:
-                        if channel_type == "individual" and etf_service.is_etf(
-                            ticker_symbol
-                        ):
+                        if channel_type == "individual" and etf_service.is_etf(ticker_symbol):
                             logger.debug(
                                 f"Dropping ETF ticker {ticker_symbol} for individual "
                                 f"channel video '{video.title}'"
@@ -199,9 +191,7 @@ class AnalysisPipeline:
 
                     prediction = Prediction(
                         video_id=video.id,
-                        segment_id=(
-                            chunk_db_segments[0].id if chunk_db_segments else None
-                        ),
+                        segment_id=(chunk_db_segments[0].id if chunk_db_segments else None),
                         theme_id=first_matched_theme_id,
                         ticker=ticker_symbol,
                         prediction_text=extracted_pred.text,
@@ -216,9 +206,7 @@ class AnalysisPipeline:
                     total_predictions += 1
 
             except Exception as e:
-                logger.error(
-                    f"LLM analysis failed for chunk in video {video.title}: {e}"
-                )
+                logger.error(f"LLM analysis failed for chunk in video {video.title}: {e}")
                 continue
 
         # Mark video as processed

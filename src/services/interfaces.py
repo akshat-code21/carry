@@ -9,7 +9,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import date
 
-
 # --- Data transfer objects ---
 
 
@@ -161,9 +160,7 @@ class LLMProvider(ABC):
         """Analyze a chunk of transcript segments and extract themes, predictions, etc."""
 
     @abstractmethod
-    async def enrich_theme_tickers(
-        self, theme_name: str, narrative: str
-    ) -> list[TickerMapping]:
+    async def enrich_theme_tickers(self, theme_name: str, narrative: str) -> list[TickerMapping]:
         """Given a theme and its narrative, suggest additional relevant tickers."""
 
 
@@ -183,9 +180,7 @@ class MarketDataSource(ABC):
     """Interface for stock/ETF market data."""
 
     @abstractmethod
-    async def get_price_history(
-        self, ticker: str, start: date, end: date
-    ) -> list[PricePoint]:
+    async def get_price_history(self, ticker: str, start: date, end: date) -> list[PricePoint]:
         """Fetch daily price history for a ticker over a date range."""
 
     @abstractmethod
@@ -197,7 +192,5 @@ class EconDataSource(ABC):
     """Interface for economic/macro data (FRED)."""
 
     @abstractmethod
-    async def get_series(
-        self, series_id: str, start: date, end: date
-    ) -> list[tuple[date, float]]:
+    async def get_series(self, series_id: str, start: date, end: date) -> list[tuple[date, float]]:
         """Fetch a FRED data series (e.g., FEDFUNDS, CPIAUCSL)."""

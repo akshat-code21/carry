@@ -60,9 +60,9 @@ class TickerScoreOutput(BaseModel):
 
     symbol: str
     riss_score: float  # Retail Investor Sentiment Score (0–100)
-    sms_score: float   # Social Mention Score (0–100)
-    ocs_score: float   # Overall Composite Score (0–100)
-    trend: str        # "rising" | "stable" | "falling"
+    sms_score: float  # Social Mention Score (0–100)
+    ocs_score: float  # Overall Composite Score (0–100)
+    trend: str  # "rising" | "stable" | "falling"
     confidence_pct: float
     mention_count: int
     driver_cards: list[ScoreDriverCard] = Field(default_factory=list)

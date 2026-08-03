@@ -21,10 +21,17 @@ from src.services.interfaces import TranscriptSource, YouTubeService
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-CHANNEL_CLASSIFICATION_PROMPT = """Classify this YouTube channel as either "individual" or "institutional".
+CHANNEL_CLASSIFICATION_PROMPT = """Classify this YouTube channel as either \
+"individual" or "institutional".
 
-- "institutional": Financial institutions, banks, brokerages, research firms, hedge funds, asset managers, financial news networks, or any channel representing a company/organization rather than a person. Examples: Fundstrat, Morgan Stanley, Goldman Sachs, JP Morgan, BlackRock, Bloomberg, CNBC, Barclays, UBS, Deutsche Bank, BofA Securities, Citi, Wells Fargo, Jefferies.
-- "individual": Personal channels run by individual traders, analysts, influencers, or content creators. The channel is clearly associated with one person or a small team creating personal content. Examples: ProfGMarkets, Meet Kevin, Stock Moe, Andrei Jikh, Graham Stephan.
+- "institutional": Financial institutions, banks, brokerages, research firms, hedge funds, \
+asset managers, financial news networks, or any channel representing a company/organization \
+rather than a person. Examples: Fundstrat, Morgan Stanley, Goldman Sachs, JP Morgan, \
+BlackRock, Bloomberg, CNBC, Barclays, UBS, Deutsche Bank, BofA Securities, Citi, \
+Wells Fargo, Jefferies.
+- "individual": Personal channels run by individual traders, analysts, influencers, or \
+content creators. The channel is clearly associated with one person or a small team creating \
+personal content. Examples: ProfGMarkets, Meet Kevin, Stock Moe, Andrei Jikh, Graham Stephan.
 
 Channel Title: "{title}"
 Channel Description: "{description}"
@@ -45,18 +52,14 @@ class IngestionPipeline:
         self.youtube = youtube_service
         self.transcript_source = transcript_source
 
-    async def ingest_channel(
-        self, youtube_channel_id: str, max_videos: int = 20
-    ) -> Channel:
+    async def ingest_channel(self, youtube_channel_id: str, max_videos: int = 20) -> Channel:
         """Ingest a YouTube channel — fetch metadata and store it.
 
         Returns the Channel ORM object (created or existing).
         """
         # Check if channel already exists
         result = await self.db.execute(
-            select(Channel).where(
-                Channel.youtube_channel_id == youtube_channel_id
-            )
+            select(Channel).where(Channel.youtube_channel_id == youtube_channel_id)
         )
         channel = result.scalar_one_or_none()
 
@@ -82,10 +85,7 @@ class IngestionPipeline:
         self.db.add(channel)
         await self.db.flush()
 
-        logger.info(
-            f"Ingested channel: {channel.title} ({channel.id}) "
-            f"[type={channel_type}]"
-        )
+        logger.info(f"Ingested channel: {channel.title} ({channel.id}) [type={channel_type}]")
         return channel
 
     async def _classify_channel_type(self, title: str, description: str) -> str:
@@ -126,8 +126,7 @@ class IngestionPipeline:
 
             if channel_type not in ("individual", "institutional"):
                 logger.warning(
-                    f"Unexpected channel_type '{channel_type}' from LLM, "
-                    f"defaulting to 'individual'"
+                    f"Unexpected channel_type '{channel_type}' from LLM, defaulting to 'individual'"
                 )
                 return "individual"
 
@@ -136,14 +135,11 @@ class IngestionPipeline:
 
         except Exception as e:
             logger.warning(
-                f"Channel classification failed for '{title}', "
-                f"defaulting to 'individual': {e}"
+                f"Channel classification failed for '{title}', defaulting to 'individual': {e}"
             )
             return "individual"
 
-    async def backfill_videos(
-        self, channel: Channel, max_videos: int = 20
-    ) -> list[Video]:
+    async def backfill_videos(self, channel: Channel, max_videos: int = 20) -> list[Video]:
         """Backfill videos for a channel — fetch metadata and store them.
 
         Skips videos that already exist in the database.
@@ -168,9 +164,7 @@ class IngestionPipeline:
 
             # Check if video already exists
             existing = await self.db.execute(
-                select(Video).where(
-                    Video.youtube_video_id == meta.video_id
-                )
+                select(Video).where(Video.youtube_video_id == meta.video_id)
             )
             if existing.scalar_one_or_none():
                 logger.debug(f"Video already exists: {meta.title}")
@@ -180,9 +174,7 @@ class IngestionPipeline:
             published_at = None
             if meta.published_at:
                 try:
-                    published_at = datetime.fromisoformat(
-                        meta.published_at.replace("Z", "+00:00")
-                    )
+                    published_at = datetime.fromisoformat(meta.published_at.replace("Z", "+00:00"))
                 except ValueError:
                     pass
 
@@ -202,14 +194,10 @@ class IngestionPipeline:
             created_videos.append(video)
 
         await self.db.flush()
-        logger.info(
-            f"Backfilled {len(created_videos)} new videos for {channel.title}"
-        )
+        logger.info(f"Backfilled {len(created_videos)} new videos for {channel.title}")
         return created_videos
 
-    async def ingest_single_video(
-        self, channel_id: uuid_mod.UUID, youtube_video_id: str
-    ) -> Video:
+    async def ingest_single_video(self, channel_id: uuid_mod.UUID, youtube_video_id: str) -> Video:
         """Ingest a single video for a channel by YouTube Video ID.
 
         If video already exists, fetches transcript if needed and returns Video.
@@ -233,9 +221,7 @@ class IngestionPipeline:
         published_at = None
         if meta.published_at:
             try:
-                published_at = datetime.fromisoformat(
-                    meta.published_at.replace("Z", "+00:00")
-                )
+                published_at = datetime.fromisoformat(meta.published_at.replace("Z", "+00:00"))
             except ValueError:
                 pass
 
@@ -266,9 +252,7 @@ class IngestionPipeline:
         """
         try:
             # Fetch transcript via the pluggable source
-            raw_segments = await self.transcript_source.fetch_transcript(
-                video.youtube_video_id
-            )
+            raw_segments = await self.transcript_source.fetch_transcript(video.youtube_video_id)
 
             # Store segments in the database
             db_segments: list[TranscriptSegment] = []
@@ -285,17 +269,13 @@ class IngestionPipeline:
             video.transcript_status = "fetched"
             await self.db.flush()
 
-            logger.info(
-                f"Fetched {len(db_segments)} transcript segments for: {video.title}"
-            )
+            logger.info(f"Fetched {len(db_segments)} transcript segments for: {video.title}")
             return db_segments
 
         except NotImplementedError:
             video.transcript_status = "failed"
             await self.db.flush()
-            logger.warning(
-                f"Transcript fetch failed (no fallback) for: {video.title}"
-            )
+            logger.warning(f"Transcript fetch failed (no fallback) for: {video.title}")
             raise
 
         except Exception as e:
@@ -304,9 +284,7 @@ class IngestionPipeline:
             logger.error(f"Transcript fetch failed for {video.title}: {e}")
             raise
 
-    async def ingest_and_backfill(
-        self, youtube_channel_id: str, max_videos: int = 20
-    ) -> dict:
+    async def ingest_and_backfill(self, youtube_channel_id: str, max_videos: int = 20) -> dict:
         """Full ingestion pipeline: channel → videos → transcripts.
 
         Returns a summary dict of what was ingested.

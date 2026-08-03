@@ -9,7 +9,6 @@ import os
 from pathlib import Path
 
 import numpy as np
-
 from transformers import AutoTokenizer
 
 from src.services.interfaces import FinBertResult
@@ -50,7 +49,6 @@ class FinBertService:
             return
 
         import onnxruntime as ort
-        from transformers import AutoTokenizer
 
         model_path = self._model_dir / "model.onnx"
 
@@ -89,7 +87,6 @@ class FinBertService:
         Uses huggingface_hub to download the PyTorch model, then exports
         to ONNX. Falls back to optimum if available.
         """
-        from transformers import AutoTokenizer
 
         logger.info("Downloading ProsusAI/finbert and exporting to ONNX...")
         self._model_dir.mkdir(parents=True, exist_ok=True)
@@ -197,9 +194,7 @@ class FinBertService:
 
         for probs in probabilities:
             # Build probability dict
-            prob_dict = {
-                FINBERT_LABELS[i]: float(probs[i]) for i in range(len(FINBERT_LABELS))
-            }
+            prob_dict = {FINBERT_LABELS[i]: float(probs[i]) for i in range(len(FINBERT_LABELS))}
 
             # Get winning class
             winning_idx = int(np.argmax(probs))

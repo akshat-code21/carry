@@ -9,7 +9,6 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
@@ -35,9 +34,7 @@ router = APIRouter(
 
 def _get_service(request: Request) -> CollectionService:
     """Retrieve the CollectionService stashed in app.state during lifespan."""
-    service: CollectionService | None = getattr(
-        request.app.state, "tickerflow_service", None
-    )
+    service: CollectionService | None = getattr(request.app.state, "tickerflow_service", None)
     if service is None:
         raise HTTPException(
             status_code=503,
@@ -68,9 +65,7 @@ async def get_ticker(
 ) -> MCTickerResponse:
     """Get social-sentiment data for a ticker symbol."""
     try:
-        return await service.ticker_response(
-            symbol, source, period_days, force=refresh
-        )
+        return await service.ticker_response(symbol, source, period_days, force=refresh)
     except UnsupportedTickerError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -91,9 +86,7 @@ async def refresh_ticker(
 ) -> MCTickerResponse:
     """Force-refresh social-sentiment data for a ticker symbol."""
     try:
-        return await service.ticker_response(
-            symbol, source, period_days, force=True
-        )
+        return await service.ticker_response(symbol, source, period_days, force=True)
     except UnsupportedTickerError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

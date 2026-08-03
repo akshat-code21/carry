@@ -49,7 +49,7 @@ class PartiallyUnavailableProvider(FixtureProvider):
 
 @pytest.mark.asyncio
 async def test_partial_source_failure_returns_partial_result(tmp_path) -> None:
-    from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
     from src.config import Settings
     from src.database import Base
@@ -78,9 +78,7 @@ async def test_partial_source_failure_returns_partial_result(tmp_path) -> None:
     assert response.data_status == "partial"
     assert response.signal.source_count == 2
     assert (
-        next(
-            card for card in response.sources if card.source == SourceName.X
-        ).status
+        next(card for card in response.sources if card.source == SourceName.X).status
         == "unavailable"
     )
     await engine.dispose()

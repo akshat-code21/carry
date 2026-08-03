@@ -36,9 +36,7 @@ class NewsCollector(BaseCollector):
         try:
             resp = await self._client.get(
                 rss_url,
-                headers={
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
-                },
+                headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"},
             )
             if resp.status_code == 200:
                 root = ET.fromstring(resp.text)
@@ -54,9 +52,7 @@ class NewsCollector(BaseCollector):
                         pub_date_raw = item.findtext("pubDate", "")
                         source_elem = item.find("source")
                         publisher = (
-                            source_elem.text
-                            if source_elem is not None
-                            else "Financial News"
+                            source_elem.text if source_elem is not None else "Financial News"
                         )
 
                         if not title:

@@ -1,12 +1,12 @@
 """FastAPI application entrypoint."""
 
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.api.activity import router as activity_router
 from src.api.channels import router as channels_router
@@ -144,4 +144,3 @@ async def health():
             },
         },
     }
-

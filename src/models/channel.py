@@ -14,9 +14,7 @@ from src.database import Base
 class Channel(Base):
     __tablename__ = "channels"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     youtube_channel_id: Mapped[str] = mapped_column(
         String(255), unique=True, nullable=False, index=True
     )
@@ -33,9 +31,7 @@ class Channel(Base):
     websub_status: Mapped[str] = mapped_column(
         String(50), default="pending", server_default="pending"
     )  # pending | active | failed | disabled
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -45,6 +41,4 @@ class Channel(Base):
     speaker_ticker_aggregations = relationship(
         "SpeakerTickerAggregation", back_populates="channel", lazy="selectin"
     )
-    activity_events = relationship(
-        "ActivityEvent", back_populates="channel", lazy="noload"
-    )
+    activity_events = relationship("ActivityEvent", back_populates="channel", lazy="noload")

@@ -85,9 +85,7 @@ class SignalSummary(BaseModel):
     attention: float | None = Field(default=None, ge=0, le=100)
     confidence: float = Field(ge=0, le=1)
     source_count: int = Field(ge=0, le=3)
-    disclaimer: str = (
-        "Aggregate vendor signal for informational use only; not investment advice."
-    )
+    disclaimer: str = "Aggregate vendor signal for informational use only; not investment advice."
 
 
 class ChartPoint(BaseModel):

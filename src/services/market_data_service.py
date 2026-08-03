@@ -11,9 +11,7 @@ logger = logging.getLogger(__name__)
 class YFinanceMarketDataService(MarketDataSource):
     """Fetches stock/ETF price data via yfinance."""
 
-    async def get_price_history(
-        self, ticker: str, start: date, end: date
-    ) -> list[PricePoint]:
+    async def get_price_history(self, ticker: str, start: date, end: date) -> list[PricePoint]:
         """Fetch daily OHLCV data for a ticker between start and end dates."""
         import yfinance as yf
 
@@ -63,15 +61,11 @@ class YFinanceMarketDataService(MarketDataSource):
             )
 
             if df.empty:
-                logger.warning(
-                    f"No price data found for {ticker} near {target_date}"
-                )
+                logger.warning(f"No price data found for {ticker} near {target_date}")
                 return None
 
             # Return the close price of the first available trading day
             return float(df.iloc[0]["Close"])
         except Exception as e:
-            logger.error(
-                f"Failed to get price for {ticker} at {target_date}: {e}"
-            )
+            logger.error(f"Failed to get price for {ticker} at {target_date}: {e}")
             return None

@@ -21,12 +21,18 @@ class ProviderError(Exception):
     pass
 
 
-class ProviderRateLimited(ProviderError):
+class ProviderRateLimitedError(ProviderError):
     pass
 
 
-class ProviderUnavailable(ProviderError):
+ProviderRateLimited = ProviderRateLimitedError
+
+
+class ProviderUnavailableError(ProviderError):
     pass
+
+
+ProviderUnavailable = ProviderUnavailableError
 
 
 class MarketSentimentProvider(Protocol):
@@ -97,9 +103,7 @@ def _daily_metrics(payload: dict) -> list[DailyMetric]:
     ]
 
 
-def normalize_adanos_payload(
-    symbol: str, source: SourceName, payload: dict
-) -> ProviderSnapshot:
+def normalize_adanos_payload(symbol: str, source: SourceName, payload: dict) -> ProviderSnapshot:
     return ProviderSnapshot(
         symbol=symbol.upper(),
         company_name=payload.get("company_name"),
@@ -127,9 +131,7 @@ class AdanosProvider:
 
     name = "adanos"
 
-    def __init__(
-        self, settings: Settings, client: httpx.AsyncClient | None = None
-    ) -> None:
+    def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None) -> None:
         if not settings.adanos_api_key:
             raise ValueError("ADANOS_API_KEY is required when SENTIMENT_PROVIDER=adanos")
         self._base_url = settings.adanos_base_url.rstrip("/")
@@ -149,9 +151,7 @@ class AdanosProvider:
         from_date = to_date - timedelta(days=max(period_days, 1) - 1)
         return {"from": from_date.isoformat(), "to": to_date.isoformat()}
 
-    async def _get(
-        self, source: SourceName, path: str, params: dict | None = None
-    ) -> dict | list:
+    async def _get(self, source: SourceName, path: str, params: dict | None = None) -> dict | list:
         try:
             response = await self._client.get(
                 self._url(source, path),
@@ -235,9 +235,7 @@ class FixtureProvider:
         for index in range(period_days):
             day_seed = seed + index * 29
             mentions = max(2, base_mentions + ((day_seed % 41) - 20))
-            day_sentiment = max(
-                -1.0, min(1.0, sentiment + ((index % 3) - 1) * 0.06)
-            )
+            day_sentiment = max(-1.0, min(1.0, sentiment + ((index % 3) - 1) * 0.06))
             daily.append(
                 DailyMetric(
                     date=today - timedelta(days=period_days - 1 - index),
@@ -340,7 +338,6 @@ class NativeRawProvider:
         from src.services.market_chatter.collectors import (
             NewsCollector,
             RedditCollector,
-            StockTwitsCollector,
             TwitterCollector,
         )
 
@@ -361,7 +358,8 @@ class NativeRawProvider:
         if not items:
             return await FixtureProvider().get_ticker_snapshot(symbol, source, period_days)
 
-        # Run LangGraph Multi-Agent Pipeline on collected raw items (with 60s deduplication cache per symbol)
+        # Run LangGraph Multi-Agent Pipeline on collected raw items
+        # (with 60s deduplication cache per symbol)
         from src.pipeline.graph import run_pipeline_for_raw_items
 
         raw_dicts = [item.model_dump(mode="json") for item in items]
@@ -464,4 +462,3 @@ def build_price_provider(settings: Settings) -> PriceProvider:
     if settings.price_provider == "yfinance_local":
         return YFinanceLocalPriceProvider()
     return FixturePriceProvider()
-

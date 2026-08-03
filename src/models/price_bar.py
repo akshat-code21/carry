@@ -10,9 +10,7 @@ from src.database import Base
 
 class PriceBarRecord(Base):
     __tablename__ = "price_bars"
-    __table_args__ = (
-        UniqueConstraint("symbol", "trade_date", name="uq_price_bar"),
-    )
+    __table_args__ = (UniqueConstraint("symbol", "trade_date", name="uq_price_bar"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     symbol: Mapped[str] = mapped_column(String(16), index=True)

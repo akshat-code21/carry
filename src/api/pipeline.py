@@ -34,9 +34,7 @@ async def trigger_ingest_single_video(
     request: IngestSingleVideoRequest,
 ) -> PipelineStatusResponse:
     """Ingest a single YouTube video for an existing channel and trigger its processing pipeline."""
-    task = ingest_single_video_task.delay(
-        str(request.channel_id), request.youtube_video_id
-    )
+    task = ingest_single_video_task.delay(str(request.channel_id), request.youtube_video_id)
     return PipelineStatusResponse(task_id=task.id, status="queued")
 
 
@@ -44,11 +42,10 @@ async def trigger_ingest_single_video(
 async def trigger_backfill(request: BackfillRequest) -> PipelineStatusResponse:
     """Trigger full backfill pipeline for a YouTube channel.
 
-    Queues a Celery task that: ingests the channel → fetches videos → fetches transcripts → queues processing for each video.
+    Queues a Celery task that: ingests the channel -> fetches videos ->
+    fetches transcripts -> queues processing for each video.
     """
-    task = backfill_channel_task.delay(
-        request.youtube_channel_id, request.max_videos
-    )
+    task = backfill_channel_task.delay(request.youtube_channel_id, request.max_videos)
     return PipelineStatusResponse(task_id=task.id, status="queued")
 
 

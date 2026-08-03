@@ -1,23 +1,25 @@
 """Tickers API endpoints."""
 
 from datetime import date, timedelta
-from uuid import UUID
+from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
+if TYPE_CHECKING:
+    from src.services.etf_mapping_service import ETFMappingService
 
 from src.api.deps import get_aggregation_service, get_market_data
 from src.database import get_db
 from src.models.performance import PerformanceRecord
 from src.models.prediction import Prediction
-from src.models.video import Video
 from src.models.speaker_ticker import SpeakerTickerAggregation
 from src.models.theme import ThemeHierarchy, ThemeTickerMapping
+from src.models.video import Video
 from src.schemas import (
     PerformanceResponse,
-    PredictionResponse,
     PredictionWithPerformance,
     PricePointResponse,
     ThemeResponse,
@@ -114,9 +116,7 @@ async def get_ticker_detail(
 
     # Get aggregation stats
     agg_result = await db.execute(
-        select(SpeakerTickerAggregation).where(
-            SpeakerTickerAggregation.ticker == ticker
-        )
+        select(SpeakerTickerAggregation).where(SpeakerTickerAggregation.ticker == ticker)
     )
     # Use first match (could be from multiple channels)
     agg = agg_result.scalars().first()
@@ -142,9 +142,7 @@ async def get_ticker_detail(
                 pwp.channel_title = pred.video.channel.title
 
         perf_result = await db.execute(
-            select(PerformanceRecord).where(
-                PerformanceRecord.prediction_id == pred.id
-            )
+            select(PerformanceRecord).where(PerformanceRecord.prediction_id == pred.id)
         )
         perf = perf_result.scalar_one_or_none()
         if perf:
@@ -195,9 +193,7 @@ async def _get_etf_ticker_detail(
     if related_theme_names:
         theme_result = await db.execute(
             select(ThemeHierarchy).where(
-                func.lower(ThemeHierarchy.name).in_(
-                    [n.lower() for n in related_theme_names]
-                )
+                func.lower(ThemeHierarchy.name).in_([n.lower() for n in related_theme_names])
             )
         )
         themes_db = theme_result.scalars().all()
@@ -234,9 +230,7 @@ async def _get_etf_ticker_detail(
                     pwp.channel_title = pred.video.channel.title
 
             perf_result = await db.execute(
-                select(PerformanceRecord).where(
-                    PerformanceRecord.prediction_id == pred.id
-                )
+                select(PerformanceRecord).where(PerformanceRecord.prediction_id == pred.id)
             )
             perf = perf_result.scalar_one_or_none()
             if perf:
@@ -254,12 +248,8 @@ async def _get_etf_ticker_detail(
         )
         aggregations = agg_result.scalars().all()
         total_mentions = sum(a.total_mentions or 0 for a in aggregations)
-        sentiments = [
-            a.avg_sentiment for a in aggregations if a.avg_sentiment is not None
-        ]
-        avg_sentiment = (
-            sum(sentiments) / len(sentiments) if sentiments else None
-        )
+        sentiments = [a.avg_sentiment for a in aggregations if a.avg_sentiment is not None]
+        avg_sentiment = sum(sentiments) / len(sentiments) if sentiments else None
 
     return TickerDetailResponse(
         ticker=etf_ticker,

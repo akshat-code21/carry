@@ -68,14 +68,10 @@ class EmbeddingPipeline:
                 await self.db.flush()
 
             except Exception as e:
-                logger.error(
-                    f"Embedding generation failed for batch {i // BATCH_SIZE}: {e}"
-                )
+                logger.error(f"Embedding generation failed for batch {i // BATCH_SIZE}: {e}")
                 continue
 
-        logger.info(
-            f"Generated {embedded_count} embeddings for video {video_id}"
-        )
+        logger.info(f"Generated {embedded_count} embeddings for video {video_id}")
         return embedded_count
 
     async def embed_all_pending(self) -> dict:

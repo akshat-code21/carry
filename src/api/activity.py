@@ -23,9 +23,7 @@ async def list_activity(
 ) -> list[ActivityEventResponse]:
     """List recent activity events (newest first)."""
     service = ActivityService(db)
-    events = await service.list_events(
-        limit=limit, offset=offset, unread_only=unread_only
-    )
+    events = await service.list_events(limit=limit, offset=offset, unread_only=unread_only)
     return [ActivityEventResponse.model_validate(e) for e in events]
 
 

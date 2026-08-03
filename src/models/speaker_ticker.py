@@ -14,14 +14,10 @@ from src.database import Base
 class SpeakerTickerAggregation(Base):
     __tablename__ = "speaker_ticker_aggregation"
     __table_args__ = (
-        UniqueConstraint(
-            "channel_id", "ticker", name="uq_speaker_ticker_agg_channel_ticker"
-        ),
+        UniqueConstraint("channel_id", "ticker", name="uq_speaker_ticker_agg_channel_ticker"),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     channel_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("channels.id"), nullable=False, index=True
     )

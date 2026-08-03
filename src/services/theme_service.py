@@ -25,9 +25,7 @@ class ThemeService:
 
     async def get_themes_by_level(self, level: str) -> list[ThemeHierarchy]:
         """Get all themes at a specific level (sector, industry, theme, narrative)."""
-        result = await self.db.execute(
-            select(ThemeHierarchy).where(ThemeHierarchy.level == level)
-        )
+        result = await self.db.execute(select(ThemeHierarchy).where(ThemeHierarchy.level == level))
         return list(result.scalars().all())
 
     async def get_theme_children(self, parent_id: uuid_mod.UUID) -> list[ThemeHierarchy]:
@@ -76,9 +74,7 @@ class ThemeService:
             return new_theme
 
         # No match found — create as a narrative-level free-text entry
-        logger.info(
-            f"No taxonomy match for theme '{extracted.theme}' — creating narrative entry"
-        )
+        logger.info(f"No taxonomy match for theme '{extracted.theme}' — creating narrative entry")
         new_theme = ThemeHierarchy(
             parent_id=None,
             level="narrative",
@@ -117,9 +113,7 @@ class ThemeService:
         await self.db.flush()
         return mention
 
-    async def get_ticker_mappings(
-        self, theme_id: uuid_mod.UUID
-    ) -> list[ThemeTickerMapping]:
+    async def get_ticker_mappings(self, theme_id: uuid_mod.UUID) -> list[ThemeTickerMapping]:
         """Get all ticker mappings for a theme."""
         result = await self.db.execute(
             select(ThemeTickerMapping).where(ThemeTickerMapping.theme_id == theme_id)
@@ -145,7 +139,7 @@ class ThemeService:
         from src.services.etf_mapping_service import ETFMappingService
 
         # Handle LLM outputs like "SAMSUNG ELECTRONICS (005930.KS)"
-        match = re.search(r'\((.*?)\)', ticker)
+        match = re.search(r"\((.*?)\)", ticker)
         if match:
             clean_ticker = match.group(1).strip()
         else:
@@ -226,13 +220,14 @@ class ThemeService:
         # Include narrative-level themes (free-text LLM extractions)
         narratives = await self.get_themes_by_level("narrative")
         for narrative in narratives:
-            tree.append({
-                "id": str(narrative.id),
-                "name": narrative.name,
-                "description": narrative.description,
-                "level": narrative.level,
-                "industries": [],
-            })
+            tree.append(
+                {
+                    "id": str(narrative.id),
+                    "name": narrative.name,
+                    "description": narrative.description,
+                    "level": narrative.level,
+                    "industries": [],
+                }
+            )
 
         return tree
-

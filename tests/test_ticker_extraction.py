@@ -1,9 +1,7 @@
 """Unit tests for ticker extraction, resolution, and relevance filtering."""
 
-import pytest
 from src.pipeline.analysis import AnalysisPipeline
 from src.pipeline.theme_mapping import MIN_THEME_TICKER_RELEVANCE_SCORE
-from src.services.interfaces import TickerMapping
 
 
 def test_resolve_ticker_explicit_and_text():

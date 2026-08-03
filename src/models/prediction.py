@@ -14,9 +14,7 @@ from src.database import Base
 class Prediction(Base):
     __tablename__ = "predictions"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     video_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("videos.id"), nullable=False, index=True
     )
@@ -46,12 +44,8 @@ class Prediction(Base):
         String(100)
     )  # short-term | long-term | earnings
     extracted_by: Mapped[str | None] = mapped_column(String(100))  # LLM model used
-    accurate: Mapped[bool | None] = mapped_column(
-        Boolean, nullable=True
-    )  # NULL until evaluated
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    accurate: Mapped[bool | None] = mapped_column(Boolean, nullable=True)  # NULL until evaluated
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
     video = relationship("Video", back_populates="predictions")

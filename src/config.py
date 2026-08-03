@@ -21,12 +21,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # Database
-    database_url: str = (
-        "postgresql+asyncpg://yt_chatter:yt_chatter_dev@localhost:5432/yt_chatter"
-    )
-    database_url_sync: str = (
-        "postgresql://yt_chatter:yt_chatter_dev@localhost:5432/yt_chatter"
-    )
+    database_url: str = "postgresql+asyncpg://yt_chatter:yt_chatter_dev@localhost:5432/yt_chatter"
+    database_url_sync: str = "postgresql://yt_chatter:yt_chatter_dev@localhost:5432/yt_chatter"
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"
@@ -131,19 +127,13 @@ class Settings(BaseSettings):
     @property
     def cors_origins(self) -> list[str]:
         """Parse comma-separated CORS origins."""
-        return [
-            origin.strip()
-            for origin in self.api_cors_origins.split(",")
-            if origin.strip()
-        ]
+        return [origin.strip() for origin in self.api_cors_origins.split(",") if origin.strip()]
 
     @property
     def pilot_symbols(self) -> list[str]:
         """Parse comma-separated pilot watchlist symbols."""
         return [
-            symbol.strip().upper()
-            for symbol in self.pilot_watchlist.split(",")
-            if symbol.strip()
+            symbol.strip().upper() for symbol in self.pilot_watchlist.split(",") if symbol.strip()
         ]
 
     def source_ttl_seconds(self, source: str) -> int:

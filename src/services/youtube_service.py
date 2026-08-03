@@ -352,17 +352,19 @@ class YouTubeAPIService(YouTubeService):
 
 
 class YouTubeTranscriptFetcher(TranscriptSource):
-    """Fetches transcripts via youtube-transcript-api with Supadata and yt-dlp + Whisper fallbacks."""
+    """Fetches transcripts via youtube-transcript-api with Supadata
+    and yt-dlp + Whisper fallbacks.
+    """
 
     async def fetch_transcript(self, video_id: str) -> list[TranscriptSegmentDTO]:
-        """Fetch transcript, trying auto-captions first, then Supadata API, then Whisper fallback."""
+        """Fetch transcript, trying auto-captions first, then Supadata API,
+        then Whisper fallback.
+        """
         # 1. Primary: youtube-transcript-api
         try:
             return await self._fetch_via_api(video_id)
         except Exception as e:
-            logger.warning(
-                f"Caption fetch failed for {video_id}, attempting fallback: {e}"
-            )
+            logger.warning(f"Caption fetch failed for {video_id}, attempting fallback: {e}")
 
         # 2. Managed Fallback: Supadata API (if key is set)
         if settings.supadata_api_key:
@@ -371,16 +373,15 @@ class YouTubeTranscriptFetcher(TranscriptSource):
                 return await self._fetch_via_supadata(video_id)
             except Exception as supadata_err:
                 logger.warning(
-                    f"Supadata fetch failed for {video_id}, attempting Whisper fallback: {supadata_err}"
+                    f"Supadata fetch failed for {video_id}, "
+                    f"attempting Whisper fallback: {supadata_err}"
                 )
 
         # 3. Local ASR Fallback: yt-dlp + faster-whisper
         try:
             return await self._fetch_via_whisper(video_id)
         except Exception as whisper_err:
-            logger.error(
-                f"Whisper fallback also failed for {video_id}: {whisper_err}"
-            )
+            logger.error(f"Whisper fallback also failed for {video_id}: {whisper_err}")
             raise ValueError(
                 f"All transcript methods failed for {video_id}. "
                 f"Captions, Supadata, and Whisper fallback failed. Last error: {whisper_err}"
@@ -401,9 +402,7 @@ class YouTubeTranscriptFetcher(TranscriptSource):
             resp = await client.get(url, headers=headers, params=params)
 
         if resp.status_code != 200:
-            raise ValueError(
-                f"Supadata request failed (HTTP {resp.status_code}): {resp.text}"
-            )
+            raise ValueError(f"Supadata request failed (HTTP {resp.status_code}): {resp.text}")
 
         data = resp.json()
         content = data.get("content")
@@ -488,14 +487,9 @@ class YouTubeTranscriptFetcher(TranscriptSource):
             audio_path = await self._download_audio(url, tmp_dir)
 
             # Step 2: Transcribe with faster-whisper
-            logger.info(
-                f"Starting Whisper transcription for {video_id} "
-                f"(model: {model_size})"
-            )
+            logger.info(f"Starting Whisper transcription for {video_id} (model: {model_size})")
             model = WhisperModel(model_size, device="cpu", compute_type="int8")
-            segments_iter, info = model.transcribe(
-                audio_path, beam_size=5, language="en"
-            )
+            segments_iter, info = model.transcribe(audio_path, beam_size=5, language="en")
 
             segments: list[TranscriptSegmentDTO] = []
             for seg in segments_iter:
@@ -514,9 +508,7 @@ class YouTubeTranscriptFetcher(TranscriptSource):
             )
 
             if not segments:
-                raise ValueError(
-                    f"Whisper produced no segments for {video_id}"
-                )
+                raise ValueError(f"Whisper produced no segments for {video_id}")
 
             return segments
 
@@ -533,10 +525,13 @@ class YouTubeTranscriptFetcher(TranscriptSource):
         cmd = [
             "yt-dlp",
             "--no-playlist",
-            "-x",                       # extract audio only
-            "--audio-format", "wav",     # wav for whisper compatibility
-            "--audio-quality", "0",      # best quality
-            "-o", output_template,
+            "-x",  # extract audio only
+            "--audio-format",
+            "wav",  # wav for whisper compatibility
+            "--audio-quality",
+            "0",  # best quality
+            "-o",
+            output_template,
             "--no-warnings",
             url,
         ]
@@ -544,24 +539,17 @@ class YouTubeTranscriptFetcher(TranscriptSource):
         logger.info(f"Downloading audio: {url}")
         proc = await asyncio.get_event_loop().run_in_executor(
             None,
-            lambda: subprocess.run(
-                cmd, capture_output=True, text=True, timeout=300
-            ),
+            lambda: subprocess.run(cmd, capture_output=True, text=True, timeout=300),
         )
 
         if proc.returncode != 0:
-            raise RuntimeError(
-                f"yt-dlp failed (exit {proc.returncode}): {proc.stderr[:500]}"
-            )
+            raise RuntimeError(f"yt-dlp failed (exit {proc.returncode}): {proc.stderr[:500]}")
 
         # Find the downloaded file
         audio_files = glob.glob(f"{output_dir}/audio.*")
         if not audio_files:
-            raise FileNotFoundError(
-                f"yt-dlp completed but no audio file found in {output_dir}"
-            )
+            raise FileNotFoundError(f"yt-dlp completed but no audio file found in {output_dir}")
 
         audio_path = audio_files[0]
         logger.info(f"Audio downloaded: {audio_path}")
         return audio_path
-

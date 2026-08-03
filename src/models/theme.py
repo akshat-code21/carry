@@ -16,9 +16,7 @@ class ThemeHierarchy(Base):
 
     __tablename__ = "theme_hierarchy"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     parent_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("theme_hierarchy.id"), nullable=True, index=True
     )
@@ -27,9 +25,7 @@ class ThemeHierarchy(Base):
     )  # sector | industry | theme | narrative
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Self-referential relationship
     parent = relationship("ThemeHierarchy", remote_side="ThemeHierarchy.id", backref="children")
@@ -45,9 +41,7 @@ class ThemeMention(Base):
 
     __tablename__ = "theme_mentions"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     video_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("videos.id"), nullable=False, index=True
     )
@@ -85,9 +79,7 @@ class ThemeTickerMapping(Base):
 
     __tablename__ = "theme_ticker_mappings"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     theme_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("theme_hierarchy.id"),
@@ -96,9 +88,7 @@ class ThemeTickerMapping(Base):
     )
     ticker: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     relevance_score: Mapped[float | None] = mapped_column(Float)  # 0-1
-    source: Mapped[str] = mapped_column(
-        String(50), default="curated"
-    )  # curated | llm
+    source: Mapped[str] = mapped_column(String(50), default="curated")  # curated | llm
     notes: Mapped[str | None] = mapped_column(Text)
 
     # Relationships

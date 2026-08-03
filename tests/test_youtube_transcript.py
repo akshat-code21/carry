@@ -1,10 +1,10 @@
 """Tests for YouTubeTranscriptFetcher including Supadata fallback."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 from src.services.youtube_service import YouTubeTranscriptFetcher
-from src.services.interfaces import TranscriptSegmentDTO
 
 
 @pytest.mark.asyncio

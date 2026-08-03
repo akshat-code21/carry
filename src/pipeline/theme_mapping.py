@@ -10,7 +10,7 @@ import uuid as uuid_mod
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.theme import ThemeHierarchy, ThemeMention, ThemeTickerMapping
+from src.models.theme import ThemeHierarchy, ThemeMention
 from src.models.video import Video
 from src.services.aggregation_service import AggregationService
 from src.services.interfaces import LLMProvider
@@ -83,15 +83,15 @@ class ThemeMappingPipeline:
 
             # LLM enrichment pass
             try:
-                suggested_tickers = await self.llm.enrich_theme_tickers(
-                    theme.name, narrative
-                )
+                suggested_tickers = await self.llm.enrich_theme_tickers(theme.name, narrative)
 
                 for suggestion in suggested_tickers:
                     if suggestion.relevance_score < MIN_THEME_TICKER_RELEVANCE_SCORE:
                         logger.debug(
-                            f"Skipping suggested ticker {suggestion.ticker} for theme '{theme.name}' "
-                            f"due to low relevance score ({suggestion.relevance_score} < {MIN_THEME_TICKER_RELEVANCE_SCORE})"
+                            f"Skipping suggested ticker {suggestion.ticker} "
+                            f"for theme '{theme.name}' due to low relevance score "
+                            f"({suggestion.relevance_score} < "
+                            f"{MIN_THEME_TICKER_RELEVANCE_SCORE})"
                         )
                         continue
 
@@ -110,19 +110,13 @@ class ThemeMappingPipeline:
                             new_mappings_count += 1
 
             except Exception as e:
-                logger.warning(
-                    f"LLM ticker enrichment failed for theme '{theme.name}': {e}"
-                )
+                logger.warning(f"LLM ticker enrichment failed for theme '{theme.name}': {e}")
 
         # Update speaker-ticker aggregation for the channel
-        video_result = await self.db.execute(
-            select(Video).where(Video.id == video_id)
-        )
+        video_result = await self.db.execute(select(Video).where(Video.id == video_id))
         video = video_result.scalar_one_or_none()
         if video:
-            await self.aggregation_service.update_channel_aggregation(
-                video.channel_id
-            )
+            await self.aggregation_service.update_channel_aggregation(video.channel_id)
 
         await self.db.flush()
 
@@ -163,9 +157,7 @@ class ThemeMappingPipeline:
                                 existing_tickers.add(ticker)
                                 total_new += 1
                 except Exception as e:
-                    logger.warning(
-                        f"Enrichment failed for theme '{theme.name}': {e}"
-                    )
+                    logger.warning(f"Enrichment failed for theme '{theme.name}': {e}")
 
         await self.db.flush()
         return {"new_mappings": total_new}

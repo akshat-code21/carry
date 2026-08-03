@@ -10,9 +10,7 @@ from src.database import Base
 
 class TickerDailyMetric(Base):
     __tablename__ = "ticker_daily_metrics"
-    __table_args__ = (
-        UniqueConstraint("symbol", "source", "metric_date", name="uq_daily_metric"),
-    )
+    __table_args__ = (UniqueConstraint("symbol", "source", "metric_date", name="uq_daily_metric"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     symbol: Mapped[str] = mapped_column(String(16), index=True)

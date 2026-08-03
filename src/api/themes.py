@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_theme_service
 from src.database import get_db
-from src.models.theme import ThemeHierarchy, ThemeMention, ThemeTickerMapping
+from src.models.theme import ThemeHierarchy, ThemeMention
 from src.models.video import Video
 from src.schemas import ThemeResponse, ThemeTickerMappingResponse, VideoResponse
 from src.services.theme_service import ThemeService

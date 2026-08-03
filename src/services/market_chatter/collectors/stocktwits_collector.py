@@ -35,6 +35,7 @@ class StockTwitsCollector(BaseCollector):
         def _fetch() -> dict | None:
             try:
                 from curl_cffi import requests
+
                 resp = requests.get(url, impersonate="chrome120", timeout=10)
                 if resp.status_code == 200:
                     return resp.json()
@@ -58,9 +59,7 @@ class StockTwitsCollector(BaseCollector):
                         continue
                     # StockTwits format: 2026-07-29T11:00:00Z
                     try:
-                        created_dt = datetime.fromisoformat(
-                            created_raw.replace("Z", "+00:00")
-                        )
+                        created_dt = datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
                     except ValueError:
                         created_dt = now
 
@@ -68,7 +67,9 @@ class StockTwitsCollector(BaseCollector):
                         continue
 
                     user = msg.get("user") or {}
-                    author = user.get("username", "anonymous") if isinstance(user, dict) else "anonymous"
+                    author = (
+                        user.get("username", "anonymous") if isinstance(user, dict) else "anonymous"
+                    )
                     followers = int(user.get("followers", 0)) if isinstance(user, dict) else 0
 
                     sentiment = None

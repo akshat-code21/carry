@@ -39,9 +39,7 @@ async def test_adanos_provider_maps_rate_limits() -> None:
         return httpx.Response(429, json={"detail": "rate limited"})
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    provider = AdanosProvider(
-        Settings(adanos_api_key="test-key", _env_file=None), client=client
-    )
+    provider = AdanosProvider(Settings(adanos_api_key="test-key", _env_file=None), client=client)
     with pytest.raises(ProviderRateLimited):
         await provider.get_ticker_snapshot("AAPL", SourceName.REDDIT)
     await client.aclose()
@@ -76,9 +74,7 @@ async def test_adanos_provider_requests_explicit_history_window() -> None:
         )
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    provider = AdanosProvider(
-        Settings(adanos_api_key="test-key", _env_file=None), client=client
-    )
+    provider = AdanosProvider(Settings(adanos_api_key="test-key", _env_file=None), client=client)
     snapshot = await provider.get_ticker_snapshot("TSLA", SourceName.REDDIT)
     assert snapshot.daily_trend[0].date <= snapshot.daily_trend[-1].date
     await client.aclose()

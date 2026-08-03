@@ -24,12 +24,7 @@ async def list_predictions(
     db: AsyncSession = Depends(get_db),
 ) -> list[PredictionResponse]:
     """List predictions, optionally filtered by ticker or theme."""
-    stmt = (
-        select(Prediction)
-        .order_by(Prediction.created_at.desc())
-        .limit(limit)
-        .offset(offset)
-    )
+    stmt = select(Prediction).order_by(Prediction.created_at.desc()).limit(limit).offset(offset)
 
     if ticker:
         stmt = stmt.where(Prediction.ticker == ticker.upper())
@@ -49,9 +44,7 @@ async def get_prediction_performance(
     db: AsyncSession = Depends(get_db),
 ) -> PredictionWithPerformance:
     """Get a prediction with its performance data."""
-    pred_result = await db.execute(
-        select(Prediction).where(Prediction.id == prediction_id)
-    )
+    pred_result = await db.execute(select(Prediction).where(Prediction.id == prediction_id))
     prediction = pred_result.scalar_one_or_none()
 
     if not prediction:
@@ -61,9 +54,7 @@ async def get_prediction_performance(
 
     # Fetch performance record
     perf_result = await db.execute(
-        select(PerformanceRecord).where(
-            PerformanceRecord.prediction_id == prediction_id
-        )
+        select(PerformanceRecord).where(PerformanceRecord.prediction_id == prediction_id)
     )
     performance = perf_result.scalar_one_or_none()
 

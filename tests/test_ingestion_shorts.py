@@ -77,9 +77,7 @@ async def test_list_channel_videos_filters_shorts():
     mock_service_obj.videos.return_value.list.return_value = mock_videos_req
 
     with (
-        patch.object(
-            yt_service, "_fetch_video_list_ytdlp", new_callable=AsyncMock
-        ) as mock_ytdlp,
+        patch.object(yt_service, "_fetch_video_list_ytdlp", new_callable=AsyncMock) as mock_ytdlp,
         patch.object(yt_service, "_get_service", return_value=mock_service_obj),
     ):
         mock_ytdlp.return_value = mock_entries

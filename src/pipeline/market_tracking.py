@@ -48,25 +48,18 @@ class MarketTrackingPipeline:
 
         for prediction in predictions:
             try:
-                record = await self.performance_service.compute_performance(
-                    prediction.id
-                )
+                record = await self.performance_service.compute_performance(prediction.id)
                 if record:
                     tracked += 1
                 else:
                     failed += 1
             except Exception as e:
-                logger.error(
-                    f"Performance tracking failed for prediction {prediction.id}: {e}"
-                )
+                logger.error(f"Performance tracking failed for prediction {prediction.id}: {e}")
                 failed += 1
 
         await self.db.flush()
 
-        logger.info(
-            f"Tracked {tracked} predictions for video {video_id} "
-            f"({failed} failed)"
-        )
+        logger.info(f"Tracked {tracked} predictions for video {video_id} ({failed} failed)")
         return {"tracked": tracked, "failed": failed}
 
     async def track_all_pending(self) -> dict:
@@ -80,8 +73,6 @@ class MarketTrackingPipeline:
     async def get_unique_tickers(self) -> list[str]:
         """Get all unique tickers across all predictions."""
         result = await self.db.execute(
-            select(Prediction.ticker)
-            .where(Prediction.ticker.isnot(None))
-            .distinct()
+            select(Prediction.ticker).where(Prediction.ticker.isnot(None)).distinct()
         )
         return [row[0].upper() for row in result.all()]

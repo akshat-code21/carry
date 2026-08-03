@@ -1,18 +1,18 @@
 """Search API endpoints."""
 
-from fastapi import APIRouter, Depends, Query
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_search_service, get_query_router
+from src.api.deps import get_query_router, get_search_service
 from src.database import get_db
 from src.models.channel import Channel
 from src.schemas import (
+    SearchPredictionResult,
     SearchResponse,
     SearchSegmentResult,
-    SearchPredictionResult,
     StockDiscoveryResult,
     StockSearchResult,
 )
@@ -47,9 +47,7 @@ async def search(
     # Step 1.5: Look up channel_type if a channel filter is applied
     channel_type: str | None = None
     if channel:
-        ch_result = await db.execute(
-            select(Channel.channel_type).where(Channel.id == channel)
-        )
+        ch_result = await db.execute(select(Channel.channel_type).where(Channel.id == channel))
         row = ch_result.scalar_one_or_none()
         if row:
             channel_type = row
@@ -137,4 +135,3 @@ async def search_stocks(
         )
         for r in results
     ]
-

@@ -1,7 +1,5 @@
 """Tests for stock vs ETF instrument detection and discovery mode resolution."""
 
-import pytest
-
 from src.services.query_router import QueryRouter
 from src.services.search_service import SearchService
 
@@ -69,23 +67,17 @@ class TestResolveDiscoveryMode:
 
     def test_individual_always_stocks(self):
         assert (
-            SearchService.resolve_discovery_mode(
-                channel_type="individual", instrument_type="etfs"
-            )
+            SearchService.resolve_discovery_mode(channel_type="individual", instrument_type="etfs")
             == "stocks"
         )
 
     def test_global_uses_instrument_type(self):
         assert (
-            SearchService.resolve_discovery_mode(
-                channel_type=None, instrument_type="etfs"
-            )
+            SearchService.resolve_discovery_mode(channel_type=None, instrument_type="etfs")
             == "etfs"
         )
         assert (
-            SearchService.resolve_discovery_mode(
-                channel_type=None, instrument_type="stocks"
-            )
+            SearchService.resolve_discovery_mode(channel_type=None, instrument_type="stocks")
             == "stocks"
         )
 
