@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # YouTube Data API v3
     youtube_api_key: str = ""
 
+    # Supadata.ai (YouTube transcript API fallback)
+    supadata_api_key: str = ""
+
     # Anthropic
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-4-20250514"

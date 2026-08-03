@@ -352,19 +352,29 @@ class YouTubeAPIService(YouTubeService):
 
 
 class YouTubeTranscriptFetcher(TranscriptSource):
-    """Fetches transcripts via youtube-transcript-api with yt-dlp + Whisper fallback."""
+    """Fetches transcripts via youtube-transcript-api with Supadata and yt-dlp + Whisper fallbacks."""
 
     async def fetch_transcript(self, video_id: str) -> list[TranscriptSegmentDTO]:
-        """Fetch transcript, trying auto-captions first, then ASR fallback."""
-        # Primary: youtube-transcript-api
+        """Fetch transcript, trying auto-captions first, then Supadata API, then Whisper fallback."""
+        # 1. Primary: youtube-transcript-api
         try:
             return await self._fetch_via_api(video_id)
         except Exception as e:
             logger.warning(
-                f"Caption fetch failed for {video_id}, will attempt Whisper fallback: {e}"
+                f"Caption fetch failed for {video_id}, attempting fallback: {e}"
             )
 
-        # Fallback: yt-dlp + faster-whisper
+        # 2. Managed Fallback: Supadata API (if key is set)
+        if settings.supadata_api_key:
+            try:
+                logger.info(f"Attempting Supadata transcript fetch for {video_id}")
+                return await self._fetch_via_supadata(video_id)
+            except Exception as supadata_err:
+                logger.warning(
+                    f"Supadata fetch failed for {video_id}, attempting Whisper fallback: {supadata_err}"
+                )
+
+        # 3. Local ASR Fallback: yt-dlp + faster-whisper
         try:
             return await self._fetch_via_whisper(video_id)
         except Exception as whisper_err:
@@ -373,8 +383,64 @@ class YouTubeTranscriptFetcher(TranscriptSource):
             )
             raise ValueError(
                 f"All transcript methods failed for {video_id}. "
-                f"Captions unavailable and Whisper fallback error: {whisper_err}"
+                f"Captions, Supadata, and Whisper fallback failed. Last error: {whisper_err}"
             ) from whisper_err
+
+    async def _fetch_via_supadata(self, video_id: str) -> list[TranscriptSegmentDTO]:
+        """Fetch transcript via Supadata API."""
+        if not settings.supadata_api_key:
+            raise ValueError("SUPADATA_API_KEY is not configured")
+
+        import httpx
+
+        url = "https://api.supadata.ai/v1/youtube/transcript"
+        headers = {"x-api-key": settings.supadata_api_key}
+        params = {"videoId": video_id}
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(url, headers=headers, params=params)
+
+        if resp.status_code != 200:
+            raise ValueError(
+                f"Supadata request failed (HTTP {resp.status_code}): {resp.text}"
+            )
+
+        data = resp.json()
+        content = data.get("content")
+        if not content or not isinstance(content, list):
+            raise ValueError(f"No content returned from Supadata for {video_id}")
+
+        segments: list[TranscriptSegmentDTO] = []
+        for item in content:
+            text = item.get("text", "").strip()
+            if not text:
+                continue
+
+            raw_start = item.get("offset") if "offset" in item else item.get("start", 0.0)
+            raw_dur = item.get("duration", 0.0)
+
+            start_sec = float(raw_start)
+            dur_sec = float(raw_dur)
+
+            # Convert milliseconds to seconds if returned in ms
+            if start_sec > 10000 or dur_sec > 1000:
+                start_sec /= 1000.0
+                dur_sec /= 1000.0
+
+            end_sec = start_sec + dur_sec
+
+            segments.append(
+                TranscriptSegmentDTO(
+                    start_sec=start_sec,
+                    end_sec=end_sec,
+                    text=text,
+                )
+            )
+
+        if not segments:
+            raise ValueError(f"Supadata returned no valid transcript segments for {video_id}")
+
+        return segments
 
     async def _fetch_via_api(self, video_id: str) -> list[TranscriptSegmentDTO]:
         """Fetch transcript using youtube-transcript-api."""

@@ -1,0 +1,49 @@
+name: Deploy Backend to EC2
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'src/**'
+      - 'alembic/**'
+      - 'Dockerfile'
+      - 'docker-compose.prod.yml'
+      - 'pyproject.toml'
+      - 'uv.lock'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --dev
+      - run: uv run ruff check src/ tests/
+      - run: uv run ruff format --check src/ tests/
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /opt/yt-chatter
+
+            # Pull latest code
+            git pull origin master
+
+            # Rebuild and restart containers
+            docker compose -f docker-compose.prod.yml up -d --build
+
+            # Run database migrations
+            docker compose -f docker-compose.prod.yml exec -T api alembic upgrade head
+
+            # Clean up old images
+            docker image prune -f
+
+            echo "✅ Deploy complete"
