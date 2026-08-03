@@ -1,0 +1,36 @@
+services:
+  api:
+    build: .
+    container_name: yt-chatter-api
+    env_file: .env.prod
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  worker:
+    build: .
+    container_name: yt-chatter-worker
+    command: celery -A src.tasks worker --loglevel=info --concurrency=2
+    env_file: .env.prod
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  beat:
+    build: .
+    container_name: yt-chatter-beat
+    command: celery -A src.tasks beat --loglevel=info
+    env_file: .env.prod
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      worker:
+        condition: service_started
+    restart: unless-stopped
