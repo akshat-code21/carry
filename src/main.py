@@ -41,7 +41,7 @@ log = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan — initialise and tear down TickerFlow services."""
-    # ── TickerFlow init ──────────────────────────────────────────────────
+    # ── TickerFlow init ─────────────────────────────────────────────────
     cache = await JsonCache.connect(settings.redis_url)
     sentiment_provider = build_sentiment_provider(settings)
     price_provider = build_price_provider(settings)
