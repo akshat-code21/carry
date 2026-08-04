@@ -90,7 +90,9 @@ class Settings(BaseSettings):
     twitter_email: str = ""
 
     # CORS origins for the TickerFlow API (comma-separated)
-    api_cors_origins: str = "https://carry-fin.vercel.app,https://yt-chatter.vercel.app,http://localhost:3000"
+    api_cors_origins: str = (
+        "https://carry-fin.vercel.app,https://yt-chatter.vercel.app,http://localhost:3000"
+    )
     api_cors_origin_regex: str = r"https://.*\.vercel\.app"
 
     # Watchlist worker

@@ -29,7 +29,10 @@ def test_cors_preflight_vercel_preview():
         },
     )
     assert response.status_code == 200
-    assert response.headers.get("access-control-allow-origin") == "https://carry-fin-git-main-akshat.vercel.app"
+    assert (
+        response.headers.get("access-control-allow-origin")
+        == "https://carry-fin-git-main-akshat.vercel.app"
+    )
     assert response.headers.get("access-control-allow-credentials") == "true"
 
 
