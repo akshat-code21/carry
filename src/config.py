@@ -90,7 +90,8 @@ class Settings(BaseSettings):
     twitter_email: str = ""
 
     # CORS origins for the TickerFlow API (comma-separated)
-    api_cors_origins: str = "http://localhost:3000"
+    api_cors_origins: str = "https://carry-fin.vercel.app,https://yt-chatter.vercel.app,http://localhost:3000"
+    api_cors_origin_regex: str = r"https://.*\.vercel\.app"
 
     # Watchlist worker
     pilot_watchlist: str = "AAPL,NVDA"
@@ -126,8 +127,13 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins(self) -> list[str]:
-        """Parse comma-separated CORS origins."""
-        return [origin.strip() for origin in self.api_cors_origins.split(",") if origin.strip()]
+        """Parse comma-separated CORS origins, stripping trailing slashes."""
+        origins: list[str] = []
+        for raw in self.api_cors_origins.split(","):
+            cleaned = raw.strip().rstrip("/")
+            if cleaned and cleaned not in origins:
+                origins.append(cleaned)
+        return origins
 
     @property
     def pilot_symbols(self) -> list[str]:

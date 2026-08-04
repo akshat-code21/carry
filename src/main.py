@@ -93,10 +93,22 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS middleware — allow all origins in dev (restrict in production)
+# CORS middleware — allow configured origins, Vercel deployments, and local dev
+cors_origins_list = list(settings.cors_origins)
+dev_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+for dev_origin in dev_origins:
+    if dev_origin not in cors_origins_list:
+        cors_origins_list.append(dev_origin)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.is_development else settings.cors_origins,
+    allow_origins=cors_origins_list,
+    allow_origin_regex=settings.api_cors_origin_regex if settings.api_cors_origin_regex else None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
