@@ -2,10 +2,14 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   async rewrites() {
+    const rawUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const cleanUrl = rawUrl.trim().replace(/\/$/, "");
+    const destinationBase = cleanUrl.endsWith("/api") ? cleanUrl : `${cleanUrl}/api`;
+
     return [
       {
         source: "/api/:path*",
-        destination: `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/:path*`,
+        destination: `${destinationBase}/:path*`,
       },
     ];
   },

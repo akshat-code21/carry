@@ -255,39 +255,50 @@ export interface MCDashboardData {
   bearish_laggards: MCDashboardTickerItem[];
 }
 
+export const getApiBaseUrl = (): string => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl && envUrl.trim()) {
+    const clean = envUrl.trim().replace(/\/$/, "");
+    return clean.endsWith("/api") ? clean : `${clean}/api`;
+  }
+  return "/api";
+};
+
+export const API_BASE_URL = getApiBaseUrl();
+
 export const api = {
   async search(query: string, type: "keyword" | "semantic" | "hybrid" = "hybrid"): Promise<SearchResult> {
-    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=${type}`);
+    const res = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}&type=${type}`);
     if (!res.ok) throw new Error("Search failed");
     return res.json();
   },
 
   async getVideos(): Promise<VideoItem[]> {
-    const res = await fetch("/api/videos");
+    const res = await fetch(`${API_BASE_URL}/videos`);
     if (!res.ok) throw new Error("Failed to fetch videos");
     return res.json();
   },
 
   async getVideo(id: string): Promise<VideoDetail> {
-    const res = await fetch(`/api/videos/${id}`);
+    const res = await fetch(`${API_BASE_URL}/videos/${id}`);
     if (!res.ok) throw new Error("Failed to fetch video");
     return res.json();
   },
 
   async getChannels(): Promise<ChannelItem[]> {
-    const res = await fetch("/api/channels");
+    const res = await fetch(`${API_BASE_URL}/channels`);
     if (!res.ok) throw new Error("Failed to fetch channels");
     return res.json();
   },
 
   async getChannel(id: string): Promise<ChannelDetail> {
-    const res = await fetch(`/api/channels/${id}`);
+    const res = await fetch(`${API_BASE_URL}/channels/${id}`);
     if (!res.ok) throw new Error("Failed to fetch channel");
     const channel = await res.json();
 
     const [videosRes, stocksRes] = await Promise.all([
-      fetch(`/api/videos?channel_id=${id}`),
-      fetch(`/api/channels/${id}/top-stocks`),
+      fetch(`${API_BASE_URL}/videos?channel_id=${id}`),
+      fetch(`${API_BASE_URL}/channels/${id}/top-stocks`),
     ]);
 
     const videos = videosRes.ok ? await videosRes.json() : [];
@@ -297,49 +308,49 @@ export const api = {
   },
 
   async getTickers(): Promise<TickerItem[]> {
-    const res = await fetch("/api/tickers");
+    const res = await fetch(`${API_BASE_URL}/tickers`);
     if (!res.ok) throw new Error("Failed to fetch tickers");
     return res.json();
   },
 
   async getTopETFs(): Promise<TickerItem[]> {
-    const res = await fetch("/api/tickers/top-etfs");
+    const res = await fetch(`${API_BASE_URL}/tickers/top-etfs`);
     if (!res.ok) throw new Error("Failed to fetch top ETFs");
     return res.json();
   },
 
   async getTicker(ticker: string): Promise<TickerDetail> {
-    const res = await fetch(`/api/tickers/${ticker}`);
+    const res = await fetch(`${API_BASE_URL}/tickers/${ticker}`);
     if (!res.ok) throw new Error("Failed to fetch ticker");
     return res.json();
   },
 
   async getTickerSentimentTimeline(ticker: string, days = 30): Promise<TickerSentimentTimelineItem[]> {
-    const res = await fetch(`/api/tickers/${ticker}/sentiment-timeline?days=${days}`);
+    const res = await fetch(`${API_BASE_URL}/tickers/${ticker}/sentiment-timeline?days=${days}`);
     if (!res.ok) throw new Error("Failed to fetch sentiment timeline");
     return res.json();
   },
 
   async getTickerPriceHistory(ticker: string, days = 30): Promise<TickerPricePoint[]> {
-    const res = await fetch(`/api/tickers/${ticker}/price-history?days=${days}`);
+    const res = await fetch(`${API_BASE_URL}/tickers/${ticker}/price-history?days=${days}`);
     if (!res.ok) throw new Error("Failed to fetch price history");
     return res.json();
   },
 
   async getThemes(): Promise<SectorThemeNode[]> {
-    const res = await fetch("/api/themes");
+    const res = await fetch(`${API_BASE_URL}/themes`);
     if (!res.ok) throw new Error("Failed to fetch themes");
     return res.json();
   },
 
   async getTheme(id: string): Promise<ThemeDetail> {
-    const res = await fetch(`/api/themes/${id}`);
+    const res = await fetch(`${API_BASE_URL}/themes/${id}`);
     if (!res.ok) throw new Error("Failed to fetch theme");
     const theme = await res.json();
 
     const [tickersRes, videosRes] = await Promise.all([
-      fetch(`/api/themes/${id}/tickers`),
-      fetch(`/api/themes/${id}/videos`),
+      fetch(`${API_BASE_URL}/themes/${id}/tickers`),
+      fetch(`${API_BASE_URL}/themes/${id}/videos`),
     ]);
 
     const mapped_tickers = tickersRes.ok ? await tickersRes.json() : [];
@@ -350,7 +361,7 @@ export const api = {
 
 
   async addChannel(youtubeChannelId: string, maxVideos = 50): Promise<{ task_id: string }> {
-    const res = await fetch("/api/pipeline/backfill", {
+    const res = await fetch(`${API_BASE_URL}/pipeline/backfill`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ youtube_channel_id: youtubeChannelId, max_videos: maxVideos }),
@@ -360,7 +371,7 @@ export const api = {
   },
 
   async backfillChannel(youtubeChannelId: string, maxVideos = 20): Promise<{ task_id: string }> {
-    const res = await fetch("/api/pipeline/backfill", {
+    const res = await fetch(`${API_BASE_URL}/pipeline/backfill`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -373,7 +384,7 @@ export const api = {
   },
 
   async ingestSingleVideo(channelDbId: string, youtubeVideoId: string): Promise<{ task_id: string }> {
-    const res = await fetch("/api/pipeline/ingest-single-video", {
+    const res = await fetch(`${API_BASE_URL}/pipeline/ingest-single-video`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ channel_id: channelDbId, youtube_video_id: youtubeVideoId }),
@@ -387,36 +398,36 @@ export const api = {
     if (opts?.limit) params.set("limit", String(opts.limit));
     if (opts?.unreadOnly) params.set("unread_only", "true");
     const qs = params.toString() ? `?${params.toString()}` : "";
-    const res = await fetch(`/api/activity${qs}`);
+    const res = await fetch(`${API_BASE_URL}/activity${qs}`);
     if (!res.ok) throw new Error("Failed to fetch activity");
     return res.json();
   },
 
   async getActivityUnreadCount(): Promise<{ count: number }> {
-    const res = await fetch("/api/activity/unread-count");
+    const res = await fetch(`${API_BASE_URL}/activity/unread-count`);
     if (!res.ok) throw new Error("Failed to fetch unread count");
     return res.json();
   },
 
   async markActivityRead(eventId: string): Promise<ActivityEvent> {
-    const res = await fetch(`/api/activity/${eventId}/read`, { method: "POST" });
+    const res = await fetch(`${API_BASE_URL}/activity/${eventId}/read`, { method: "POST" });
     if (!res.ok) throw new Error("Failed to mark activity read");
     return res.json();
   },
 
   async markAllActivityRead(): Promise<{ marked_read: number }> {
-    const res = await fetch("/api/activity/read-all", { method: "POST" });
+    const res = await fetch(`${API_BASE_URL}/activity/read-all`, { method: "POST" });
     if (!res.ok) throw new Error("Failed to mark all activity read");
     return res.json();
   },
 
   async getTickerFlowDashboard(periodDays = 7): Promise<MCDashboardData> {
-    let res = await fetch(`/api/v1/tickerflow/dashboard?period_days=${periodDays}`);
+    let res = await fetch(`${API_BASE_URL}/v1/tickerflow/dashboard?period_days=${periodDays}`);
     if (!res.ok) {
-      res = await fetch(`/api/v1/market-chatter/dashboard?days=${periodDays}`);
+      res = await fetch(`${API_BASE_URL}/v1/market-chatter/dashboard?days=${periodDays}`);
     }
     if (!res.ok) {
-      res = await fetch(`/api/market-chatter/dashboard?days=${periodDays}`);
+      res = await fetch(`${API_BASE_URL}/market-chatter/dashboard?days=${periodDays}`);
     }
     if (!res.ok) throw new Error("Failed to fetch market chatter dashboard");
     return res.json();
