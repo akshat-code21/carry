@@ -1,4 +1,36 @@
 services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: yt-chatter-postgres
+    environment:
+      POSTGRES_USER: yt_chatter
+      POSTGRES_PASSWORD: yt_chatter_dev
+      POSTGRES_DB: yt_chatter
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yt_chatter -d yt_chatter"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: yt-chatter-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   api:
     build: .
     container_name: yt-chatter-api
@@ -7,6 +39,11 @@ services:
       - "8000:8000"
     volumes:
       - ./data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
@@ -21,6 +58,11 @@ services:
     env_file: .env.prod
     volumes:
       - ./data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
   beat:
@@ -31,6 +73,14 @@ services:
     volumes:
       - ./data:/app/data
     depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
       worker:
         condition: service_started
     restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
