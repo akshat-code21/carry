@@ -1,6 +1,7 @@
 """Unit tests for CORS configuration."""
 
 from fastapi.testclient import TestClient
+
 from src.main import app
 
 client = TestClient(app)
