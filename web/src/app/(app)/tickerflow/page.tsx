@@ -38,7 +38,7 @@ import { useTickerFlowDashboard } from "@/lib/hooks";
 import { useChartColors } from "@/lib/useChartColors";
 import { StatusBadge } from "@/components/market-chatter/StatusBadge";
 import { DashboardOverview } from "@/components/market-chatter/DashboardOverview";
-import { api, MCDashboardData } from "@/lib/api";
+import { api, API_BASE_URL, MCDashboardData } from "@/lib/api";
 import { LayoutDashboard, LineChart as ChartIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -97,7 +97,7 @@ type TooltipEntry = {
 };
 
 /* Uses the Next.js rewrite proxy — /api/v1/* → backend:8000/api/v1/* */
-const API_BASE = "/api/v1";
+const API_BASE = `${API_BASE_URL}/v1`;
 
 const QUICK_TICKERS = ["NVDA", "TSLA", "AAPL", "MSFT"] as const;
 
