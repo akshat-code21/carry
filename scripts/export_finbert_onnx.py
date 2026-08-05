@@ -14,7 +14,6 @@ Produces:
     └── special_tokens_map.json
 """
 
-import os
 import shutil
 from pathlib import Path
 

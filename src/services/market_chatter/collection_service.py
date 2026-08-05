@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import func, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.config import Settings
@@ -254,35 +255,42 @@ class CollectionService:
             raw_payload=snapshot.raw_payload,
         )
         session.add(record)
-        for metric in snapshot.daily_trend:
-            existing = await session.scalar(
-                select(TickerDailyMetric).where(
-                    TickerDailyMetric.symbol == snapshot.symbol,
-                    TickerDailyMetric.source == snapshot.source.value,
-                    TickerDailyMetric.metric_date == metric.date,
-                )
-            )
-            if existing:
-                existing.mentions = metric.mentions
-                existing.buzz_score = metric.buzz_score
-                existing.sentiment_score = metric.sentiment_score
-                existing.bullish_pct = metric.bullish_pct
-                existing.bearish_pct = metric.bearish_pct
-                existing.observed_at = snapshot.fetched_at
-            else:
-                session.add(
-                    TickerDailyMetric(
-                        symbol=snapshot.symbol,
-                        source=snapshot.source.value,
-                        metric_date=metric.date,
-                        mentions=metric.mentions,
-                        buzz_score=metric.buzz_score,
-                        sentiment_score=metric.sentiment_score,
-                        bullish_pct=metric.bullish_pct,
-                        bearish_pct=metric.bearish_pct,
-                        observed_at=snapshot.fetched_at,
+        if snapshot.daily_trend:
+            metrics_by_date = {metric.date: metric for metric in snapshot.daily_trend}
+            existing_metrics = (
+                await session.scalars(
+                    select(TickerDailyMetric).where(
+                        TickerDailyMetric.symbol == snapshot.symbol,
+                        TickerDailyMetric.source == snapshot.source.value,
+                        TickerDailyMetric.metric_date.in_(list(metrics_by_date.keys())),
                     )
                 )
+            ).all()
+            existing_map = {row.metric_date: row for row in existing_metrics}
+
+            for metric_date, metric in metrics_by_date.items():
+                if metric_date in existing_map:
+                    existing = existing_map[metric_date]
+                    existing.mentions = metric.mentions
+                    existing.buzz_score = metric.buzz_score
+                    existing.sentiment_score = metric.sentiment_score
+                    existing.bullish_pct = metric.bullish_pct
+                    existing.bearish_pct = metric.bearish_pct
+                    existing.observed_at = snapshot.fetched_at
+                else:
+                    session.add(
+                        TickerDailyMetric(
+                            symbol=snapshot.symbol,
+                            source=snapshot.source.value,
+                            metric_date=metric_date,
+                            mentions=metric.mentions,
+                            buzz_score=metric.buzz_score,
+                            sentiment_score=metric.sentiment_score,
+                            bullish_pct=metric.bullish_pct,
+                            bearish_pct=metric.bearish_pct,
+                            observed_at=snapshot.fetched_at,
+                        )
+                    )
         await self._cache.set(
             self._cache_key(snapshot.symbol, snapshot.source),
             snapshot.model_dump(mode="json"),
@@ -363,28 +371,38 @@ class CollectionService:
                 except Exception:
                     bars = []
                 fetched_at = utcnow()
-                for bar in bars:
-                    existing = await session.scalar(
-                        select(PriceBarRecord).where(
-                            PriceBarRecord.symbol == symbol,
-                            PriceBarRecord.trade_date == bar.date,
-                        )
-                    )
-                    if existing:
-                        existing.close = bar.close
-                        existing.provider = self._price_provider.name
-                        existing.fetched_at = fetched_at
-                    else:
-                        session.add(
-                            PriceBarRecord(
-                                symbol=symbol,
-                                trade_date=bar.date,
-                                close=bar.close,
-                                provider=self._price_provider.name,
-                                fetched_at=fetched_at,
+                bars_by_date = {bar.date: bar for bar in bars}
+                if bars_by_date:
+                    existing_records = (
+                        await session.scalars(
+                            select(PriceBarRecord).where(
+                                PriceBarRecord.symbol == symbol,
+                                PriceBarRecord.trade_date.in_(list(bars_by_date.keys())),
                             )
                         )
-                await session.commit()
+                    ).all()
+                    existing_map = {row.trade_date: row for row in existing_records}
+
+                    for trade_date, bar in bars_by_date.items():
+                        if trade_date in existing_map:
+                            record = existing_map[trade_date]
+                            record.close = bar.close
+                            record.provider = self._price_provider.name
+                            record.fetched_at = fetched_at
+                        else:
+                            session.add(
+                                PriceBarRecord(
+                                    symbol=symbol,
+                                    trade_date=trade_date,
+                                    close=bar.close,
+                                    provider=self._price_provider.name,
+                                    fetched_at=fetched_at,
+                                )
+                            )
+                    try:
+                        await session.commit()
+                    except IntegrityError:
+                        await session.rollback()
             rows = (
                 await session.scalars(
                     select(PriceBarRecord)

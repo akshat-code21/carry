@@ -303,12 +303,23 @@ class YFinanceLocalPriceProvider:
 
     async def get_daily_bars(self, symbol: str, period_days: int) -> list[PriceBar]:
         def fetch() -> list[PriceBar]:
+            import os
+
             import yfinance as yf
+
+            try:
+                if hasattr(yf, "set_tz_cache_location"):
+                    cache_dir = os.environ.get("YFINANCE_CACHE_DIR", "/tmp/py-yfinance")
+                    yf.set_tz_cache_location(cache_dir)
+            except Exception:
+                pass
 
             history = yf.Ticker(symbol).history(
                 period=f"{max(period_days + 7, 30)}d", interval="1d"
             )
             bars: list[PriceBar] = []
+            if history.empty:
+                return bars
             for index, row in history.tail(period_days).iterrows():
                 close = row.get("Close")
                 if close is None:

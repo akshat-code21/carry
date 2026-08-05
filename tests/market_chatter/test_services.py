@@ -82,3 +82,51 @@ async def test_partial_source_failure_returns_partial_result(tmp_path) -> None:
         == "unavailable"
     )
     await engine.dispose()
+
+
+class DuplicatePriceProvider:
+    name = "duplicate_test_provider"
+
+    async def get_daily_bars(self, symbol: str, period_days: int):
+        from datetime import date
+
+        from src.schemas.market_chatter import PriceBar
+
+        # Intentionally return duplicate bars with the same trade_date
+        return [
+            PriceBar(date=date(2026, 6, 24), close=600.0),
+            PriceBar(date=date(2026, 6, 24), close=601.5),
+            PriceBar(date=date(2026, 6, 25), close=605.0),
+        ]
+
+
+@pytest.mark.asyncio
+async def test_ensure_prices_handles_duplicate_dates(tmp_path) -> None:
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+    from src.config import Settings
+    from src.database import Base
+    from src.services.market_chatter.cache import JsonCache
+
+    settings = Settings(
+        database_url=f"sqlite+aiosqlite:///{tmp_path}/dup.db",
+        sentiment_provider="fixture",
+        price_provider="fixture",
+        redis_url="",
+        _env_file=None,
+    )
+    engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    service = CollectionService(
+        settings,
+        async_sessionmaker(engine, expire_on_commit=False),
+        JsonCache(),
+        FixtureProvider(),
+        DuplicatePriceProvider(),
+    )
+    response = await service.ticker_response("SOXX", SourceName.REDDIT, 7)
+    assert response.symbol == "SOXX"
+    assert len(response.chart) > 0
+    await engine.dispose()

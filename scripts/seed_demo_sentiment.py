@@ -12,7 +12,7 @@ import asyncio
 import random
 import sys
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 # Make sure the repo root (parent of this scripts/ dir) is importable as
@@ -37,7 +37,7 @@ async def main() -> None:
         db.add(channel)
         await db.flush()
 
-        today = datetime.now(timezone.utc)
+        today = datetime.now(UTC)
         directions = ["bullish", "bearish", "neutral"]
 
         for day_offset in range(10):
