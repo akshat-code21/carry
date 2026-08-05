@@ -1,4 +1,4 @@
-name: Deploy Backend to EC2
+name: Deploy Backend to GCP
 
 on:
   workflow_dispatch:
@@ -26,12 +26,12 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to EC2 via SSH
+      - name: Deploy to GCP via SSH
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_SSH_USER }}
+          key: ${{ secrets.GCP_SSH_KEY }}
           script: |
             cd /opt/yt-chatter
 
