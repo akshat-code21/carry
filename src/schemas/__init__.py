@@ -366,6 +366,34 @@ class ActivityUnreadCountResponse(BaseModel):
     count: int
 
 
+# --- Auth / user schemas ---
+
+
+class UserProfileResponse(BaseModel):
+    """Current-user profile returned by GET /api/auth/me."""
+
+    id: UUID
+    clerk_user_id: str
+    email: str
+    full_name: str | None = None
+    image_url: str | None = None
+    role: str  # admin | user
+    status: str  # active | pending_invite | deactivated
+    created_at: datetime
+    last_seen_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class RedeemInviteRequest(BaseModel):
+    code: str = Field(min_length=1, max_length=64)
+
+
+class RedeemInviteResponse(BaseModel):
+    ok: bool
+    user: UserProfileResponse
+
+
 # Resolve forward references
 VideoDetailResponse.model_rebuild()
 PredictionWithPerformance.model_rebuild()

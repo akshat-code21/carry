@@ -3,6 +3,7 @@
 import { Bell, Menu, Moon, Sun, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { UserButton, useUser } from "@clerk/nextjs";
 import { api, type ActivityEvent } from "@/lib/api";
 import { Button } from "./ui/button";
 import { useTheme } from "./ThemeProvider";
@@ -13,10 +14,13 @@ import { eventLabel, eventBadgeClass, timeAgo } from "@/lib/activity";
 interface TopbarProps {
   onMenuClick?: () => void;
   onOpenCommandPalette?: () => void;
+  fullName?: string | null;
+  loadingUser?: boolean;
 }
 
-export function Topbar({ onMenuClick, onOpenCommandPalette }: TopbarProps) {
+export function Topbar({ onMenuClick, onOpenCommandPalette, fullName, loadingUser }: TopbarProps) {
   const { theme, setTheme } = useTheme();
+  const { isSignedIn } = useUser();
   const { data: unreadData, refetch: refetchUnread } = useUnreadCount();
   const unread = unreadData?.count || 0;
   const [open, setOpen] = useState(false);
@@ -213,6 +217,20 @@ export function Topbar({ onMenuClick, onOpenCommandPalette }: TopbarProps) {
           {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           <span className="sr-only">Toggle theme</span>
         </Button>
+
+        {/* Account */}
+        {loadingUser ? (
+          <div className="ml-1 h-6 w-6 animate-pulse rounded-full bg-panel-raised" />
+        ) : isSignedIn ? (
+          <div className="ml-1 flex items-center gap-2">
+            {fullName && (
+              <span className="hidden font-mono text-micro text-ink-secondary sm:block">
+                {fullName}
+              </span>
+            )}
+            <UserButton />
+          </div>
+        ) : null}
       </div>
     </header>
   );

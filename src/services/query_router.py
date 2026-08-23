@@ -9,8 +9,10 @@ Uses a lightweight LLM call to determine whether a query is:
 
 import json
 import logging
+import time
 from dataclasses import dataclass
 
+from src.analytics.service import analytics
 from src.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -112,6 +114,7 @@ class QueryRouter:
             return fast_result
 
         # LLM classification
+        started = time.perf_counter()
         try:
             client = self._get_client()
             response = client.chat.completions.create(
@@ -123,6 +126,16 @@ class QueryRouter:
                 ],
                 temperature=0.0,
                 max_tokens=100,
+            )
+
+            usage = getattr(response, "usage", None)
+            analytics.record_llm_usage(
+                provider="openai",
+                model="gpt-5.4-nano",
+                purpose="search_classify",
+                input_tokens=getattr(usage, "prompt_tokens", 0) or 0,
+                output_tokens=getattr(usage, "completion_tokens", 0) or 0,
+                duration_ms=(time.perf_counter() - started) * 1000.0,
             )
 
             content = response.choices[0].message.content
@@ -149,6 +162,14 @@ class QueryRouter:
 
         except Exception as e:
             logger.warning(f"Query classification failed, falling back to factual_search: {e}")
+            analytics.record_llm_usage(
+                provider="openai",
+                model="gpt-5.4-nano",
+                purpose="search_classify",
+                success=False,
+                error_summary=str(e),
+                duration_ms=(time.perf_counter() - started) * 1000.0,
+            )
             return QueryIntent(
                 intent="factual_search",
                 instrument_type=QueryRouter.detect_instrument_type(query) or "stocks",

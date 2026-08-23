@@ -266,131 +266,145 @@ export const getApiBaseUrl = (): string => {
 
 export const API_BASE_URL = getApiBaseUrl();
 
+/* ── Auth-aware request plumbing ─────────────────────────────────── */
+
+import { ApiError, getAuthToken } from "@/lib/auth-client";
+
+async function request<T>(path: string, init: RequestInit = {}, opts?: { auth?: boolean }): Promise<T> {
+  const headers = new Headers(init.headers);
+  const needsAuth = opts?.auth !== false; // default: attach token when available
+  if (needsAuth) {
+    const token = await getAuthToken();
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+  }
+  if (init.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
+  } catch {
+    throw new ApiError(0, "network_error", "Network request failed");
+  }
+
+  if (!res.ok) {
+    let code = "request_failed";
+    let message = `Request failed (${res.status})`;
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === "object" && body.detail?.code) {
+        code = body.detail.code;
+        message = body.detail.message || message;
+      } else if (typeof body?.detail === "string") {
+        code = res.status === 403 ? "forbidden" : code;
+        message = body.detail;
+      }
+    } catch {
+      // non-JSON body
+    }
+    throw new ApiError(res.status, code, message);
+  }
+
+  return res.json() as Promise<T>;
+}
+
+/** True when the error means "sign in again". */
+export function isAuthError(err: unknown): err is ApiError {
+  return err instanceof ApiError && (err.status === 401 || err.code === "unauthorized");
+}
+
+/** True when the account exists but has not redeemed an invite yet. */
+export function isInviteRequired(err: unknown): err is ApiError {
+  return err instanceof ApiError && err.code === "invite_required";
+}
+
 export const api = {
   async search(query: string, type: "keyword" | "semantic" | "hybrid" = "hybrid"): Promise<SearchResult> {
-    const res = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}&type=${type}`);
-    if (!res.ok) throw new Error("Search failed");
-    return res.json();
+    return request(`/search?q=${encodeURIComponent(query)}&type=${type}`);
   },
 
   async getVideos(): Promise<VideoItem[]> {
-    const res = await fetch(`${API_BASE_URL}/videos`);
-    if (!res.ok) throw new Error("Failed to fetch videos");
-    return res.json();
+    return request("/videos");
   },
 
   async getVideo(id: string): Promise<VideoDetail> {
-    const res = await fetch(`${API_BASE_URL}/videos/${id}`);
-    if (!res.ok) throw new Error("Failed to fetch video");
-    return res.json();
+    return request(`/videos/${id}`);
   },
 
   async getChannels(): Promise<ChannelItem[]> {
-    const res = await fetch(`${API_BASE_URL}/channels`);
-    if (!res.ok) throw new Error("Failed to fetch channels");
-    return res.json();
+    return request("/channels");
   },
 
   async getChannel(id: string): Promise<ChannelDetail> {
-    const res = await fetch(`${API_BASE_URL}/channels/${id}`);
-    if (!res.ok) throw new Error("Failed to fetch channel");
-    const channel = await res.json();
+    const channel = await request<ChannelItem>(`/channels/${id}`);
 
-    const [videosRes, stocksRes] = await Promise.all([
-      fetch(`${API_BASE_URL}/videos?channel_id=${id}`),
-      fetch(`${API_BASE_URL}/channels/${id}/top-stocks`),
+    const [videos, top_stocks] = await Promise.all([
+      request<VideoItem[]>(`/videos?channel_id=${id}`).catch(() => []),
+      request<ChannelTopStock[]>(`/channels/${id}/top-stocks`).catch(() => []),
     ]);
-
-    const videos = videosRes.ok ? await videosRes.json() : [];
-    const top_stocks = stocksRes.ok ? await stocksRes.json() : [];
 
     return { channel, videos, top_stocks };
   },
 
   async getTickers(): Promise<TickerItem[]> {
-    const res = await fetch(`${API_BASE_URL}/tickers`);
-    if (!res.ok) throw new Error("Failed to fetch tickers");
-    return res.json();
+    return request("/tickers");
   },
 
   async getTopETFs(): Promise<TickerItem[]> {
-    const res = await fetch(`${API_BASE_URL}/tickers/top-etfs`);
-    if (!res.ok) throw new Error("Failed to fetch top ETFs");
-    return res.json();
+    return request("/tickers/top-etfs");
   },
 
   async getTicker(ticker: string): Promise<TickerDetail> {
-    const res = await fetch(`${API_BASE_URL}/tickers/${ticker}`);
-    if (!res.ok) throw new Error("Failed to fetch ticker");
-    return res.json();
+    return request(`/tickers/${ticker}`);
   },
 
   async getTickerSentimentTimeline(ticker: string, days = 30): Promise<TickerSentimentTimelineItem[]> {
-    const res = await fetch(`${API_BASE_URL}/tickers/${ticker}/sentiment-timeline?days=${days}`);
-    if (!res.ok) throw new Error("Failed to fetch sentiment timeline");
-    return res.json();
+    return request(`/tickers/${ticker}/sentiment-timeline?days=${days}`);
   },
 
   async getTickerPriceHistory(ticker: string, days = 30): Promise<TickerPricePoint[]> {
-    const res = await fetch(`${API_BASE_URL}/tickers/${ticker}/price-history?days=${days}`);
-    if (!res.ok) throw new Error("Failed to fetch price history");
-    return res.json();
+    return request(`/tickers/${ticker}/price-history?days=${days}`);
   },
 
   async getThemes(): Promise<SectorThemeNode[]> {
-    const res = await fetch(`${API_BASE_URL}/themes`);
-    if (!res.ok) throw new Error("Failed to fetch themes");
-    return res.json();
+    return request("/themes");
   },
 
   async getTheme(id: string): Promise<ThemeDetail> {
-    const res = await fetch(`${API_BASE_URL}/themes/${id}`);
-    if (!res.ok) throw new Error("Failed to fetch theme");
-    const theme = await res.json();
+    const theme = await request<ThemeItem>(`/themes/${id}`);
 
-    const [tickersRes, videosRes] = await Promise.all([
-      fetch(`${API_BASE_URL}/themes/${id}/tickers`),
-      fetch(`${API_BASE_URL}/themes/${id}/videos`),
+    const [mapped_tickers, videos] = await Promise.all([
+      request<ThemeMappedTicker[]>(`/themes/${id}/tickers`).catch(() => []),
+      request<ThemeVideoMention[]>(`/themes/${id}/videos`).catch(() => []),
     ]);
-
-    const mapped_tickers = tickersRes.ok ? await tickersRes.json() : [];
-    const videos = videosRes.ok ? await videosRes.json() : [];
 
     return { theme, mapped_tickers, videos };
   },
 
 
   async addChannel(youtubeChannelId: string, maxVideos = 50): Promise<{ task_id: string }> {
-    const res = await fetch(`${API_BASE_URL}/pipeline/backfill`, {
+    return request("/pipeline/backfill", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ youtube_channel_id: youtubeChannelId, max_videos: maxVideos }),
     });
-    if (!res.ok) throw new Error("Failed to add channel");
-    return res.json();
   },
 
   async backfillChannel(youtubeChannelId: string, maxVideos = 20): Promise<{ task_id: string }> {
-    const res = await fetch(`${API_BASE_URL}/pipeline/backfill`, {
+    return request("/pipeline/backfill", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         youtube_channel_id: youtubeChannelId,
         max_videos: maxVideos,
       }),
     });
-    if (!res.ok) throw new Error("Failed to trigger backfill");
-    return res.json();
   },
 
   async ingestSingleVideo(channelDbId: string, youtubeVideoId: string): Promise<{ task_id: string }> {
-    const res = await fetch(`${API_BASE_URL}/pipeline/ingest-single-video`, {
+    return request("/pipeline/ingest-single-video", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ channel_id: channelDbId, youtube_video_id: youtubeVideoId }),
     });
-    if (!res.ok) throw new Error("Failed to trigger video ingestion");
-    return res.json();
   },
 
   async getActivity(opts?: { limit?: number; unreadOnly?: boolean }): Promise<ActivityEvent[]> {
@@ -398,38 +412,141 @@ export const api = {
     if (opts?.limit) params.set("limit", String(opts.limit));
     if (opts?.unreadOnly) params.set("unread_only", "true");
     const qs = params.toString() ? `?${params.toString()}` : "";
-    const res = await fetch(`${API_BASE_URL}/activity${qs}`);
-    if (!res.ok) throw new Error("Failed to fetch activity");
-    return res.json();
+    return request(`/activity${qs}`);
   },
 
   async getActivityUnreadCount(): Promise<{ count: number }> {
-    const res = await fetch(`${API_BASE_URL}/activity/unread-count`);
-    if (!res.ok) throw new Error("Failed to fetch unread count");
-    return res.json();
+    return request("/activity/unread-count");
   },
 
   async markActivityRead(eventId: string): Promise<ActivityEvent> {
-    const res = await fetch(`${API_BASE_URL}/activity/${eventId}/read`, { method: "POST" });
-    if (!res.ok) throw new Error("Failed to mark activity read");
-    return res.json();
+    return request(`/activity/${eventId}/read`, { method: "POST" });
   },
 
   async markAllActivityRead(): Promise<{ marked_read: number }> {
-    const res = await fetch(`${API_BASE_URL}/activity/read-all`, { method: "POST" });
-    if (!res.ok) throw new Error("Failed to mark all activity read");
-    return res.json();
+    return request("/activity/read-all", { method: "POST" });
   },
 
   async getTickerFlowDashboard(periodDays = 7): Promise<MCDashboardData> {
-    let res = await fetch(`${API_BASE_URL}/v1/tickerflow/dashboard?period_days=${periodDays}`);
-    if (!res.ok) {
-      res = await fetch(`${API_BASE_URL}/v1/market-chatter/dashboard?days=${periodDays}`);
+    try {
+      return await request<MCDashboardData>(`/v1/tickerflow/dashboard?period_days=${periodDays}`);
+    } catch (firstErr) {
+      try {
+        return await request<MCDashboardData>(`/v1/market-chatter/dashboard?days=${periodDays}`);
+      } catch {
+        // fall through to legacy alias
+        void firstErr;
+        return request<MCDashboardData>(`/market-chatter/dashboard?days=${periodDays}`);
+      }
     }
-    if (!res.ok) {
-      res = await fetch(`${API_BASE_URL}/market-chatter/dashboard?days=${periodDays}`);
-    }
-    if (!res.ok) throw new Error("Failed to fetch market chatter dashboard");
-    return res.json();
+  },
+
+  /* ── Auth & account ──────────────────────────────────────────────── */
+
+  async getMe(): Promise<UserProfile> {
+    return request("/auth/me");
+  },
+
+  async redeemInvite(code: string): Promise<{ ok: boolean; user: UserProfile }> {
+    return request("/auth/redeem-invite", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    });
+  },
+
+  /* ── Usage analytics ─────────────────────────────────────────────── */
+
+  async sendClientEvents(events: { type: string; data?: Record<string, unknown> }[]): Promise<void> {
+    if (!events.length) return;
+    await request(
+      "/usage/events",
+      { method: "POST", body: JSON.stringify({ events }) },
+    ).catch(() => undefined); // never let tracking break the UI
+  },
+
+  async getMyUsage(days = 30): Promise<MyUsageResponse> {
+    return request(`/usage/me?days=${days}`);
+  },
+
+  /* ── Admin ───────────────────────────────────────────────────────── */
+
+  async createInvite(body: CreateInviteRequest): Promise<InviteDto> {
+    return request("/admin/invites", { method: "POST", body: JSON.stringify(body) });
+  },
+
+  async listInvites(): Promise<InviteDto[]> {
+    return request("/admin/invites");
+  },
+
+  async revokeInvite(inviteId: string): Promise<{ ok: boolean }> {
+    return request(`/admin/invites/${inviteId}`, { method: "DELETE" });
+  },
+
+  async getPlatformOverview(days = 30): Promise<PlatformOverview> {
+    return request(`/admin/metrics/overview?days=${days}`);
   },
 };
+
+/* ── Auth / usage / admin types ──────────────────────────────────── */
+
+export interface UserProfile {
+  id: string;
+  clerk_user_id: string;
+  email: string;
+  full_name?: string | null;
+  image_url?: string | null;
+  role: "admin" | "user";
+  status: "active" | "pending_invite" | "deactivated";
+  created_at: string;
+  last_seen_at: string;
+}
+
+export interface InviteDto {
+  id: string;
+  code: string;
+  invited_email: string | null;
+  max_uses: number;
+  uses_count: number;
+  expires_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+}
+
+export interface CreateInviteRequest {
+  invited_email?: string | null;
+  max_uses: number;
+  expires_in_days?: number | null;
+}
+
+export interface UsageDailyPoint {
+  day: string;
+  api_calls: number;
+  searches: number;
+  search_zero_results: number;
+  page_views: number;
+  video_views: number;
+  channel_views: number;
+  theme_views: number;
+  ticker_views: number;
+  expensive_ops: number;
+  llm_input_tokens: number;
+  llm_output_tokens: number;
+}
+
+export interface MyUsageResponse {
+  totals: Record<string, number | string | null>;
+  daily: UsageDailyPoint[];
+  top_queries: { query: string; count: number }[];
+  recent_events: { type: string; payload: Record<string, unknown>; created_at: string }[];
+}
+
+export interface PlatformOverview {
+  users: { total: number; active: number; pending_invite: number; dau: number; wau: number; mau: number };
+  activity: { window_days: number; api_calls: number; expensive_ops: number };
+  searches: { total: number; zero_results: number; zero_result_rate: number };
+  llm: { input_tokens: number; output_tokens: number };
+  daily_active: { day: string; users: number; searches: number }[];
+  top_users: { id: string; email: string; full_name: string | null; api_calls: number; searches: number; last_active: string | null }[];
+  top_queries: { query: string; count: number }[];
+  top_features: { route: string; views: number }[];
+}

@@ -1,6 +1,13 @@
 """SQLAlchemy ORM models package."""
 
 from src.models.activity_event import ActivityEvent
+from src.models.analytics import (
+    ApiRequestLog,
+    DailyUserUsage,
+    LlmUsageLog,
+    PlatformDailyUsage,
+    UsageEvent,
+)
 from src.models.channel import Channel
 from src.models.collection_run import CollectionRun
 from src.models.performance import PerformanceRecord
@@ -13,12 +20,22 @@ from src.models.speaker_ticker import SpeakerTickerAggregation
 from src.models.theme import ThemeHierarchy, ThemeMention, ThemeTickerMapping
 from src.models.ticker_daily_metric import TickerDailyMetric
 from src.models.transcript_segment import TranscriptSegment
+from src.models.user import Invite, User, UserRole, UserStatus
 from src.models.video import Video
 
 __all__ = [
     "ActivityEvent",
+    "ApiRequestLog",
     "Channel",
     "CollectionRun",
+    "DailyUserUsage",
+    "Invite",
+    "LlmUsageLog",
+    "PlatformDailyUsage",
+    "UsageEvent",
+    "User",
+    "UserRole",
+    "UserStatus",
     "Video",
     "TranscriptSegment",
     "ThemeHierarchy",

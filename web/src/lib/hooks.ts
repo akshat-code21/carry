@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { ApiError } from "@/lib/auth-client";
 
 export function useVideos() {
   return useQuery({
@@ -179,5 +180,42 @@ export function useIngestVideo() {
       queryClient.invalidateQueries({ queryKey: ["channel", variables.channelDbId] });
       queryClient.invalidateQueries({ queryKey: ["videos"] });
     },
+  });
+}
+
+/* ── Auth & usage hooks ─────────────────────────────────────────── */
+
+export function useMe() {
+  const query = useQuery({
+    queryKey: ["me"],
+    queryFn: () => api.getMe(),
+    retry: false,
+    staleTime: 60_000,
+  });
+
+  // Surface semantic flags for gating UI (invite gate, admin controls).
+  const error = query.error;
+  const inviteRequired = error instanceof ApiError && error.code === "invite_required";
+  const unauthorized =
+    error instanceof ApiError &&
+    (error.status === 401 || error.code === "unauthorized" || error.status === 0);
+
+  return { ...query, user: query.data, isAdmin: query.data?.role === "admin", inviteRequired, unauthorized };
+}
+
+export function useRedeemInvite() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (code: string) => api.redeemInvite(code),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+}
+
+export function useMyUsage(days = 30) {
+  return useQuery({
+    queryKey: ["myUsage", days],
+    queryFn: () => api.getMyUsage(days),
   });
 }

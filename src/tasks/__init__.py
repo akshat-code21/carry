@@ -23,6 +23,15 @@ _beat_schedule: dict = {
         "task": "pipeline.update_performance",
         "schedule": crontab(minute=0, hour=6),  # daily 06:00 UTC
     },
+    # Analytics maintenance
+    "aggregate-platform-daily": {
+        "task": "analytics.aggregate_platform_daily",
+        "schedule": crontab(minute=0, hour=1),  # daily 01:00 UTC (previous day finalised)
+    },
+    "analytics-retention-cleanup": {
+        "task": "analytics.retention_cleanup",
+        "schedule": crontab(minute=30, hour=3),  # daily 03:30 UTC
+    },
 }
 
 # Optional infrequent RSS fallback (0 disables)
@@ -35,7 +44,7 @@ if settings.discovery_fallback_poll_hours > 0:
     }
 
 celery_app.conf.update(
-    imports=["src.tasks.pipeline_tasks"],
+    imports=["src.tasks.pipeline_tasks", "src.tasks.analytics_tasks"],
     task_serializer="json",
     accept_content=["json"],
     result_serializer="json",

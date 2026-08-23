@@ -1,11 +1,13 @@
 """Search API endpoints."""
 
+import time
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.analytics.service import analytics
 from src.api.deps import get_query_router, get_search_service
 from src.database import get_db
 from src.models.channel import Channel
@@ -24,6 +26,7 @@ router = APIRouter(prefix="/api", tags=["Search"])
 
 @router.get("/search", response_model=SearchResponse)
 async def search(
+    request: Request,
     q: str = Query(..., min_length=1, description="Search query"),
     type: str = Query(default="hybrid", description="Search type: keyword, semantic, hybrid"),
     channel: UUID | None = Query(default=None, description="Filter by channel ID"),
@@ -41,6 +44,8 @@ async def search(
     - ticker_narrative: direct narrative intelligence for a specific ticker
     - entity_lookup / factual_search: hybrid transcript segment search
     """
+    started = time.perf_counter()
+
     # Step 1: Classify query intent
     intent = await query_router.classify(q)
 
@@ -88,6 +93,27 @@ async def search(
         offset=offset,
     )
 
+    # ── Usage analytics ─────────────────────────────────────────────────
+    duration_ms = (time.perf_counter() - started) * 1000.0
+    total_results = int(results.get("total", 0)) or (
+        len(results.get("segments", [])) + len(results.get("predictions", [])) + len(stocks)
+    )
+    analytics.record_event(
+        "search_performed",
+        payload={
+            "query": q[:280],
+            "search_type": type,
+            "intent": intent.intent,
+            "ticker_hint": intent.ticker_hint,
+            "sector_hint": intent.sector_hint,
+            "instrument_type": intent.instrument_type,
+            "result_count": total_results,
+            "zero_results": total_results == 0,
+            "duration_ms": round(duration_ms, 1),
+        },
+        counters={"searches": 1, **({"search_zero_results": 1} if total_results == 0 else {})},
+    )
+
     # Effective instrument class for UI labels (channel scope can override query)
     if channel_type == "institutional":
         effective_instrument = "etfs"
@@ -119,12 +145,25 @@ async def search_stocks(
 
     Uses query understanding to decide instrument class (stocks vs ETFs).
     """
+    started = time.perf_counter()
     intent = await query_router.classify(q)
     results = await search_service.search_stocks_for_query(
         q,
         sector_hint=intent.sector_hint,
         limit=limit,
         instrument_type=intent.instrument_type,
+    )
+    analytics.record_event(
+        "search_performed",
+        payload={
+            "query": q[:280],
+            "search_type": "stocks",
+            "intent": intent.intent,
+            "result_count": len(results),
+            "zero_results": not results,
+            "duration_ms": round((time.perf_counter() - started) * 1000.0, 1),
+        },
+        counters={"searches": 1},
     )
     # Map to legacy StockSearchResult format
     return [

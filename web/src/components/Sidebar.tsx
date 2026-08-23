@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, LayoutDashboard, Tv, Hash, Activity, AudioLines, X, CandlestickChart } from "lucide-react";
+import { Search, LayoutDashboard, Tv, Hash, Activity, X, CandlestickChart, Gauge, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { useChannels } from "@/lib/hooks";
@@ -10,6 +10,7 @@ import { useChannels } from "@/lib/hooks";
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
+  isAdmin?: boolean;
 }
 
 const navItems = [
@@ -21,9 +22,16 @@ const navItems = [
   { href: "/activity", label: "Activity", icon: Activity },
 ];
 
-export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
+const adminItems = [
+  { href: "/usage", label: "Usage", icon: Gauge },
+  { href: "/admin", label: "Admin", icon: ShieldCheck },
+];
+
+export function Sidebar({ isOpen = false, onClose, isAdmin }: SidebarProps) {
   const pathname = usePathname();
   const { data: channels = [] } = useChannels();
+
+  const items = isAdmin ? [...navItems, ...adminItems] : navItems;
 
   const isLinkActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -79,7 +87,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         {/* Nav */}
         <div className="flex-1 overflow-y-auto py-3">
           <nav className="grid items-start gap-0.5 px-2.5">
-            {navItems.map((item) => {
+            {items.map((item) => {
               const active = isLinkActive(item.href);
               const Icon = item.icon;
 

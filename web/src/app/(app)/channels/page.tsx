@@ -9,11 +9,12 @@ import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { DashboardSkeleton } from "@/components/skeletons/LayoutSkeletons";
-import { useChannels, useBackfillChannel } from "@/lib/hooks";
+import { useChannels, useBackfillChannel, useMe } from "@/lib/hooks";
 
 export default function ChannelsPage() {
   const { data: channels = [], isLoading } = useChannels();
   const backfillMutation = useBackfillChannel();
+  const { isAdmin } = useMe();
 
   // Form state
   const [showForm, setShowForm] = useState(false);
@@ -56,27 +57,29 @@ export default function ChannelsPage() {
         title="Channels"
         description="Browse all tracked financial YouTube channels and ingest new sources."
       >
-        <Button
-          onClick={() => {
-            setShowForm((prev) => !prev);
-            setFeedback(null);
-          }}
-          variant={showForm ? "outline" : "default"}
-        >
-          {showForm ? (
-            <>
-              <X className="mr-2 h-4 w-4" /> Cancel
-            </>
-          ) : (
-            <>
-              <Plus className="mr-2 h-4 w-4" /> Add Channel
-            </>
-          )}
-        </Button>
+        {isAdmin && (
+          <Button
+            onClick={() => {
+              setShowForm((prev) => !prev);
+              setFeedback(null);
+            }}
+            variant={showForm ? "outline" : "default"}
+          >
+            {showForm ? (
+              <>
+                <X className="mr-2 h-4 w-4" /> Cancel
+              </>
+            ) : (
+              <>
+                <Plus className="mr-2 h-4 w-4" /> Add Channel
+              </>
+            )}
+          </Button>
+        )}
       </PageHeader>
 
       {/* Inline add-channel form */}
-      {showForm && (
+      {showForm && isAdmin && (
         <Card>
           <CardHeader>
             <CardTitle>Add a YouTube Channel</CardTitle>

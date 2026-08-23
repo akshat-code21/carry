@@ -40,7 +40,7 @@ export function CTA() {
           transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
           className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
         >
-          <Link href="/search">
+          <Link href="/sign-up">
             <Button
               size="lg"
               className="btn-glow h-12 gap-2 px-7 text-body"
@@ -49,13 +49,13 @@ export function CTA() {
               <ArrowRight className="size-4" />
             </Button>
           </Link>
-          <Link href="/dashboard">
+          <Link href="/sign-in">
             <Button
               size="lg"
               variant="outline"
               className="h-12 gap-2 px-7 text-body bg-panel/50"
             >
-              View the live overview
+              Sign in
             </Button>
           </Link>
         </motion.div>

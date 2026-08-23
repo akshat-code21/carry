@@ -4,12 +4,14 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from src.analytics.middleware import AnalyticsMiddleware
 from src.api.activity import router as activity_router
+from src.api.admin import router as admin_router
 from src.api.channels import router as channels_router
 from src.api.market_chatter import router as market_chatter_router
 from src.api.pipeline import router as pipeline_router
@@ -17,8 +19,11 @@ from src.api.predictions import router as predictions_router
 from src.api.search import router as search_router
 from src.api.themes import router as themes_router
 from src.api.tickers import router as tickers_router
+from src.api.usage import router as usage_router
 from src.api.videos import router as videos_router
 from src.api.websub import router as websub_router
+from src.auth.dependencies import get_current_user
+from src.auth.router import router as auth_router
 from src.config import get_settings
 from src.database import engine
 from src.services.market_chatter.cache import JsonCache
@@ -115,17 +120,37 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register routers
-app.include_router(search_router)
-app.include_router(videos_router)
-app.include_router(predictions_router)
-app.include_router(channels_router)
-app.include_router(tickers_router)
-app.include_router(themes_router)
-app.include_router(pipeline_router)
-app.include_router(websub_router)
-app.include_router(activity_router)
-app.include_router(market_chatter_router)
+# Usage analytics — logs every API request with latency + user attribution.
+# Added after CORS so preflight OPTIONS requests bypass it entirely.
+app.add_middleware(AnalyticsMiddleware)
+
+# Register routers.
+#
+# Authentication: every user-facing router requires an authenticated,
+# activated account (Clerk session token → app User row). Public exceptions:
+#   - / and /health (infra probes)
+#   - /docs, /redoc, /openapi.json
+#   - /api/websub/callback — secured via HMAC signature instead; the Google
+#     hub cannot authenticate. /api/websub/simulate is admin-gated internally.
+#
+# Pipeline triggers are additionally admin-gated inside src/api/pipeline.py.
+_protected = [Depends(get_current_user)]
+
+app.include_router(search_router, dependencies=_protected)
+app.include_router(videos_router, dependencies=_protected)
+app.include_router(predictions_router, dependencies=_protected)
+app.include_router(channels_router, dependencies=_protected)
+app.include_router(tickers_router, dependencies=_protected)
+app.include_router(themes_router, dependencies=_protected)
+app.include_router(pipeline_router)  # self-guards: auth + require_admin
+app.include_router(websub_router)  # callback public (HMAC), simulate admin-gated
+app.include_router(activity_router, dependencies=_protected)
+app.include_router(market_chatter_router, dependencies=_protected)
+
+# Auth & usage & admin routers handle their own dependency wiring
+app.include_router(auth_router)
+app.include_router(usage_router, dependencies=_protected)
+app.include_router(admin_router)  # self-guards: require_admin
 
 
 @app.exception_handler(Exception)
