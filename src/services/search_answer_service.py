@@ -84,11 +84,52 @@ def build_user_prompt(query: str, segments: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+# Matches bracketed UUID citations like "[28442ada-dea1-4b3b-8859-80c026260635]"
+_CITATION_BRACKET_RE = re.compile(
+    r"\[\s*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*\]",
+    re.IGNORECASE,
+)
+_RAW_UUID_RE = re.compile(
+    r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b",
+    re.IGNORECASE,
+)
+
+
+def sanitize_citation_text(text: str, cited_ids: list[str]) -> str:
+    """Replace bracketed UUID citations with numbered markers [1], [2], etc.
+
+    UUIDs present in ``cited_ids`` are mapped by their LLM order; any stray
+    bracketed UUID or bare UUID not in the list is stripped so raw ids never
+    leak to the UI. Also cleans up empty brackets / parentheses left behind.
+    """
+    if not text:
+        return text
+    id_to_index = {cid.lower(): str(idx + 1) for idx, cid in enumerate(cited_ids)}
+
+    def _repl(m: re.Match[str]) -> str:
+        uid = m.group(1).lower()
+        idx = id_to_index.get(uid)
+        return f"[{idx}]" if idx is not None else ""
+
+    text = _CITATION_BRACKET_RE.sub(_repl, text)
+    text = _RAW_UUID_RE.sub("", text)
+    # Clean artefacts left after stripping unknown citations
+    text = re.sub(r"\(\s*,\s*", "(", text)
+    text = re.sub(r",\s*\)", ")", text)
+    text = re.sub(r"\(\s*\)", "", text)
+    text = re.sub(r"\[\s*\]", "", text)
+    text = re.sub(r",\s*,", ",", text)
+    text = re.sub(r"\s{2,}", " ", text)
+    text = re.sub(r"\s+([.,;:)])", r"\1", text)
+    return text.strip()
+
+
 def parse_llm_response(content: str, valid_ids: set[str]) -> dict[str, Any] | None:
     """Parse + validate the model's JSON payload.
 
     Returns {"summary", "key_points", "cited_segment_ids"} with citations
-    filtered to known segment ids, or None when unusable.
+    filtered to known segment ids, or None when unusable. Summary and
+    key_points are sanitized so bracketed UUIDs become numbered citations.
     """
     try:
         data = json.loads(content)
@@ -120,9 +161,15 @@ def parse_llm_response(content: str, valid_ids: set[str]) -> dict[str, Any] | No
                 seen.add(cid)
                 cited_ids.append(cid)
 
+    # Sanitize UUID citations → numbered markers; stray UUIDs are stripped
+    summary_clean = sanitize_citation_text(summary.strip(), cited_ids)
+    key_points_clean = [sanitize_citation_text(kp, cited_ids) for kp in key_points]
+    # Drop any key points that became empty after sanitization
+    key_points_clean = [kp for kp in key_points_clean if kp]
+
     return {
-        "summary": summary.strip(),
-        "key_points": key_points,
+        "summary": summary_clean,
+        "key_points": key_points_clean,
         "cited_segment_ids": cited_ids,
     }
 
@@ -196,9 +243,62 @@ class SearchAnswerService:
         async with lock:
             cached_payload = await self._read_cache(qhash)
             if cached_payload is not None:
-                cached_payload["cached"] = True
-                return cached_payload
+                # Validate that cached entry was built from the same segment set;
+                # frontend race (keepPreviousData) previously sent NVDA ids for an MSFT
+                # query, poisoning the MSFT cache with a fallback answer. Bust it.
+                if segment_ids is not None:
+                    cached_source = cached_payload.get("source_segment_ids")
+                    if cached_source is not None:
+                        if set(cached_source) != set(segment_ids):
+                            logger.info(
+                                f"search/answer: cache bust for '{query[:60]}' — "
+                                f"segment set changed ({len(cached_source)} vs {len(segment_ids)})"
+                            )
+                            try:
+                                await self.db.execute(
+                                    delete(SearchAnswer).where(SearchAnswer.query_hash == qhash)
+                                )
+                                await self.db.commit()
+                            except Exception as exc:
+                                logger.warning(f"search/answer: cache bust delete failed: {exc}")
+                                await self._safe_rollback()
+                            cached_payload = None
+                        else:
+                            cached_payload["cached"] = True
+                            return cached_payload
+                    else:
+                        # Legacy entry without source ids — be conservative: if it is
+                        # a fallback empty answer ("don't mention ...") but the caller now
+                        # has real clips, force re-synthesis.
+                        summary_l = (cached_payload.get("summary") or "").lower()
+                        is_fallback = (
+                            "don't mention" in summary_l
+                            or "doesn't mention" in summary_l
+                            or "don't provide" in summary_l
+                            or "don't contain" in summary_l
+                            or "doesn't provide" in summary_l
+                        )
+                        if is_fallback and len(segment_ids) >= 3:
+                            logger.info(
+                                f"search/answer: cache bust legacy fallback for '{query[:60]}'"
+                            )
+                            try:
+                                await self.db.execute(
+                                    delete(SearchAnswer).where(SearchAnswer.query_hash == qhash)
+                                )
+                                await self.db.commit()
+                            except Exception as exc:
+                                logger.warning(f"search/answer: legacy bust failed: {exc}")
+                                await self._safe_rollback()
+                            cached_payload = None
+                        else:
+                            cached_payload["cached"] = True
+                            return cached_payload
+                else:
+                    cached_payload["cached"] = True
+                    return cached_payload
 
+            # Cache miss or bust — synthesize fresh
             try:
                 segments = await self._resolve_segments(query, segment_ids, max_input)
             except Exception as exc:
@@ -227,6 +327,7 @@ class SearchAnswerService:
                 "summary": llm_out["summary"],
                 "key_points": llm_out["key_points"],
                 "citations": map_citations(llm_out["cited_segment_ids"], segments),
+                "source_segment_ids": [s["id"] for s in segments],
                 "available": True,
                 "cached": False,
             }
@@ -394,6 +495,19 @@ class SearchAnswerService:
             return None
         payload = dict(row.answer_json)
         payload.pop("cached", None)
+        # Retrofit sanitization for legacy cached rows that still contain UUID brackets
+        try:
+            citations = payload.get("citations") or []
+            cited_ids = [c.get("segment_id") for c in citations if c.get("segment_id")]
+            if payload.get("summary"):
+                payload["summary"] = sanitize_citation_text(payload["summary"], cited_ids)
+            if payload.get("key_points"):
+                payload["key_points"] = [
+                    sanitize_citation_text(kp, cited_ids) for kp in payload["key_points"]
+                ]
+                payload["key_points"] = [kp for kp in payload["key_points"] if kp]
+        except Exception:  # noqa: BLE001 — sanitization must never break cache reads
+            pass
         return payload
 
     async def _write_cache(

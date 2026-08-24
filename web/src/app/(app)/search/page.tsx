@@ -72,6 +72,29 @@ const formatDate = (value?: string | null) => {
   });
 };
 
+// Sanitize leaked UUID citations in LLM answers (defense-in-depth for cached rows)
+const UUID_BRACKET_RE = /\[\s*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*\]/gi;
+const RAW_UUID_RE = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi;
+
+function sanitizeCitations(text: string, citations: AnswerCitation[]): string {
+  if (!text) return text;
+  const idToIndex = new Map<string, string>();
+  citations.forEach((c, i) => idToIndex.set(c.segment_id.toLowerCase(), String(i + 1)));
+  let out = text.replace(UUID_BRACKET_RE, (_m, uid: string) => {
+    const idx = idToIndex.get(uid.toLowerCase());
+    return idx ? `[${idx}]` : "";
+  });
+  out = out.replace(RAW_UUID_RE, "");
+  out = out.replace(/\(\s*,\s*/g, "(");
+  out = out.replace(/,\s*\)/g, ")");
+  out = out.replace(/\(\s*\)/g, "");
+  out = out.replace(/\[\s*\]/g, "");
+  out = out.replace(/,\s*,/g, ",");
+  out = out.replace(/\s{2,}/g, " ");
+  out = out.replace(/\s+([.,;:)])/g, "$1");
+  return out.trim();
+}
+
 function SegmentQuote({ seg }: { seg: SearchSegment }) {
   return (
     <div className="flex flex-col gap-2">
@@ -102,14 +125,14 @@ function SearchAnswerCard({
       <div className="mb-2.5 flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-signal" />
         <span className="label-overline text-signal">Summary</span>
-        {answer?.cached && (
+        {/* {answer?.cached && (
           <Badge
             variant="outline"
             className="border-line px-1.5 py-0 font-mono text-micro text-ink-faint"
           >
             cached
           </Badge>
-        )}
+        )} */}
       </div>
 
       {skeleton ? (
@@ -120,16 +143,22 @@ function SearchAnswerCard({
         </div>
       ) : answer ? (
         <>
-          <p className="text-body leading-relaxed text-ink">{answer.summary}</p>
+          <p className="text-body leading-relaxed text-ink">
+            {sanitizeCitations(answer.summary, answer.citations)}
+          </p>
 
           {answer.key_points.length > 0 && (
             <ul className="mt-3 flex flex-col gap-1.5">
-              {answer.key_points.map((point, i) => (
-                <li key={i} className="flex items-start gap-2 text-small text-ink-secondary">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-signal" />
-                  {point}
-                </li>
-              ))}
+              {answer.key_points.map((point, i) => {
+                const clean = sanitizeCitations(point, answer.citations);
+                if (!clean) return null;
+                return (
+                  <li key={i} className="flex items-start gap-2 text-small text-ink-secondary">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-signal" />
+                    {clean}
+                  </li>
+                );
+              })}
             </ul>
           )}
 
@@ -305,7 +334,7 @@ function SearchPageContent() {
   const [dateFilter, setDateFilter] = useState<DateRangeFilter>({ key: "all", cutoffMs: null });
   const [channelFilter, setChannelFilter] = useState<string | null>(null);
 
-  const { data: results, isLoading: loading } = useSearch(
+  const { data: results, isLoading: loading, isFetching: resultsFetching, isPlaceholderData } = useSearch(
     activeQuery,
     activeType,
     activeSort,
@@ -408,14 +437,16 @@ function SearchPageContent() {
   };
 
   // ── AI answer — synthesized from the top fused-rank segments ──────────
-  const answerSegmentIds = useMemo(
-    () =>
-      (results?.groups ?? [])
-        .flatMap((g) => [...g.top_segments, ...g.remaining_segments])
-        .map((s) => s.id)
-        .slice(0, 12),
-    [results],
-  );
+  // Avoid the keepPreviousData race: while a new query is fetching, results
+  // still holds the previous query's groups. Sending those stale ids with the
+  // new query poisons the answer cache (MSFT query + NVDA ids → "don't mention MSFT").
+  const answerSegmentIds = useMemo(() => {
+    if (isPlaceholderData || resultsFetching) return [];
+    return (results?.groups ?? [])
+      .flatMap((g) => [...g.top_segments, ...g.remaining_segments])
+      .map((s) => s.id)
+      .slice(0, 12);
+  }, [results, isPlaceholderData, resultsFetching]);
   const { data: answer, isFetching: answerFetching } = useSearchAnswer(
     activeQuery,
     answerSegmentIds,
@@ -541,9 +572,9 @@ function SearchPageContent() {
                     const SentimentIcon = stock.avg_sentiment > 0.2 ? TrendingUp : stock.avg_sentiment < -0.2 ? TrendingDown : BarChart3;
 
                     return (
-                      <motion.div key={stock.ticker} variants={itemAnim}>
-                        <Card className="h-full transition-colors hover:border-signal/40">
-                          <CardContent className="flex flex-col gap-3 p-4">
+                      <motion.div key={stock.ticker} variants={itemAnim} className="min-w-0">
+                        <Card className="h-full min-w-0 overflow-hidden transition-colors hover:border-signal/40">
+                          <CardContent className="flex min-w-0 flex-col gap-3 overflow-hidden p-4">
                             {/* Ticker + Score Row */}
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2.5">
@@ -585,14 +616,19 @@ function SearchPageContent() {
 
                             {/* Themes */}
                             {stock.themes.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5">
+                              <div className="flex flex-wrap gap-1.5 min-w-0 overflow-hidden">
                                 {stock.themes.slice(0, 3).map((theme) => (
-                                  <Badge key={theme} variant="outline" className="border-signal/20 bg-signal/5 px-2 py-0 text-micro text-signal">
-                                    {theme}
+                                  <Badge
+                                    key={theme}
+                                    variant="outline"
+                                    title={theme}
+                                    className="h-auto max-w-full min-w-0 shrink border-signal/20 bg-signal/5 px-2 py-1 text-micro leading-tight text-signal !whitespace-normal break-words"
+                                  >
+                                    <span className="block max-w-full break-words">{theme}</span>
                                   </Badge>
                                 ))}
                                 {stock.themes.length > 3 && (
-                                  <Badge variant="outline" className="border-line px-2 py-0 text-micro text-ink-faint">
+                                  <Badge variant="outline" className="shrink-0 border-line px-2 py-0 text-micro text-ink-faint">
                                     +{stock.themes.length - 3} more
                                   </Badge>
                                 )}

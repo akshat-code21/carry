@@ -125,7 +125,7 @@ class QueryRouter:
                     {"role": "user", "content": query},
                 ],
                 temperature=0.0,
-                max_tokens=100,
+                max_completion_tokens=100,
             )
 
             usage = getattr(response, "usage", None)
@@ -356,4 +356,90 @@ class QueryRouter:
                     instrument_type=instrument_type,
                 )
 
+        # Sentiment check heuristic — e.g. "What is the sentiment on NVDA?", "Is TSLA bullish?"
+        sentiment_signals = [
+            "sentiment",
+            "bullish",
+            "bearish",
+            "bull case",
+            "bear case",
+            "overbought",
+            "oversold",
+        ]
+        if any(sig in q for sig in sentiment_signals):
+            ticker = QueryRouter._extract_ticker_heuristic(query)
+            if ticker:
+                return QueryIntent(
+                    intent="sentiment_check",
+                    ticker_hint=ticker,
+                    instrument_type=instrument_type,
+                )
+
+        # Ticker narrative heuristic — e.g. "Outlook on Nvidia?", "What are people saying about Tesla?"
+        narrative_signals = [
+            "narrative",
+            "outlook",
+            "what are people saying",
+            "what is the narrative",
+            "what's the narrative",
+            "stock analysis",
+            "bull case for",
+            "bear case for",
+        ]
+        if any(sig in q for sig in narrative_signals):
+            ticker = QueryRouter._extract_ticker_heuristic(query)
+            if ticker:
+                return QueryIntent(
+                    intent="ticker_narrative",
+                    ticker_hint=ticker,
+                    instrument_type=instrument_type,
+                )
+
+        return None
+
+    @staticmethod
+    def _extract_ticker_heuristic(query: str) -> str | None:
+        """Try to pull a ticker symbol from the raw query without an LLM.
+
+        Maps common company names → tickers, and falls back to any uppercase
+        1-5 letter token that looks like a ticker.
+        """
+        import re
+
+        lowered = query.lower()
+        name_map = {
+            "nvidia": "NVDA",
+            "nvda": "NVDA",
+            "tesla": "TSLA",
+            "tsla": "TSLA",
+            "apple": "AAPL",
+            "aapl": "AAPL",
+            "microsoft": "MSFT",
+            "msft": "MSFT",
+            "google": "GOOGL",
+            "alphabet": "GOOGL",
+            "googl": "GOOGL",
+            "goog": "GOOGL",
+            "amazon": "AMZN",
+            "amzn": "AMZN",
+            "meta": "META",
+            "facebook": "META",
+            "amd": "AMD",
+            "intel": "INTC",
+            "intc": "INTC",
+            "palantir": "PLTR",
+            "pltr": "PLTR",
+            "netflix": "NFLX",
+            "nflx": "NFLX",
+        }
+        for name, ticker in name_map.items():
+            if re.search(rf"\b{re.escape(name)}\b", lowered):
+                return ticker
+        # Fallback: any standalone uppercase ticker-like token (2-5 caps) in original query
+        m = re.search(r"\b([A-Z]{2,5})\b", query)
+        if m:
+            cand = m.group(1).upper()
+            # Avoid common English words that look like tickers
+            if cand not in {"WHAT", "WHEN", "THIS", "THAT", "SENTIMENT", "BULLISH", "BEARISH"}:
+                return cand
         return None
