@@ -33,6 +33,15 @@ from src.models import (  # noqa: F401
     UsageEvent,
     User,
     Video,
+    # HFI models
+    Investor,
+    HfiSource,
+    ContentItem,
+    PortfolioChange,
+    TickerCache,
+    ExtractedMention,
+    HfiReport,
+    HfiAlert,
 )
 
 config = context.config

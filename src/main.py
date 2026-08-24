@@ -22,6 +22,12 @@ from src.api.tickers import router as tickers_router
 from src.api.usage import router as usage_router
 from src.api.videos import router as videos_router
 from src.api.websub import router as websub_router
+
+# HFI (Hedge Fund Intelligence) routers
+from src.api.investors import router as hfi_investors_router
+from src.api.hfi_analytics import router as hfi_analytics_router
+from src.api.hfi_reports import router as hfi_reports_router
+from src.api.hfi_alerts import router as hfi_alerts_router
 from src.auth.dependencies import get_current_user
 from src.auth.router import router as auth_router
 from src.config import get_settings
@@ -146,6 +152,12 @@ app.include_router(pipeline_router)  # self-guards: auth + require_admin
 app.include_router(websub_router)  # callback public (HMAC), simulate admin-gated
 app.include_router(activity_router, dependencies=_protected)
 app.include_router(market_chatter_router, dependencies=_protected)
+
+# HFI routers
+app.include_router(hfi_investors_router, dependencies=_protected)
+app.include_router(hfi_analytics_router, dependencies=_protected)
+app.include_router(hfi_reports_router, dependencies=_protected)
+app.include_router(hfi_alerts_router, dependencies=_protected)
 
 # Auth & usage & admin routers handle their own dependency wiring
 app.include_router(auth_router)

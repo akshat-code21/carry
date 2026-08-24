@@ -485,6 +485,111 @@ export const api = {
   async getPlatformOverview(days = 30): Promise<PlatformOverview> {
     return request(`/admin/metrics/overview?days=${days}`);
   },
+
+  /* ── HFI — Investors ────────────────────────────────────────────── */
+
+  async getHfiInvestors(): Promise<HfiInvestor[]> {
+    return request("/hfi/investors");
+  },
+
+  async getHfiInvestor(investorId: string): Promise<HfiInvestor> {
+    return request(`/hfi/investors/${investorId}`);
+  },
+
+  async createHfiInvestor(body: { name: string; description?: string; cik_number?: string }): Promise<HfiInvestor> {
+    return request("/hfi/investors", { method: "POST", body: JSON.stringify(body) });
+  },
+
+  async updateHfiInvestor(investorId: string, body: Partial<{ name: string; description: string; cik_number: string; is_active: boolean }>): Promise<HfiInvestor> {
+    return request(`/hfi/investors/${investorId}`, { method: "PATCH", body: JSON.stringify(body) });
+  },
+
+  async deleteHfiInvestor(investorId: string): Promise<void> {
+    return request(`/hfi/investors/${investorId}`, { method: "DELETE" });
+  },
+
+  async getHfiInvestorStats(investorId: string): Promise<HfiInvestorStats> {
+    return request(`/hfi/investors/${investorId}/stats`);
+  },
+
+  async getHfiInvestorSources(investorId: string): Promise<HfiSource[]> {
+    return request(`/hfi/investors/${investorId}/sources`);
+  },
+
+  async createHfiSource(investorId: string, body: { source_type: string; url: string; label?: string; config?: Record<string, unknown> }): Promise<HfiSource> {
+    return request(`/hfi/investors/${investorId}/sources`, { method: "POST", body: JSON.stringify(body) });
+  },
+
+  async deleteHfiSource(sourceId: string): Promise<void> {
+    return request(`/hfi/investors/sources/${sourceId}`, { method: "DELETE" });
+  },
+
+  async getHfiInvestorContent(investorId: string, limit = 20, offset = 0): Promise<HfiContentItem[]> {
+    return request(`/hfi/investors/${investorId}/content?limit=${limit}&offset=${offset}`);
+  },
+
+  async syncHfiInvestor(investorId: string): Promise<HfiSyncResponse> {
+    return request(`/hfi/investors/${investorId}/sync`, { method: "POST" });
+  },
+
+  async generateHfiReport(investorId: string): Promise<HfiReport> {
+    return request(`/hfi/reports/generate/${investorId}`, { method: "POST" });
+  },
+
+  /* ── HFI — Analytics ────────────────────────────────────────────── */
+
+  async getHfiConsensus(period?: string): Promise<HfiConsensusResponse> {
+    const params = period ? `?period=${encodeURIComponent(period)}` : "";
+    return request(`/hfi/analytics/consensus${params}`);
+  },
+
+  async getHfiCompare(investorIds: string[], period?: string): Promise<HfiCompareResponse> {
+    let params = `?investor_ids=${investorIds.join(",")}`;
+    if (period) params += `&period=${encodeURIComponent(period)}`;
+    return request(`/hfi/analytics/compare${params}`);
+  },
+
+  async getHfiPeriods(): Promise<string[]> {
+    return request("/hfi/analytics/periods");
+  },
+
+  async getHfiPortfolio(investorId: string, period?: string): Promise<HfiPortfolioChange[]> {
+    const params = period ? `?period=${encodeURIComponent(period)}` : "";
+    return request(`/hfi/analytics/portfolio/${investorId}${params}`);
+  },
+
+  /* ── HFI — Reports ──────────────────────────────────────────────── */
+
+  async getHfiReports(investorId?: string, limit = 20, offset = 0): Promise<HfiReportListItem[]> {
+    let params = `?limit=${limit}&offset=${offset}`;
+    if (investorId) params += `&investor_id=${investorId}`;
+    return request(`/hfi/reports${params}`);
+  },
+
+  async getHfiReport(reportId: string): Promise<HfiReport> {
+    return request(`/hfi/reports/${reportId}`);
+  },
+
+  /* ── HFI — Alerts ───────────────────────────────────────────────── */
+
+  async getHfiAlerts(opts?: { investor_id?: string; severity?: string; unread_only?: boolean; limit?: number; offset?: number }): Promise<HfiAlertsResponse> {
+    const params = new URLSearchParams();
+    if (opts?.investor_id) params.set("investor_id", opts.investor_id);
+    if (opts?.severity) params.set("severity", opts.severity);
+    if (opts?.unread_only) params.set("unread_only", "true");
+    if (opts?.limit) params.set("limit", String(opts.limit));
+    if (opts?.offset) params.set("offset", String(opts.offset));
+    const qs = params.toString();
+    return request(`/hfi/alerts${qs ? `?${qs}` : ""}`);
+  },
+
+  async markHfiAlertRead(alertId: string): Promise<HfiAlert> {
+    return request(`/hfi/alerts/${alertId}/read`, { method: "POST" });
+  },
+
+  async markAllHfiAlertsRead(): Promise<{ marked_read: number }> {
+    return request("/hfi/alerts/read-all", { method: "POST" });
+  },
 };
 
 /* ── Auth / usage / admin types ──────────────────────────────────── */
@@ -550,3 +655,160 @@ export interface PlatformOverview {
   top_queries: { query: string; count: number }[];
   top_features: { route: string; views: number }[];
 }
+
+/* ── HFI (Hedge Fund Intelligence) types ─────────────────────────── */
+
+export interface HfiInvestor {
+  id: string;
+  name: string;
+  description: string | null;
+  cik_number: string | null;
+  is_active: boolean;
+  last_synced_at: string | null;
+  sources_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HfiInvestorStats {
+  content_items: number;
+  reports: number;
+  unread_alerts: number;
+}
+
+export interface HfiSource {
+  id: string;
+  source_type: string;
+  url: string;
+  label: string | null;
+  is_active: boolean;
+  last_checked_at: string | null;
+  last_successful_at: string | null;
+  consecutive_failures: number;
+  check_frequency_hours: number;
+  created_at: string;
+}
+
+export interface HfiContentItem {
+  id: string;
+  content_type: string;
+  title: string | null;
+  url: string | null;
+  processing_status: string;
+  published_at: string | null;
+  created_at: string;
+}
+
+export interface HfiPortfolioChange {
+  id: string;
+  ticker_symbol: string | null;
+  company_name: string | null;
+  cusip: string | null;
+  change_type: string;
+  shares_previous: number;
+  shares_current: number;
+  value_usd: number | null;
+  percent_of_portfolio: number | null;
+  filing_period: string;
+  report_date: string | null;
+  created_at: string;
+}
+
+export interface HfiReport {
+  id: string;
+  investor_id: string | null;
+  report_type: string;
+  title: string;
+  summary: string | null;
+  content_markdown: string;
+  is_read: boolean;
+  period_start: string | null;
+  period_end: string | null;
+  generated_at: string;
+  created_at: string;
+}
+
+export interface HfiReportListItem {
+  id: string;
+  investor_id: string | null;
+  report_type: string;
+  title: string;
+  summary: string | null;
+  is_read: boolean;
+  generated_at: string;
+}
+
+export interface HfiAlert {
+  id: string;
+  investor_id: string | null;
+  alert_type: string;
+  title: string;
+  summary: string | null;
+  severity: string;
+  score: number;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface HfiAlertsResponse {
+  alerts: HfiAlert[];
+  total: number;
+  unread_count: number;
+}
+
+export interface HfiFundHoldingDetail {
+  investor_id: string;
+  investor_name: string;
+  change_type: string;
+  shares_current: number;
+  shares_previous: number;
+  value_usd: number | null;
+  percent_of_portfolio: number | null;
+}
+
+export interface HfiConsensusHolding {
+  ticker_symbol: string | null;
+  company_name: string | null;
+  total_funds_holding: number;
+  funds_buying: number;
+  funds_selling: number;
+  total_value_usd: number | null;
+  funds: HfiFundHoldingDetail[];
+}
+
+export interface HfiConsensusResponse {
+  filing_period: string;
+  available_periods: string[];
+  total_funds_analyzed: number;
+  holdings: HfiConsensusHolding[];
+}
+
+export interface HfiCompareCell {
+  ticker_symbol: string | null;
+  company_name: string | null;
+  shares: number;
+  value_usd: number | null;
+  percent_of_portfolio: number | null;
+  change_type: string;
+}
+
+export interface HfiCompareInvestor {
+  investor_id: string;
+  investor_name: string;
+  holdings: HfiCompareCell[];
+}
+
+export interface HfiCompareResponse {
+  period: string;
+  all_tickers: string[];
+  investors: HfiCompareInvestor[];
+}
+
+export interface HfiSyncResponse {
+  investor_id: string;
+  status: string;
+  processed: number;
+  failed: number;
+  skipped: number;
+}
+

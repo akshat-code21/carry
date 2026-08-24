@@ -23,6 +23,16 @@ from src.models.transcript_segment import TranscriptSegment
 from src.models.user import Invite, User, UserRole, UserStatus
 from src.models.video import Video
 
+# HFI (Hedge Fund Intelligence) models
+from src.models.investor import Investor
+from src.models.hfi_source import HfiSource
+from src.models.content_item import ContentItem
+from src.models.portfolio_change import PortfolioChange
+from src.models.ticker_cache import TickerCache
+from src.models.extracted_mention import ExtractedMention
+from src.models.hfi_report import HfiReport
+from src.models.hfi_alert import HfiAlert
+
 __all__ = [
     "ActivityEvent",
     "ApiRequestLog",
@@ -49,4 +59,13 @@ __all__ = [
     "SourceSnapshot",
     "SpeakerTickerAggregation",
     "TickerDailyMetric",
+    # HFI models
+    "Investor",
+    "HfiSource",
+    "ContentItem",
+    "PortfolioChange",
+    "TickerCache",
+    "ExtractedMention",
+    "HfiReport",
+    "HfiAlert",
 ]

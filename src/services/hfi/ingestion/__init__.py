@@ -1,0 +1,1 @@
+"""HFI ingestion adapters."""

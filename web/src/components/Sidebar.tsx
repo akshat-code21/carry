@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, LayoutDashboard, Tv, Hash, Activity, X, CandlestickChart, Gauge, ShieldCheck } from "lucide-react";
+import { Search, LayoutDashboard, Tv, Hash, Activity, X, CandlestickChart, Gauge, ShieldCheck, Briefcase, Scale, GitCompareArrows } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { useChannels } from "@/lib/hooks";
@@ -19,6 +19,9 @@ const navItems = [
   { href: "/channels", label: "Channels", icon: Tv },
   { href: "/themes", label: "Themes", icon: Hash },
   { href: "/tickerflow", label: "Tickerflow", icon: CandlestickChart },
+  { href: "/investors", label: "Investors", icon: Briefcase },
+  { href: "/consensus", label: "Consensus", icon: Scale },
+  // { href: "/compare", label: "Compare", icon: GitCompareArrows },
   { href: "/activity", label: "Activity", icon: Activity },
 ];
 

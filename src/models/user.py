@@ -125,3 +125,14 @@ class User(Base):
     last_seen_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+    # HFI (Hedge Fund Intelligence) relationships
+    investors: Mapped[list["Investor"]] = relationship(
+        "Investor", back_populates="user", cascade="all, delete-orphan"
+    )
+    hfi_reports: Mapped[list["HfiReport"]] = relationship(
+        "HfiReport", back_populates="user", cascade="all, delete-orphan"
+    )
+    hfi_alerts: Mapped[list["HfiAlert"]] = relationship(
+        "HfiAlert", back_populates="user", cascade="all, delete-orphan"
+    )
