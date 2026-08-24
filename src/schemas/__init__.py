@@ -261,13 +261,32 @@ class StockDiscoveryResult(BaseModel):
     is_etf: bool = False
 
 
+class SegmentGroup(BaseModel):
+    """Transcript segments consolidated per video for grouped search display."""
+
+    video_id: str
+    youtube_video_id: str | None = None
+    video_title: str | None = None
+    channel_id: str | None = None
+    channel_title: str | None = None
+    published_at: str | None = None
+    thumbnail_url: str | None = None
+    hit_count: int = 0
+    best_rank: float = 0.0
+    top_segments: list[SearchSegmentResult] = []
+    remaining_segments: list[SearchSegmentResult] = []
+
+
 class SearchResponse(BaseModel):
     segments: list[SearchSegmentResult] = []
+    groups: list[SegmentGroup] = []
     predictions: list[SearchPredictionResult] = []
     stocks: list[StockDiscoveryResult] = []
     videos: dict[str, dict] = {}
     channels: dict[str, dict] = {}
     total: int = 0
+    # More distinct video groups available beyond the current limit
+    has_more: bool = False
     query_intent: str = "factual_search"
     # stocks | etfs — instrument class inferred for discovery results
     instrument_type: str = "stocks"
@@ -278,6 +297,51 @@ class StockSearchResult(BaseModel):
     ticker: str
     total_relevance: float = 0.0
     themes: list[str] = []
+
+
+class AnswerCitation(BaseModel):
+    """A transcript segment cited by a synthesized search answer."""
+
+    segment_id: str
+    video_id: str
+    start_sec: float
+    text: str
+    video_title: str | None = None
+    channel_title: str | None = None
+    youtube_video_id: str | None = None
+
+
+class SearchAnswerResponse(BaseModel):
+    """LLM-synthesized answer for a search query, with clip citations."""
+
+    query: str
+    summary: str = ""
+    key_points: list[str] = []
+    citations: list[AnswerCitation] = []
+    # False => client should hide the answer card entirely
+    available: bool = False
+    cached: bool = False
+
+
+class WeeklyVolumePoint(BaseModel):
+    """Video count for one 7-day slice of the coverage window."""
+
+    week_start: str  # ISO date
+    count: int
+
+
+class SearchCoverageResponse(BaseModel):
+    """Coverage intelligence: how much content discusses a query topic."""
+
+    query: str
+    total_videos: int = 0
+    positive: int = 0
+    neutral: int = 0
+    negative: int = 0
+    weekly_volume: list[WeeklyVolumePoint] = []
+    # Null when <2 weeks of data or previous week had zero videos
+    wow_delta_pct: float | None = None
+    window_days: int = 14
 
 
 # --- Pipeline schemas ---

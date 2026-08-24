@@ -145,11 +145,41 @@ export function useDashboardData() {
   };
 }
 
-export function useSearch(query: string, type: "keyword" | "semantic" | "hybrid" = "hybrid") {
+export function useSearch(
+  query: string,
+  type: "keyword" | "semantic" | "hybrid" = "hybrid",
+  sort: "relevance" | "recent" = "relevance",
+  limit = 20,
+) {
   return useQuery({
-    queryKey: ["search", query, type],
-    queryFn: () => api.search(query, type),
+    queryKey: ["search", query, type, sort, limit],
+    queryFn: () => api.search(query, type, sort, limit),
     enabled: !!query.trim(),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useSearchAnswer(query: string, segmentIds: string[]) {
+  // Key on the joined ids (stable identity) so refetches only happen when
+  // the underlying result set actually changes.
+  const joined = segmentIds.join(",");
+  return useQuery({
+    queryKey: ["searchAnswer", query, joined],
+    queryFn: () => api.searchAnswer(query, segmentIds),
+    enabled: !!query.trim() && segmentIds.length >= 3,
+    staleTime: 10 * 60_000,
+    retry: false,
+  });
+}
+
+export function useSearchCoverage(query: string, segmentIds: string[]) {
+  const joined = segmentIds.join(",");
+  return useQuery({
+    queryKey: ["searchCoverage", query, joined],
+    queryFn: () => api.searchCoverage(query, segmentIds),
+    enabled: !!query.trim() && segmentIds.length > 0,
+    staleTime: 10 * 60_000,
+    retry: false,
   });
 }
 

@@ -8,17 +8,27 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.analytics.service import analytics
-from src.api.deps import get_query_router, get_search_service
+from src.api.deps import (
+    get_query_router,
+    get_search_answer_service,
+    get_search_coverage_service,
+    get_search_service,
+)
 from src.database import get_db
 from src.models.channel import Channel
 from src.schemas import (
+    SearchAnswerResponse,
+    SearchCoverageResponse,
     SearchPredictionResult,
     SearchResponse,
     SearchSegmentResult,
+    SegmentGroup,
     StockDiscoveryResult,
     StockSearchResult,
 )
 from src.services.query_router import QueryRouter
+from src.services.search_answer_service import SearchAnswerService
+from src.services.search_coverage_service import SearchCoverageService
 from src.services.search_service import SearchService
 
 router = APIRouter(prefix="/api", tags=["Search"])
@@ -33,6 +43,9 @@ async def search(
     ticker: str | None = Query(default=None, description="Filter by ticker"),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    sort: str = Query(
+        default="relevance", pattern="^(relevance|recent)$", description="Group sort order"
+    ),
     search_service: SearchService = Depends(get_search_service),
     query_router: QueryRouter = Depends(get_query_router),
     db: AsyncSession = Depends(get_db),
@@ -91,6 +104,7 @@ async def search(
         ticker=search_ticker,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
     # ── Usage analytics ─────────────────────────────────────────────────
@@ -108,6 +122,8 @@ async def search(
             "sector_hint": intent.sector_hint,
             "instrument_type": intent.instrument_type,
             "result_count": total_results,
+            "group_count": len(results.get("groups", [])),
+            "sort": sort,
             "zero_results": total_results == 0,
             "duration_ms": round(duration_ms, 1),
         },
@@ -124,11 +140,13 @@ async def search(
 
     return SearchResponse(
         segments=[SearchSegmentResult(**s) for s in results["segments"]],
+        groups=[SegmentGroup(**g) for g in results.get("groups", [])],
         predictions=[SearchPredictionResult(**p) for p in results["predictions"]],
         stocks=stocks,
         videos=results.get("videos", {}),
         channels=results.get("channels", {}),
         total=results["total"],
+        has_more=bool(results.get("has_more", False)),
         query_intent=intent.intent,
         instrument_type=effective_instrument,
     )
@@ -174,3 +192,54 @@ async def search_stocks(
         )
         for r in results
     ]
+
+
+@router.get("/search/answer", response_model=SearchAnswerResponse)
+async def search_answer(
+    q: str = Query(..., min_length=1, description="Search query"),
+    segment_ids: str | None = Query(
+        default=None,
+        description="Comma-separated transcript segment IDs in fused-rank order",
+    ),
+    limit: int = Query(default=12, ge=3, le=20, description="Max segments fed to synthesis"),
+    answer_service: SearchAnswerService = Depends(get_search_answer_service),
+) -> SearchAnswerResponse:
+    """Synthesized answer for a search query with clip citations.
+
+    Cached per normalized query for 24h. Returns available=False when there
+    is insufficient evidence or synthesis fails — clients hide the card.
+    """
+    ids = [s.strip() for s in segment_ids.split(",") if s.strip()] if segment_ids else None
+    result = await answer_service.get_or_create(q, ids, max_input=limit)
+    return SearchAnswerResponse(**result)
+
+
+@router.get("/search/coverage", response_model=SearchCoverageResponse)
+async def search_coverage(
+    q: str = Query(..., min_length=1, description="Search query"),
+    segment_ids: str | None = Query(
+        default=None,
+        description="Comma-separated transcript segment IDs in fused-rank order",
+    ),
+    window_days: int = Query(default=14, ge=7, le=90, description="Coverage window"),
+    coverage_service: SearchCoverageService = Depends(get_search_coverage_service),
+) -> SearchCoverageResponse:
+    """Coverage intelligence for a topic: video count, stance distribution,
+    weekly volume, and week-over-week momentum.
+
+    Stance comes from local FinBERT classification of each video's best
+    matching snippet. Cached 6h. total_videos=0 means nothing to show.
+    """
+    ids = [s.strip() for s in segment_ids.split(",") if s.strip()] if segment_ids else None
+    result = await coverage_service.get_or_create(q, ids, window_days=window_days)
+
+    analytics.record_event(
+        "coverage_computed",
+        payload={
+            "query": q[:280],
+            "window_days": window_days,
+            "total_videos": result.get("total_videos", 0),
+            "wow_delta_pct": result.get("wow_delta_pct"),
+        },
+    )
+    return SearchCoverageResponse(**result)

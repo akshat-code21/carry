@@ -20,28 +20,85 @@ export interface StockDiscoveryResult {
   is_etf?: boolean;
 }
 
+export interface SearchSegment {
+  id: string;
+  video_id: string;
+  video_title?: string;
+  channel_title?: string;
+  youtube_video_id?: string;
+  thumbnail_url?: string;
+  start_sec: number;
+  end_sec: number;
+  text: string;
+  rank: number;
+  search_type: string;
+}
+
+export interface SegmentGroup {
+  video_id: string;
+  youtube_video_id?: string | null;
+  video_title?: string | null;
+  channel_id?: string | null;
+  channel_title?: string | null;
+  published_at?: string | null;
+  thumbnail_url?: string | null;
+  hit_count: number;
+  best_rank: number;
+  top_segments: SearchSegment[];
+  remaining_segments: SearchSegment[];
+}
+
 export interface SearchResult {
-  segments: {
-    id: string;
-    video_id: string;
-    video_title?: string;
-    channel_title?: string;
-    youtube_video_id?: string;
-    thumbnail_url?: string;
-    start_sec: number;
-    end_sec: number;
-    text: string;
-    rank: number;
-    search_type: string;
-  }[];
+  segments: SearchSegment[];
+  groups: SegmentGroup[];
   predictions: Prediction[];
   stocks: StockDiscoveryResult[];
   themes: ThemeItem[];
   videos: Record<string, VideoItem>;
   channels: Record<string, ChannelItem>;
+  total: number;
+  /** More distinct video groups available beyond the current limit */
+  has_more?: boolean;
   query_intent: string;
   /** stocks | etfs — which instrument class discovery results represent */
   instrument_type?: string;
+}
+
+export interface AnswerCitation {
+  segment_id: string;
+  video_id: string;
+  start_sec: number;
+  text: string;
+  video_title?: string | null;
+  channel_title?: string | null;
+  youtube_video_id?: string | null;
+}
+
+export interface SearchAnswerResponse {
+  query: string;
+  summary: string;
+  key_points: string[];
+  citations: AnswerCitation[];
+  /** False => hide the answer card entirely */
+  available: boolean;
+  cached?: boolean;
+}
+
+export interface WeeklyVolumePoint {
+  week_start: string; // ISO date
+  count: number;
+}
+
+export interface SearchCoverageResponse {
+  query: string;
+  total_videos: number;
+  positive: number;
+  neutral: number;
+  negative: number;
+  weekly_volume: WeeklyVolumePoint[];
+  /** Null when <2 weeks of data or previous week had zero videos */
+  wow_delta_pct?: number | null;
+  window_days: number;
 }
 
 export interface ActivityEvent {
@@ -320,8 +377,35 @@ export function isInviteRequired(err: unknown): err is ApiError {
 }
 
 export const api = {
-  async search(query: string, type: "keyword" | "semantic" | "hybrid" = "hybrid"): Promise<SearchResult> {
-    return request(`/search?q=${encodeURIComponent(query)}&type=${type}`);
+  async search(
+    query: string,
+    type: "keyword" | "semantic" | "hybrid" = "hybrid",
+    sort: "relevance" | "recent" = "relevance",
+    limit = 20,
+  ): Promise<SearchResult> {
+    return request(
+      `/search?q=${encodeURIComponent(query)}&type=${type}&sort=${sort}&limit=${limit}`,
+    );
+  },
+
+  async searchAnswer(query: string, segmentIds?: string[]): Promise<SearchAnswerResponse> {
+    const params = new URLSearchParams({ q: query });
+    if (segmentIds?.length) {
+      params.set("segment_ids", segmentIds.join(","));
+    }
+    return request(`/search/answer?${params.toString()}`);
+  },
+
+  async searchCoverage(
+    query: string,
+    segmentIds?: string[],
+    windowDays = 14,
+  ): Promise<SearchCoverageResponse> {
+    const params = new URLSearchParams({ q: query, window_days: String(windowDays) });
+    if (segmentIds?.length) {
+      params.set("segment_ids", segmentIds.join(","));
+    }
+    return request(`/search/coverage?${params.toString()}`);
   },
 
   async getVideos(): Promise<VideoItem[]> {
