@@ -301,6 +301,8 @@ class AnalyticsService:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             logger.debug("No running loop; dropping analytics write")
+            if hasattr(coro, "close"):
+                coro.close()
             return
         task = loop.create_task(coro)
         self._pending.add(task)

@@ -31,6 +31,8 @@ import secrets
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from src.config import get_settings
 
 
@@ -54,9 +56,7 @@ def parse_rows(path: str) -> list[dict]:
                 first, last = name_part, ""
             password = cells[2] if len(cells) > 2 and cells[2] else None
             if password is not None and len(password) < 8:
-                print(
-                    f"  ! skipping {cells[1]}: password must be at least 8 characters"
-                )
+                print(f"  ! skipping {cells[1]}: password must be at least 8 characters")
                 continue
             rows.append(
                 {
@@ -145,7 +145,9 @@ async def provision(rows: list[dict], out_path: str | None, login_url: str) -> i
                     first_name=row["first_name"] or None,
                     last_name=row["last_name"] or None,
                     email_address=[email],
+                    email_address_identification_status=["verified"],
                     password=password,
+                    skip_password_checks=True,
                 )
                 print(f"  ✓ created Clerk user {email} ({clerk_user.id})")
             else:
@@ -182,9 +184,7 @@ async def provision(rows: list[dict], out_path: str | None, login_url: str) -> i
 
     if out_path and results:
         with open(out_path, "w", newline="", encoding="utf-8") as fh:
-            writer = csv.DictWriter(
-                fh, fieldnames=["name", "email", "password", "login_url"]
-            )
+            writer = csv.DictWriter(fh, fieldnames=["name", "email", "password", "login_url"])
             writer.writeheader()
             writer.writerows(results)
         print(f"\nCredential sheet written to {out_path} — share each row privately.")

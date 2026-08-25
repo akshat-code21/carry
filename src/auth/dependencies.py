@@ -148,9 +148,11 @@ async def get_current_user(
 
     # ── Role sync from Clerk ────────────────────────────────────────────
     # Admins are promoted manually via Clerk public metadata
-    # ({"role": "admin"}). Source of truth, in order: a customised session
-    # token claim (if configured), else the Backend API profile — re-synced
-    # at most once a minute per user alongside the last-seen touch.
+    # ({"role": "admin"}) or the ADMIN_CLERK_USER_IDS env var. Source of truth, in order:
+    # 1. Configured ADMIN_CLERK_USER_IDS env var
+    # 2. Customised session token claim (if configured)
+    # 3. Clerk Backend API profile — re-synced at most once a minute per user
+    is_configured_admin = clerk_user_id in settings.admin_clerk_user_id_set
     claimed_role = _extract_claim(claims, "role")
     if not claimed_role and isinstance(claims.get("public_metadata"), dict):
         meta_role = claims["public_metadata"].get("role")
@@ -158,8 +160,10 @@ async def get_current_user(
             claimed_role = meta_role.strip()
 
     now = time.monotonic()
-    if not claimed_role and now - _LAST_ROLE_SYNC.get(clerk_user_id, 0.0) > (
-        _ROLE_SYNC_INTERVAL_SECONDS
+    if (
+        not claimed_role
+        and not is_configured_admin
+        and now - _LAST_ROLE_SYNC.get(clerk_user_id, 0.0) > _ROLE_SYNC_INTERVAL_SECONDS
     ):
         _LAST_ROLE_SYNC[clerk_user_id] = now
         profile = await get_clerk_user_profile(clerk_user_id)
@@ -167,7 +171,7 @@ async def get_current_user(
         if isinstance(meta_role, str) and meta_role.strip():
             claimed_role = meta_role.strip()
 
-    if not claimed_role and not _warned_no_role_claim:
+    if not claimed_role and not is_configured_admin and not _warned_no_role_claim:
         _warned_no_role_claim = True
         logger.info(
             "Session token carries no 'role' claim; syncing admin role via "
@@ -176,34 +180,37 @@ async def get_current_user(
             "avoids the per-minute API lookup). Present claims: %s",
             sorted(claims.keys()),
         )
-    if claimed_role in ("admin", "user"):
-        db_role = user.role.value if hasattr(user.role, "value") else str(user.role)
-        if claimed_role != db_role:
-            logger.info(
-                "Role for %s changed %s -> %s via Clerk metadata",
-                user.email,
-                db_role,
-                claimed_role,
-            )
-            user.role = UserRole.ADMIN if claimed_role == "admin" else UserRole.USER
+
+    if is_configured_admin or claimed_role == "admin":
+        user.role = UserRole.ADMIN
+        user.status = UserStatus.ACTIVE
+    elif claimed_role == "user":
+        user.role = UserRole.USER
 
     # Expose identity to analytics middleware + route handlers
     request.state.user_id = str(user.id)
-    request.state.user_role = user.role.value if hasattr(user.role, "value") else user.role
-    request.state.user_status = user.status.value if hasattr(user.status, "value") else user.status
+    request.state.user_role = user.role.value if hasattr(user.role, "value") else str(user.role)
+    status_str = user.status.value if hasattr(user.status, "value") else str(user.status)
+    request.state.user_status = status_str
     request.state.user_email = user.email
 
     # Attribute deep service-layer calls (LLM etc.) to this user
     current_user_id.set(str(user.id))
 
     # Authorization gates
-    status_value = user.status.value if hasattr(user.status, "value") else user.status
+    role_value = user.role.value if hasattr(user.role, "value") else str(user.role)
+    status_value = user.status.value if hasattr(user.status, "value") else str(user.status)
     if status_value == UserStatus.DEACTIVATED.value or status_value == "deactivated":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"code": "account_deactivated", "message": "This account has been deactivated."},
         )
-    if not settings.is_development and status_value == UserStatus.PENDING_INVITE.value:
+    if (
+        not settings.is_development
+        and status_value == UserStatus.PENDING_INVITE.value
+        and role_value != UserRole.ADMIN.value
+    ):
+        await db.commit()
         raise InviteRequiredError()
 
     # Throttled activity stamp (own short session; never blocks the response path)

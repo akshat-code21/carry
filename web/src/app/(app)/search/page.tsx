@@ -334,23 +334,23 @@ function SearchPageContent() {
   const [dateFilter, setDateFilter] = useState<DateRangeFilter>({ key: "all", cutoffMs: null });
   const [channelFilter, setChannelFilter] = useState<string | null>(null);
 
-  const { data: results, isLoading: loading, isFetching: resultsFetching, isPlaceholderData } = useSearch(
-    activeQuery,
-    activeType,
-    activeSort,
-    resultLimit,
-  );
+  const {
+    data: results,
+    isLoading: loading,
+    isFetching: resultsFetching,
+    isPlaceholderData,
+    refetch,
+  } = useSearch(activeQuery, activeType, activeSort, resultLimit);
 
-  // Reset view-local state whenever the server-side result set changes
-  const [prevResultKey, setPrevResultKey] = useState("");
-  const resultKey = `${activeQuery}|${activeType}|${activeSort}`;
-  if (prevResultKey !== resultKey) {
-    setPrevResultKey(resultKey);
+  const isSearching = loading || resultsFetching;
+
+  // Reset view-local state whenever the search parameters change
+  useEffect(() => {
     setResultLimit(RESULT_LIMIT_STEP);
     setDateFilter({ key: "all", cutoffMs: null });
     setChannelFilter(null);
     setExpandedGroups(new Set());
-  }
+  }, [activeQuery, activeType, activeSort]);
 
   const toggleGroup = (videoId: string) => {
     setExpandedGroups((prev) => {
@@ -371,8 +371,13 @@ function SearchPageContent() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
-    router.push(`/search?q=${encodeURIComponent(query.trim())}&type=${type}&sort=${activeSort}`);
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    const targetUrl = `/search?q=${encodeURIComponent(trimmed)}&type=${type}&sort=${activeSort}`;
+    router.push(targetUrl);
+    if (trimmed === activeQuery && type === activeType) {
+      refetch();
+    }
   };
 
   const handleTypeChange = (newType: "keyword" | "semantic" | "hybrid") => {
@@ -490,8 +495,8 @@ function SearchPageContent() {
                   onChange={(e) => setQuery(e.target.value)}
                 />
               </div>
-              <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={isSearching}>
+                {isSearching && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
                 Search
               </Button>
             </div>
@@ -539,7 +544,10 @@ function SearchPageContent() {
 
         {results && (
           <motion.div
-            className="flex flex-col gap-4 pb-10"
+            className={cn(
+              "flex flex-col gap-4 pb-10 transition-opacity duration-200",
+              (isSearching || isPlaceholderData) && "opacity-60 pointer-events-none",
+            )}
             variants={revealAnim}
             initial={reducedMotion ? false : "hidden"}
             animate="show"
