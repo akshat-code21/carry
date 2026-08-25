@@ -59,14 +59,15 @@ def _extract_claim(claims: dict, *names: str) -> str | None:
     return None
 
 
-async def get_current_user(
+async def get_current_authenticated_user(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """Authenticate via Clerk session token and JIT-provision the app user row.
 
+    Does not enforce active status — allows pending users to check their profile
+    and redeem invites.
     - 401 when no valid session token is presented.
-    - 403 ``invite_required`` when the account has not redeemed an invite yet.
     - 403 ``account_deactivated`` for disabled accounts.
 
     Also stores ``request.state.user_id`` for downstream analytics middleware.
@@ -197,14 +198,35 @@ async def get_current_user(
     # Attribute deep service-layer calls (LLM etc.) to this user
     current_user_id.set(str(user.id))
 
-    # Authorization gates
-    role_value = user.role.value if hasattr(user.role, "value") else str(user.role)
+    # Deactivated check
     status_value = user.status.value if hasattr(user.status, "value") else str(user.status)
     if status_value == UserStatus.DEACTIVATED.value or status_value == "deactivated":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"code": "account_deactivated", "message": "This account has been deactivated."},
         )
+
+    # Throttled activity stamp (own short session; never blocks the response path)
+    now = time.monotonic()
+    if now - _LAST_TOUCH.get(clerk_user_id, 0.0) > _TOUCH_INTERVAL_SECONDS:
+        _LAST_TOUCH[clerk_user_id] = now
+        await touch_last_seen(user)
+
+    return user
+
+
+async def get_current_user(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_authenticated_user),
+) -> User:
+    """Gate requiring an active account (or admin role).
+
+    - 403 ``invite_required`` when the account has not redeemed an invite yet.
+    """
+    settings = get_settings()
+    role_value = user.role.value if hasattr(user.role, "value") else str(user.role)
+    status_value = user.status.value if hasattr(user.status, "value") else str(user.status)
+
     if (
         not settings.is_development
         and status_value == UserStatus.PENDING_INVITE.value
@@ -212,12 +234,6 @@ async def get_current_user(
     ):
         await db.commit()
         raise InviteRequiredError()
-
-    # Throttled activity stamp (own short session; never blocks the response path)
-    now = time.monotonic()
-    if now - _LAST_TOUCH.get(clerk_user_id, 0.0) > _TOUCH_INTERVAL_SECONDS:
-        _LAST_TOUCH[clerk_user_id] = now
-        await touch_last_seen(user)
 
     return user
 

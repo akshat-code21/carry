@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.analytics.service import analytics
-from src.auth.dependencies import get_current_user
+from src.auth.dependencies import get_current_authenticated_user
 from src.auth.service import InviteError, redeem_invite
 from src.database import get_db
 from src.models.user import User
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
 
 @router.get("/me", response_model=UserProfileResponse)
-async def read_current_user(user: User = Depends(get_current_user)) -> User:
+async def read_current_user(user: User = Depends(get_current_authenticated_user)) -> User:
     """Return the authenticated user's profile, role and account status.
 
     The frontend polls this after sign-in; a ``pending_invite`` status routes
@@ -31,7 +31,7 @@ async def read_current_user(user: User = Depends(get_current_user)) -> User:
 async def redeem_invite_endpoint(
     body: RedeemInviteRequest,
     request: Request,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_authenticated_user),
     db: AsyncSession = Depends(get_db),
 ) -> RedeemInviteResponse:
     """Activate a pending account by redeeming an invite code."""
