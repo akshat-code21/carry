@@ -225,7 +225,9 @@ export function useMe() {
 
   // Surface semantic flags for gating UI (invite gate, admin controls).
   const error = query.error;
-  const inviteRequired = error instanceof ApiError && error.code === "invite_required";
+  const inviteRequired =
+    (error instanceof ApiError && error.code === "invite_required") ||
+    query.data?.status === "pending_invite";
   const unauthorized =
     error instanceof ApiError &&
     (error.status === 401 || error.code === "unauthorized" || error.status === 0);
