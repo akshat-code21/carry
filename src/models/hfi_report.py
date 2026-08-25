@@ -10,7 +10,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database import Base
 
 HfiReportTypeEnum = Enum(
-    "investor_report", "daily_digest", "event_report",
+    "investor_report",
+    "daily_digest",
+    "event_report",
     name="hfi_report_type",
 )
 
@@ -34,9 +36,7 @@ class HfiReport(Base):
         ),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
@@ -51,12 +51,8 @@ class HfiReport(Base):
         ARRAY(UUID(as_uuid=True)), nullable=False, default=list
     )
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    period_start: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    period_end: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    period_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     generated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -65,8 +61,6 @@ class HfiReport(Base):
     )
 
     # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="hfi_reports")
-    investor: Mapped["Investor | None"] = relationship(
-        "Investor", back_populates="reports"
-    )
-    alerts: Mapped[list["HfiAlert"]] = relationship("HfiAlert", back_populates="report")
+    user = relationship("User", back_populates="hfi_reports")
+    investor = relationship("Investor", back_populates="reports")
+    alerts = relationship("HfiAlert", back_populates="report")

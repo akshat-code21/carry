@@ -19,9 +19,7 @@ class TickerCache(Base):
         Index("idx_ticker_cache_cusip", "cusip", postgresql_where="cusip IS NOT NULL"),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     company_name: Mapped[str] = mapped_column(String, nullable=False)
     cusip: Mapped[str | None] = mapped_column(String, nullable=True)
     ticker: Mapped[str | None] = mapped_column(String, nullable=True)

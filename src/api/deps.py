@@ -84,9 +84,7 @@ def get_search_answer_service(
     db: AsyncSession = Depends(get_db),
     embedding: EmbeddingProvider = Depends(get_embedding_provider),
 ) -> SearchAnswerService:
-    return SearchAnswerService(
-        db, embedding, coverage_service=SearchCoverageService(db, embedding)
-    )
+    return SearchAnswerService(db, embedding, coverage_service=SearchCoverageService(db, embedding))
 
 
 def get_search_coverage_service(

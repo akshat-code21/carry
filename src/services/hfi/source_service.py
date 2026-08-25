@@ -1,7 +1,6 @@
 """Source service — auto-creates SEC 13F sources for investors."""
 
 import uuid
-from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

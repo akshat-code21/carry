@@ -4,9 +4,8 @@ Combined from Pet-Project's ingestion_job.py and processing_job.py.
 Uses yt-chatter's async session factory.
 """
 
-import hashlib
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import structlog
 from sqlalchemy import func, select
@@ -59,7 +58,7 @@ async def run_ingestion_for_investor(investor_id) -> dict:
             await db.execute(select(Investor).where(Investor.id == investor_uuid))
         ).scalar_one_or_none()
         if investor:
-            investor.last_synced_at = datetime.now(timezone.utc)
+            investor.last_synced_at = datetime.now(UTC)
             await db.commit()
 
     logger.info("Investor ingestion complete", **results)
@@ -158,7 +157,9 @@ async def _ingest_source(source) -> dict:
                 published_at=published_at,
                 processing_status="pending",
                 extra_metadata={
-                    "source_url": (doc.metadata.get("source", source.url) or "").replace("\x00", ""),
+                    "source_url": (doc.metadata.get("source", source.url) or "").replace(
+                        "\x00", ""
+                    ),
                     "title": (doc.metadata.get("title", "") or "").replace("\x00", ""),
                     "published_at": (doc.metadata.get("published", "") or "").replace("\x00", ""),
                     **safe_metadata,
@@ -194,6 +195,7 @@ async def _fetch_documents(source) -> list:
 
     if source_type == "sec_13f":
         from src.services.hfi.ingestion.sec_adapter import SECEdgarAdapter
+
         adapter = SECEdgarAdapter()
         return await adapter.fetch(source)
     else:
@@ -220,7 +222,7 @@ def _parse_datetime(value: str) -> datetime | None:
     try:
         if "T" in value:
             return datetime.fromisoformat(value.replace("Z", "+00:00"))
-        return datetime.strptime(value[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        return datetime.strptime(value[:10], "%Y-%m-%d").replace(tzinfo=UTC)
     except (ValueError, TypeError):
         return None
 
@@ -265,7 +267,7 @@ async def _update_last_checked(source_id: str) -> None:
             await db.execute(select(HfiSource).where(HfiSource.id == uuid.UUID(source_id)))
         ).scalar_one_or_none()
         if source:
-            source.last_checked_at = datetime.now(timezone.utc)
+            source.last_checked_at = datetime.now(UTC)
             await db.commit()
 
 
@@ -288,9 +290,7 @@ async def process_pending_content_for_investor(investor_id: str | uuid.UUID) -> 
                         ContentItem.processing_status == "pending",
                     )
                     .order_by(
-                        func.coalesce(
-                            ContentItem.extra_metadata["filing_period"].as_string(), ""
-                        ),
+                        func.coalesce(ContentItem.extra_metadata["filing_period"].as_string(), ""),
                         ContentItem.published_at.asc().nulls_last(),
                         ContentItem.created_at.asc(),
                     )
@@ -335,7 +335,9 @@ async def _run_pipeline_for_item(item) -> bool:
                 await db.execute(select(Investor).where(Investor.id == item.investor_id))
             ).scalar_one_or_none()
             user = (
-                (await db.execute(select(User).where(User.id == investor.user_id))).scalar_one_or_none()
+                (
+                    await db.execute(select(User).where(User.id == investor.user_id))
+                ).scalar_one_or_none()
                 if investor
                 else None
             )
@@ -374,6 +376,7 @@ async def _run_pipeline_for_item(item) -> bool:
         }
 
         import asyncio
+
         loop = asyncio.get_event_loop()
         final_state = await loop.run_in_executor(None, run_pipeline, initial_state)
 

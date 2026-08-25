@@ -127,12 +127,6 @@ class User(Base):
     )
 
     # HFI (Hedge Fund Intelligence) relationships
-    investors: Mapped[list["Investor"]] = relationship(
-        "Investor", back_populates="user", cascade="all, delete-orphan"
-    )
-    hfi_reports: Mapped[list["HfiReport"]] = relationship(
-        "HfiReport", back_populates="user", cascade="all, delete-orphan"
-    )
-    hfi_alerts: Mapped[list["HfiAlert"]] = relationship(
-        "HfiAlert", back_populates="user", cascade="all, delete-orphan"
-    )
+    investors = relationship("Investor", back_populates="user", cascade="all, delete-orphan")
+    hfi_reports = relationship("HfiReport", back_populates="user", cascade="all, delete-orphan")
+    hfi_alerts = relationship("HfiAlert", back_populates="user", cascade="all, delete-orphan")

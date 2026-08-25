@@ -28,6 +28,7 @@ def normalizer_node(state: PipelineState) -> PipelineState:
     if content_type in ("article", "newsletter", "website_page") and _looks_like_html(raw):
         try:
             from langchain_community.document_transformers import Html2TextTransformer
+
             doc = Document(page_content=raw, metadata={})
             transformed = Html2TextTransformer().transform_documents([doc])
             text = transformed[0].page_content if transformed else raw

@@ -2,7 +2,7 @@
 
 import json
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import structlog
 from openai import OpenAI
@@ -47,7 +47,7 @@ def generate_report_from_context(
     settings = get_settings()
     client = OpenAI(api_key=settings.openai_api_key)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     period_start = (now - timedelta(days=period_days)).strftime("%Y-%m-%d")
     period_end = now.strftime("%Y-%m-%d")
 

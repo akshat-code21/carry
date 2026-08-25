@@ -17,9 +17,7 @@ class Investor(Base):
         Index("idx_investors_active", "user_id", "is_active"),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
@@ -27,9 +25,7 @@ class Investor(Base):
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     cik_number: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    last_synced_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -38,18 +34,16 @@ class Investor(Base):
     )
 
     # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="investors")
-    sources: Mapped[list["HfiSource"]] = relationship(
-        "HfiSource", back_populates="investor", cascade="all, delete-orphan"
-    )
-    content_items: Mapped[list["ContentItem"]] = relationship(
+    user = relationship("User", back_populates="investors")
+    sources = relationship("HfiSource", back_populates="investor", cascade="all, delete-orphan")
+    content_items = relationship(
         "ContentItem", back_populates="investor", cascade="all, delete-orphan"
     )
-    extracted_mentions: Mapped[list["ExtractedMention"]] = relationship(
+    extracted_mentions = relationship(
         "ExtractedMention", back_populates="investor", cascade="all, delete-orphan"
     )
-    portfolio_changes: Mapped[list["PortfolioChange"]] = relationship(
+    portfolio_changes = relationship(
         "PortfolioChange", back_populates="investor", cascade="all, delete-orphan"
     )
-    reports: Mapped[list["HfiReport"]] = relationship("HfiReport", back_populates="investor")
-    alerts: Mapped[list["HfiAlert"]] = relationship("HfiAlert", back_populates="investor")
+    reports = relationship("HfiReport", back_populates="investor")
+    alerts = relationship("HfiAlert", back_populates="investor")

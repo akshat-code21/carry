@@ -1,7 +1,7 @@
 """Alert checker node — rule-based scoring, no LLM calls."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import structlog
 
@@ -66,7 +66,7 @@ async def _create_alerts_async(
     from src.database import async_session_factory
     from src.models.hfi_alert import HfiAlert
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cooldown_cutoff = now - timedelta(days=7)
 
     async with async_session_factory() as db:
@@ -114,15 +114,35 @@ async def _create_alerts_async(
             ]
 
             for group, label, base, sev, score_kwargs in [
-                (new_positions, "New 13F Position", "portfolio_change", "medium", {"is_new_position": True}),
-                (big_increases, "13F Position Doubled", "portfolio_change", "low", {"position_change_pct": 100}),
-                (closed_positions, "13F Position Closed", "portfolio_change", "low", {"is_closed": True}),
+                (
+                    new_positions,
+                    "New 13F Position",
+                    "portfolio_change",
+                    "medium",
+                    {"is_new_position": True},
+                ),
+                (
+                    big_increases,
+                    "13F Position Doubled",
+                    "portfolio_change",
+                    "low",
+                    {"position_change_pct": 100},
+                ),
+                (
+                    closed_positions,
+                    "13F Position Closed",
+                    "portfolio_change",
+                    "low",
+                    {"is_closed": True},
+                ),
             ]:
                 if (investor_id, base) in cooldown_set:
                     continue
                 if not group:
                     continue
-                top = " | ".join((p.get("ticker") or p.get("company_name") or "?") for p in group[:8])
+                top = " | ".join(
+                    (p.get("ticker") or p.get("company_name") or "?") for p in group[:8]
+                )
                 alerts_to_create.append(
                     HfiAlert(
                         user_id=uuid.UUID(user_id),

@@ -1,5 +1,6 @@
 ENTITY_EXTRACTION_PROMPT = """\
-You are an expert investment analyst extracting structured information from investor communications.
+You are an expert investment analyst extracting structured information
+from investor communications.
 
 Analyze the following text excerpt and extract:
 1. Companies mentioned (with their ticker symbols if identifiable)
@@ -8,7 +9,8 @@ Analyze the following text excerpt and extract:
 4. The sentiment expressed toward each company (bullish/bearish/neutral/mixed)
 5. Conviction level (high/medium/low) based on language strength
 
-High conviction indicators: "core holding", "significant position", "adding aggressively", "highest conviction", "very confident"
+High conviction indicators: "core holding", "significant position",
+"adding aggressively", "highest conviction", "very confident"
 Medium conviction: "like", "interesting", "watching closely", "reasonable position"
 Low conviction: "small position", "speculative", "hedging", "monitoring"
 

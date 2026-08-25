@@ -1,9 +1,8 @@
 """Investor CRUD + sync endpoints."""
 
 import uuid
-from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +10,6 @@ from src.auth.dependencies import get_current_user
 from src.database import get_db
 from src.models.content_item import ContentItem
 from src.models.hfi_source import HfiSource
-from src.models.investor import Investor
 from src.models.user import User
 from src.schemas.hfi import (
     ContentItemOut,
@@ -114,9 +112,7 @@ async def get_investor_sources(
     if not investor:
         raise HTTPException(status_code=404, detail="Investor not found")
     result = await db.execute(
-        select(HfiSource)
-        .where(HfiSource.investor_id == investor_id)
-        .order_by(HfiSource.created_at)
+        select(HfiSource).where(HfiSource.investor_id == investor_id).order_by(HfiSource.created_at)
     )
     return list(result.scalars().all())
 

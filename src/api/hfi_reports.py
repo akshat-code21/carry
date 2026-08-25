@@ -72,10 +72,11 @@ async def generate_investor_report(
     db: AsyncSession = Depends(get_db),
 ):
     """Generate an on-demand AI intelligence report for an investor."""
-    import json
     import asyncio
-    from src.models.investor import Investor
+    import json
+
     from src.models.content_item import ContentItem
+    from src.models.investor import Investor
     from src.models.portfolio_change import PortfolioChange
     from src.pipeline.hfi.nodes.report_generator import generate_report_from_context
 
@@ -88,13 +89,17 @@ async def generate_investor_report(
         raise HTTPException(status_code=404, detail="Investor not found")
 
     items = (
-        await db.execute(
-            select(ContentItem)
-            .where(ContentItem.investor_id == investor_id)
-            .order_by(ContentItem.created_at.desc())
-            .limit(20)
+        (
+            await db.execute(
+                select(ContentItem)
+                .where(ContentItem.investor_id == investor_id)
+                .order_by(ContentItem.created_at.desc())
+                .limit(20)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     entities = []
     theses = []
@@ -110,13 +115,17 @@ async def generate_investor_report(
             theses.extend(item.extracted_theses)
 
     changes = (
-        await db.execute(
-            select(PortfolioChange)
-            .where(PortfolioChange.investor_id == investor_id)
-            .order_by(PortfolioChange.created_at.desc())
-            .limit(50)
+        (
+            await db.execute(
+                select(PortfolioChange)
+                .where(PortfolioChange.investor_id == investor_id)
+                .order_by(PortfolioChange.created_at.desc())
+                .limit(50)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     portfolio_changes_json = "None"
     filing_period = "N/A"

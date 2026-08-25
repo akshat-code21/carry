@@ -1,6 +1,6 @@
 """Pipeline state TypedDict for HFI LangGraph pipeline."""
 
-from typing import Any, Optional
+from typing import Any
 
 from typing_extensions import TypedDict
 
@@ -8,15 +8,15 @@ from typing_extensions import TypedDict
 class ExtractedEntity(TypedDict):
     entity_type: str  # company | ticker | person | theme | macro_theme
     entity_name: str
-    ticker_symbol: Optional[str]
-    sentiment: Optional[str]  # bullish | bearish | neutral | mixed
-    conviction_level: Optional[str]  # high | medium | low | unknown
-    context_snippet: Optional[str]
+    ticker_symbol: str | None
+    sentiment: str | None  # bullish | bearish | neutral | mixed
+    conviction_level: str | None  # high | medium | low | unknown
+    context_snippet: str | None
 
 
 class InvestmentThesis(TypedDict):
     company: str
-    ticker: Optional[str]
+    ticker: str | None
     thesis_summary: str
     bullish_points: list[str]
     bearish_points: list[str]
@@ -33,9 +33,9 @@ class PipelineState(TypedDict):
     content_type: str  # filing | article | video | newsletter | website_page
     raw_text: str
     source_url: str
-    investor_name: Optional[str]
-    filing_period: Optional[str]
-    report_date: Optional[str]
+    investor_name: str | None
+    filing_period: str | None
+    report_date: str | None
 
     # 13F filing inputs (from ContentItem.extra_metadata)
     holdings: list[Any]
@@ -56,4 +56,4 @@ class PipelineState(TypedDict):
     alerts_created: list[str]
 
     # Error handling
-    error: Optional[str]
+    error: str | None

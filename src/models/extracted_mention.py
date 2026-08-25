@@ -10,7 +10,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database import Base
 
 HfiEntityTypeEnum = Enum(
-    "company", "ticker", "person", "theme", "sector", "macro_theme",
+    "company",
+    "ticker",
+    "person",
+    "theme",
+    "sector",
+    "macro_theme",
     name="hfi_entity_type",
 )
 
@@ -32,9 +37,7 @@ class ExtractedMention(Base):
         Index("idx_mentions_entity", "entity_type", "entity_name"),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     content_item_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("content_items.id", ondelete="CASCADE"), nullable=False
     )
@@ -45,18 +48,12 @@ class ExtractedMention(Base):
     entity_name: Mapped[str] = mapped_column(String, nullable=False)
     ticker_symbol: Mapped[str | None] = mapped_column(String, nullable=True)
     sentiment: Mapped[str | None] = mapped_column(HfiSentimentEnum, nullable=True)
-    conviction_level: Mapped[str | None] = mapped_column(
-        HfiConvictionLevelEnum, nullable=True
-    )
+    conviction_level: Mapped[str | None] = mapped_column(HfiConvictionLevelEnum, nullable=True)
     context_snippet: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
     # Relationships
-    content_item: Mapped["ContentItem"] = relationship(
-        "ContentItem", back_populates="extracted_mentions"
-    )
-    investor: Mapped["Investor"] = relationship(
-        "Investor", back_populates="extracted_mentions"
-    )
+    content_item = relationship("ContentItem", back_populates="extracted_mentions")
+    investor = relationship("Investor", back_populates="extracted_mentions")
