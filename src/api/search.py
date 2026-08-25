@@ -86,7 +86,8 @@ async def search(
         stocks = [StockDiscoveryResult(**s) for s in stock_results]
 
     elif intent.intent in ("ticker_narrative", "sentiment_check") and intent.ticker_hint:
-        # Direct ticker narrative / sentiment check — bypass text search, go straight to structured data
+        # Direct ticker narrative / sentiment check — bypass text search,
+        # go straight to structured data
         stock_results = await search_service.search_ticker_narrative(intent.ticker_hint)
         stocks = [StockDiscoveryResult(**s) for s in stock_results]
 

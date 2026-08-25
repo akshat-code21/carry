@@ -56,9 +56,8 @@ async def get_consensus(
             )
 
     # 2. Count total funds analyzed in this period
-    total_funds_q = (
-        select(func.count(func.distinct(PortfolioChange.investor_id)))
-        .where(PortfolioChange.filing_period == target_period)
+    total_funds_q = select(func.count(func.distinct(PortfolioChange.investor_id))).where(
+        PortfolioChange.filing_period == target_period
     )
     total_funds = (await db.execute(total_funds_q)).scalar() or 0
 
@@ -203,13 +202,17 @@ async def compare_investors(
         period = latest or "N/A"
 
     rows = (
-        await db.execute(
-            select(PortfolioChange).where(
-                PortfolioChange.investor_id.in_(ids),
-                PortfolioChange.filing_period == period,
+        (
+            await db.execute(
+                select(PortfolioChange).where(
+                    PortfolioChange.investor_id.in_(ids),
+                    PortfolioChange.filing_period == period,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     # Collect all tickers
     all_tickers: set[str] = set()
@@ -238,7 +241,9 @@ async def compare_investors(
                         company_name=row.company_name,
                         shares=row.shares_current,
                         value_usd=row.value_usd,
-                        percent_of_portfolio=float(row.percent_of_portfolio) if row.percent_of_portfolio else None,
+                        percent_of_portfolio=float(row.percent_of_portfolio)
+                        if row.percent_of_portfolio
+                        else None,
                         change_type=row.change_type,
                     )
                 )
@@ -276,19 +281,23 @@ async def list_periods(
 ):
     """List all available filing periods for this user's investors."""
     investor_ids = (
-        await db.execute(select(Investor.id).where(Investor.user_id == user.id))
-    ).scalars().all()
+        (await db.execute(select(Investor.id).where(Investor.user_id == user.id))).scalars().all()
+    )
 
     if not investor_ids:
         return []
 
     periods = (
-        await db.execute(
-            select(func.distinct(PortfolioChange.filing_period))
-            .where(PortfolioChange.investor_id.in_(investor_ids))
-            .order_by(PortfolioChange.filing_period.desc())
+        (
+            await db.execute(
+                select(func.distinct(PortfolioChange.filing_period))
+                .where(PortfolioChange.investor_id.in_(investor_ids))
+                .order_by(PortfolioChange.filing_period.desc())
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     return [p for p in periods if p]
 

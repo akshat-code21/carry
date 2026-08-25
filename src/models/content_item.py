@@ -10,12 +10,21 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database import Base
 
 HfiContentTypeEnum = Enum(
-    "filing", "article", "video", "newsletter", "website_page", "custom",
+    "filing",
+    "article",
+    "video",
+    "newsletter",
+    "website_page",
+    "custom",
     name="hfi_content_type",
 )
 
 HfiProcessingStatusEnum = Enum(
-    "pending", "processing", "completed", "failed", "skipped",
+    "pending",
+    "processing",
+    "completed",
+    "failed",
+    "skipped",
     name="hfi_processing_status",
 )
 
@@ -35,9 +44,7 @@ class ContentItem(Base):
         Index("idx_content_type", "investor_id", "content_type"),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     source_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("hfi_sources.id", ondelete="CASCADE"), nullable=False
     )
@@ -49,33 +56,25 @@ class ContentItem(Base):
     url: Mapped[str | None] = mapped_column(String, nullable=True)
     raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     cleaned_text: Mapped[str | None] = mapped_column(Text, nullable=True)
-    published_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     content_hash: Mapped[str] = mapped_column(String, nullable=False)
     processing_status: Mapped[str] = mapped_column(
         HfiProcessingStatusEnum, nullable=False, default="pending"
     )
     processing_error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    extra_metadata: Mapped[dict] = mapped_column(
-        "metadata", JSONB, nullable=False, default=dict
-    )
-    extracted_entities: Mapped[list | None] = mapped_column(
-        JSONB, nullable=True, default=None
-    )
-    extracted_theses: Mapped[list | None] = mapped_column(
-        JSONB, nullable=True, default=None
-    )
+    extra_metadata: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict)
+    extracted_entities: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=None)
+    extracted_theses: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
     # Relationships
-    source: Mapped["HfiSource"] = relationship("HfiSource", back_populates="content_items")
-    investor: Mapped["Investor"] = relationship("Investor", back_populates="content_items")
-    extracted_mentions: Mapped[list["ExtractedMention"]] = relationship(
+    source = relationship("HfiSource", back_populates="content_items")
+    investor = relationship("Investor", back_populates="content_items")
+    extracted_mentions = relationship(
         "ExtractedMention", back_populates="content_item", cascade="all, delete-orphan"
     )
-    portfolio_changes: Mapped[list["PortfolioChange"]] = relationship(
+    portfolio_changes = relationship(
         "PortfolioChange", back_populates="content_item", cascade="all, delete-orphan"
     )

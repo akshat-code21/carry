@@ -1,5 +1,6 @@
 THESIS_EXTRACTION_PROMPT = """\
-You are an expert investment analyst. Extract the core investment thesis for each company discussed in the text below.
+You are an expert investment analyst. Extract the core investment thesis
+for each company discussed in the text below.
 
 For each company with a meaningful discussion, return a thesis object. Focus on:
 - WHY the investor likes or dislikes the position

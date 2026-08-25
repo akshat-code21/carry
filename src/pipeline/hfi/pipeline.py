@@ -13,14 +13,14 @@ Conditional edges:
 import structlog
 from langgraph.graph import END, START, StateGraph
 
-from src.pipeline.hfi.state import PipelineState
-from src.pipeline.hfi.nodes.normalizer import normalizer_node
-from src.pipeline.hfi.nodes.entity_extractor import entity_extractor_node
-from src.pipeline.hfi.nodes.thesis_extractor import thesis_extractor_node
+from src.pipeline.hfi.nodes.alert_checker import alert_checker_node
 from src.pipeline.hfi.nodes.embedder import embedder_node
+from src.pipeline.hfi.nodes.entity_extractor import entity_extractor_node
+from src.pipeline.hfi.nodes.normalizer import normalizer_node
 from src.pipeline.hfi.nodes.portfolio_node import portfolio_node
 from src.pipeline.hfi.nodes.report_generator import report_generator_node
-from src.pipeline.hfi.nodes.alert_checker import alert_checker_node
+from src.pipeline.hfi.nodes.thesis_extractor import thesis_extractor_node
+from src.pipeline.hfi.state import PipelineState
 
 logger = structlog.get_logger()
 

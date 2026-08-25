@@ -1,7 +1,7 @@
 """Investor CRUD service — adapted from Pet-Project for yt-chatter."""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import structlog
 from sqlalchemy import func, select
@@ -43,7 +43,12 @@ async def get_investor(
 
 
 async def create_investor(
-    db: AsyncSession, user_id: uuid.UUID, *, name: str, description: str | None = None, cik_number: str | None = None
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    name: str,
+    description: str | None = None,
+    cik_number: str | None = None,
 ) -> Investor:
     investor = Investor(
         user_id=user_id,
@@ -56,6 +61,7 @@ async def create_investor(
 
     if cik_number:
         from src.services.hfi.source_service import ensure_sec_13f_source
+
         await ensure_sec_13f_source(db, investor.id, investor.name, _pad_cik(cik_number))
 
     await db.refresh(investor)
@@ -72,12 +78,13 @@ async def update_investor(
     for field, value in fields.items():
         if value is not None:
             setattr(investor, field, value)
-    investor.updated_at = datetime.now(timezone.utc)
+    investor.updated_at = datetime.now(UTC)
     await db.flush()
     await db.refresh(investor)
 
     if investor.cik_number:
         from src.services.hfi.source_service import ensure_sec_13f_source
+
         await ensure_sec_13f_source(db, investor.id, investor.name, investor.cik_number)
 
     return investor

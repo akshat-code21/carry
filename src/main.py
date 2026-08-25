@@ -13,6 +13,12 @@ from src.analytics.middleware import AnalyticsMiddleware
 from src.api.activity import router as activity_router
 from src.api.admin import router as admin_router
 from src.api.channels import router as channels_router
+from src.api.hfi_alerts import router as hfi_alerts_router
+from src.api.hfi_analytics import router as hfi_analytics_router
+from src.api.hfi_reports import router as hfi_reports_router
+
+# HFI (Hedge Fund Intelligence) routers
+from src.api.investors import router as hfi_investors_router
 from src.api.market_chatter import router as market_chatter_router
 from src.api.pipeline import router as pipeline_router
 from src.api.predictions import router as predictions_router
@@ -22,12 +28,6 @@ from src.api.tickers import router as tickers_router
 from src.api.usage import router as usage_router
 from src.api.videos import router as videos_router
 from src.api.websub import router as websub_router
-
-# HFI (Hedge Fund Intelligence) routers
-from src.api.investors import router as hfi_investors_router
-from src.api.hfi_analytics import router as hfi_analytics_router
-from src.api.hfi_reports import router as hfi_reports_router
-from src.api.hfi_alerts import router as hfi_alerts_router
 from src.auth.dependencies import get_current_user
 from src.auth.router import router as auth_router
 from src.config import get_settings

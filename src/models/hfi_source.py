@@ -10,7 +10,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database import Base
 
 HfiSourceTypeEnum = Enum(
-    "sec_13f", "website", "youtube", "rss", "twitter", "custom",
+    "sec_13f",
+    "website",
+    "youtube",
+    "rss",
+    "twitter",
+    "custom",
     name="hfi_source_type",
 )
 
@@ -28,9 +33,7 @@ class HfiSource(Base):
         ),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     investor_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("investors.id", ondelete="CASCADE"), nullable=False
     )
@@ -39,9 +42,7 @@ class HfiSource(Base):
     label: Mapped[str | None] = mapped_column(String, nullable=True)
     config: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    last_checked_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_successful_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -55,7 +56,7 @@ class HfiSource(Base):
     )
 
     # Relationships
-    investor: Mapped["Investor"] = relationship("Investor", back_populates="sources")
-    content_items: Mapped[list["ContentItem"]] = relationship(
+    investor = relationship("Investor", back_populates="sources")
+    content_items = relationship(
         "ContentItem", back_populates="source", cascade="all, delete-orphan"
     )

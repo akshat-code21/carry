@@ -21,8 +21,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database import Base
 
 HfiAlertTypeEnum = Enum(
-    "new_filing", "new_company_mention", "new_thesis",
-    "high_conviction", "portfolio_change", "daily_digest_ready",
+    "new_filing",
+    "new_company_mention",
+    "new_thesis",
+    "high_conviction",
+    "portfolio_change",
+    "daily_digest_ready",
     name="hfi_alert_type",
 )
 
@@ -48,9 +52,7 @@ class HfiAlert(Base):
         ),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
@@ -66,22 +68,16 @@ class HfiAlert(Base):
     alert_type: Mapped[str] = mapped_column(HfiAlertTypeEnum, nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
-    severity: Mapped[str] = mapped_column(
-        HfiAlertSeverityEnum, nullable=False, default="medium"
-    )
+    severity: Mapped[str] = mapped_column(HfiAlertSeverityEnum, nullable=False, default="medium")
     score: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     email_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    extra_metadata: Mapped[dict] = mapped_column(
-        "metadata", JSONB, nullable=False, default=dict
-    )
+    extra_metadata: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
     # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="hfi_alerts")
-    investor: Mapped["Investor | None"] = relationship(
-        "Investor", back_populates="alerts"
-    )
-    report: Mapped["HfiReport | None"] = relationship("HfiReport", back_populates="alerts")
+    user = relationship("User", back_populates="hfi_alerts")
+    investor = relationship("Investor", back_populates="alerts")
+    report = relationship("HfiReport", back_populates="alerts")

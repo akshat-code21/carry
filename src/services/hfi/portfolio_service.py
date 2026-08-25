@@ -16,7 +16,7 @@ For each 13F filing it:
 import json
 import re
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 
 import structlog
 from openai import OpenAI
@@ -108,7 +108,6 @@ def process_filing(
 
             prev_rows = _get_previous_period(session, investor_uuid, filing_period)
             prev_by_key = {r["key"]: r for r in prev_rows}
-            cur_keys = {h["key"] for h in enriched}
 
             # Remove any existing rows for this period (amendment supersedes).
             session.execute(

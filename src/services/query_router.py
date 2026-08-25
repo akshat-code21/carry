@@ -375,7 +375,8 @@ class QueryRouter:
                     instrument_type=instrument_type,
                 )
 
-        # Ticker narrative heuristic — e.g. "Outlook on Nvidia?", "What are people saying about Tesla?"
+        # Ticker narrative heuristic — e.g. "Outlook on Nvidia?",
+        # "What are people saying about Tesla?"
         narrative_signals = [
             "narrative",
             "outlook",

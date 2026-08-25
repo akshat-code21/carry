@@ -10,7 +10,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database import Base
 
 PortfolioChangeTypeEnum = Enum(
-    "new_position", "increased", "decreased", "closed", "unchanged",
+    "new_position",
+    "increased",
+    "decreased",
+    "closed",
+    "unchanged",
     name="portfolio_change_type",
 )
 
@@ -24,9 +28,7 @@ class PortfolioChange(Base):
         Index("idx_portfolio_change", "change_type"),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     investor_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("investors.id", ondelete="CASCADE"), nullable=False
     )
@@ -48,7 +50,5 @@ class PortfolioChange(Base):
     )
 
     # Relationships
-    investor: Mapped["Investor"] = relationship("Investor", back_populates="portfolio_changes")
-    content_item: Mapped["ContentItem"] = relationship(
-        "ContentItem", back_populates="portfolio_changes"
-    )
+    investor = relationship("Investor", back_populates="portfolio_changes")
+    content_item = relationship("ContentItem", back_populates="portfolio_changes")
