@@ -42,12 +42,12 @@ export function Navbar() {
 
         <div className="hidden items-center gap-3 md:flex">
           <Link
-            href="/search"
+            href="/sign-in"
             className="text-small font-medium text-ink-secondary transition-colors hover:text-ink"
           >
             Sign in
           </Link>
-          <Link href="/search">
+          <Link href="/sign-up">
             <Button className="btn-glow gap-1.5">
               Get Started
               <ArrowRight className="size-4" />

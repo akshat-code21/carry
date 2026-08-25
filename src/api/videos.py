@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.analytics.service import analytics
 from src.api.deps import get_aggregation_service
 from src.database import get_db
 from src.models.prediction import Prediction
@@ -69,6 +70,16 @@ async def get_video(
     response = VideoDetailResponse.model_validate(video)
     response.predictions = [PredictionResponse.model_validate(p) for p in predictions]
     response.theme_mentions = [ThemeMentionResponse.model_validate(m) for m in mentions]
+
+    analytics.record_event(
+        "video_viewed",
+        payload={
+            "video_id": str(video_id),
+            "youtube_video_id": video.youtube_video_id,
+            "prediction_count": len(predictions),
+        },
+        counters={"video_views": 1},
+    )
     return response
 
 

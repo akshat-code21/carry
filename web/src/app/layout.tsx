@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Space_Grotesk, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -59,12 +60,22 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="h-full bg-canvas">
-        <ThemeProvider>
-          <QueryProvider>
-            {children}
-            <ReactQueryDevtools initialIsOpen={false} />
-          </QueryProvider>
-        </ThemeProvider>
+        {/* ClerkProvider lives inside <body> per Next.js 16 cache-components guidance */}
+        <ClerkProvider
+          appearance={{
+            variables: {
+              colorPrimary: "#16a34a",
+              borderRadius: "0.5rem",
+            },
+          }}
+        >
+          <ThemeProvider>
+            <QueryProvider>
+              {children}
+              <ReactQueryDevtools initialIsOpen={false} />
+            </QueryProvider>
+          </ThemeProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

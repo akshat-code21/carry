@@ -1,4 +1,8 @@
-"""YouTube WebSub (PubSubHubbub) callback endpoints."""
+"""YouTube WebSub (PubSubHubbub) callback endpoints.
+
+``/callback`` must stay publicly reachable — the Google hub cannot
+authenticate; it is secured via HMAC signature verification instead.
+"""
 
 from __future__ import annotations
 
@@ -8,8 +12,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.analytics.service import analytics
+from src.auth.dependencies import require_admin
 from src.database import get_db
 from src.models.channel import Channel
+from src.models.user import User
 from src.schemas import SimulateWebSubRequest, SimulateWebSubResponse
 from src.services.websub_service import WebSubService
 from src.tasks.pipeline_tasks import handle_websub_notification_task
@@ -70,6 +77,7 @@ async def websub_notify(request: Request) -> Response:
 async def simulate_websub_push(
     request: SimulateWebSubRequest,
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin),
 ) -> SimulateWebSubResponse:
     """Dry-run a new-upload WebSub notification without a real YouTube publish.
 
@@ -127,6 +135,18 @@ async def simulate_websub_push(
         atom,
         enqueue_ingest,
         "simulate",
+    )
+
+    analytics.record_event(
+        "pipeline_triggered",
+        payload={
+            "kind": "websub_simulate",
+            "youtube_channel_id": youtube_channel_id,
+            "youtube_video_id": request.youtube_video_id.strip(),
+            "mode": mode,
+            "task_id": task.id,
+        },
+        counters={"expensive_ops": 1},
     )
 
     logger.info(

@@ -13,7 +13,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
 import { SentimentBadge } from "@/components/SentimentBadge";
 import { DetailSkeleton } from "@/components/skeletons/LayoutSkeletons";
-import { useChannel, useIngestVideo } from "@/lib/hooks";
+import { useChannel, useIngestVideo, useMe } from "@/lib/hooks";
 
 export default function ChannelPage() {
   const params = useParams();
@@ -21,6 +21,7 @@ export default function ChannelPage() {
 
   const { data, isLoading } = useChannel(id);
   const ingestMutation = useIngestVideo();
+  const { isAdmin } = useMe();
 
   // Ingest-video form state
   const [showIngestForm, setShowIngestForm] = useState(false);
@@ -76,13 +77,14 @@ export default function ChannelPage() {
           title={data.channel.title}
           description={data.channel.description}
         >
-          <Button
-            onClick={() => {
-              setShowIngestForm((prev) => !prev);
-              setIngestFeedback(null);
-            }}
-            variant={showIngestForm ? "outline" : "default"}
-          >
+          {isAdmin && (
+            <Button
+              onClick={() => {
+                setShowIngestForm((prev) => !prev);
+                setIngestFeedback(null);
+              }}
+              variant={showIngestForm ? "outline" : "default"}
+            >
             {showIngestForm ? (
               <>
                 <X className="mr-2 h-4 w-4" /> Cancel
@@ -93,11 +95,12 @@ export default function ChannelPage() {
               </>
             )}
           </Button>
+        )}
         </PageHeader>
       </div>
 
       {/* Inline ingest-video form */}
-      {showIngestForm && (
+      {showIngestForm && isAdmin && (
         <Card>
           <CardHeader>
             <CardTitle>Ingest a Single Video</CardTitle>

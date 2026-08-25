@@ -85,8 +85,17 @@ async def refresh_ticker(
     service: CollectionService = Depends(_get_service),
 ) -> MCTickerResponse:
     """Force-refresh social-sentiment data for a ticker symbol."""
+    from src.analytics.service import analytics
+
     try:
-        return await service.ticker_response(symbol, source, period_days, force=True)
+        response = await service.ticker_response(symbol, source, period_days, force=True)
+        source_name = source.value if hasattr(source, "value") else str(source)
+        analytics.record_event(
+            "chatter_refresh_requested",
+            payload={"symbol": symbol.upper(), "source": source_name},
+            counters={"expensive_ops": 1},
+        )
+        return response
     except UnsupportedTickerError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

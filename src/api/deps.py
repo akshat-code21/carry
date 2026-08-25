@@ -12,6 +12,8 @@ from src.services.interfaces import EmbeddingProvider, LLMProvider, MarketDataSo
 from src.services.llm_service import AnthropicLLMService, OpenAILLMService
 from src.services.market_data_service import YFinanceMarketDataService
 from src.services.query_router import QueryRouter
+from src.services.search_answer_service import SearchAnswerService
+from src.services.search_coverage_service import SearchCoverageService
 from src.services.search_service import SearchService
 from src.services.theme_service import ThemeService
 
@@ -76,6 +78,22 @@ def get_search_service(
     embedding: EmbeddingProvider = Depends(get_embedding_provider),
 ) -> SearchService:
     return SearchService(db, embedding)
+
+
+def get_search_answer_service(
+    db: AsyncSession = Depends(get_db),
+    embedding: EmbeddingProvider = Depends(get_embedding_provider),
+) -> SearchAnswerService:
+    return SearchAnswerService(
+        db, embedding, coverage_service=SearchCoverageService(db, embedding)
+    )
+
+
+def get_search_coverage_service(
+    db: AsyncSession = Depends(get_db),
+    embedding: EmbeddingProvider = Depends(get_embedding_provider),
+) -> SearchCoverageService:
+    return SearchCoverageService(db, embedding)
 
 
 def get_aggregation_service(

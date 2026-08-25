@@ -1,8 +1,14 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { StockDiscoveryResult } from "@/lib/api";
+import {
+  StockDiscoveryResult,
+  SearchAnswerResponse,
+  AnswerCitation,
+  SearchCoverageResponse,
+  SearchSegment,
+} from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,9 +27,12 @@ import {
   MessageSquare,
   PanelRightClose,
   PanelRightOpen,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
-import { useSearch } from "@/lib/hooks";
+import { useSearch, useSearchAnswer, useSearchCoverage } from "@/lib/hooks";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +57,265 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" as const } },
 };
 
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+};
+
+const formatDate = (value?: string | null) => {
+  if (!value) return null;
+  return new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+// Sanitize leaked UUID citations in LLM answers (defense-in-depth for cached rows)
+const UUID_BRACKET_RE = /\[\s*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*\]/gi;
+const RAW_UUID_RE = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi;
+
+function sanitizeCitations(text: string, citations: AnswerCitation[]): string {
+  if (!text) return text;
+  const idToIndex = new Map<string, string>();
+  citations.forEach((c, i) => idToIndex.set(c.segment_id.toLowerCase(), String(i + 1)));
+  let out = text.replace(UUID_BRACKET_RE, (_m, uid: string) => {
+    const idx = idToIndex.get(uid.toLowerCase());
+    return idx ? `[${idx}]` : "";
+  });
+  out = out.replace(RAW_UUID_RE, "");
+  out = out.replace(/\(\s*,\s*/g, "(");
+  out = out.replace(/,\s*\)/g, ")");
+  out = out.replace(/\(\s*\)/g, "");
+  out = out.replace(/\[\s*\]/g, "");
+  out = out.replace(/,\s*,/g, ",");
+  out = out.replace(/\s{2,}/g, " ");
+  out = out.replace(/\s+([.,;:)])/g, "$1");
+  return out.trim();
+}
+
+function SegmentQuote({ seg }: { seg: SearchSegment }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="rounded-r-md border-l-2 border-signal bg-panel-raised px-4 py-3">
+        <p className="text-body italic leading-relaxed text-ink">&quot;{seg.text}&quot;</p>
+      </div>
+      <Link href={`/videos/${seg.video_id}?t=${Math.floor(seg.start_sec)}`} className="w-fit">
+        <Button variant="outline" size="sm" className="gap-1.5">
+          <Play className="h-3.5 w-3.5" />
+          Play @ {formatTime(seg.start_sec)}
+        </Button>
+      </Link>
+    </div>
+  );
+}
+
+function SearchAnswerCard({
+  answer,
+  skeleton,
+  onCitationClick,
+}: {
+  answer?: SearchAnswerResponse;
+  skeleton: boolean;
+  onCitationClick: (citation: AnswerCitation) => void;
+}) {
+  return (
+    <div className="rounded-lg border border-signal/30 bg-panel p-4">
+      <div className="mb-2.5 flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-signal" />
+        <span className="label-overline text-signal">Summary</span>
+        {/* {answer?.cached && (
+          <Badge
+            variant="outline"
+            className="border-line px-1.5 py-0 font-mono text-micro text-ink-faint"
+          >
+            cached
+          </Badge>
+        )} */}
+      </div>
+
+      {skeleton ? (
+        <div className="animate-pulse space-y-2.5">
+          <div className="h-3.5 w-full rounded bg-panel-raised" />
+          <div className="h-3.5 w-11/12 rounded bg-panel-raised" />
+          <div className="h-3.5 w-8/12 rounded bg-panel-raised" />
+        </div>
+      ) : answer ? (
+        <>
+          <p className="text-body leading-relaxed text-ink">
+            {sanitizeCitations(answer.summary, answer.citations)}
+          </p>
+
+          {answer.key_points.length > 0 && (
+            <ul className="mt-3 flex flex-col gap-1.5">
+              {answer.key_points.map((point, i) => {
+                const clean = sanitizeCitations(point, answer.citations);
+                if (!clean) return null;
+                return (
+                  <li key={i} className="flex items-start gap-2 text-small text-ink-secondary">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-signal" />
+                    {clean}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {answer.citations.length > 0 && (
+            <div className="mt-3 flex items-center gap-1.5">
+              {answer.citations.map((c, i) => (
+                <button
+                  key={c.segment_id}
+                  type="button"
+                  onClick={() => onCitationClick(c)}
+                  title={`Play clip: ${c.video_title ?? ""}`}
+                  className="flex h-6 min-w-6 items-center justify-center rounded border border-signal/30 bg-signal/10 px-1.5 font-mono text-micro font-semibold text-signal transition-colors hover:bg-signal/20"
+                >
+                  [{i + 1}]
+                </button>
+              ))}
+              <span className="ml-1 text-micro text-ink-faint">play cited clip</span>
+            </div>
+          )}
+
+          {/* <p className="mt-3 text-micro text-ink-faint">
+            AI-generated from transcript clips — verify against the sources.
+          </p> */}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function CoverageSnapshotCard({ coverage }: { coverage: SearchCoverageResponse }) {
+  const total = coverage.total_videos;
+  if (total === 0) return null;
+
+  const widthPct = (n: number) => `${(n / total) * 100}%`;
+  const maxCount = Math.max(1, ...coverage.weekly_volume.map((w) => w.count));
+  const wow = coverage.wow_delta_pct;
+
+  const stances = [
+    { label: "Positive", count: coverage.positive, color: "bg-bullish" },
+    { label: "Neutral", count: coverage.neutral, color: "bg-ink-faint/60" },
+    { label: "Negative", count: coverage.negative, color: "bg-bearish" },
+  ];
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-line bg-panel p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="h-4 w-4 text-signal" />
+          <span className="label-overline text-signal">Coverage</span>
+        </div>
+        <Badge
+          variant="outline"
+          className="border-line px-1.5 py-0 font-mono text-micro text-ink-faint"
+        >
+          {coverage.window_days}d
+        </Badge>
+      </div>
+
+      <div className="flex items-baseline gap-2">
+        <span className="font-display text-heading font-semibold text-ink">{total}</span>
+        <span className="text-small text-ink-secondary">
+          videos · last {coverage.window_days} days
+        </span>
+      </div>
+
+      {/* Stacked stance bar */}
+      <div className="flex h-2 w-full overflow-hidden rounded-full bg-panel-raised">
+        {stances.map(
+          (s) =>
+            s.count > 0 && (
+              <div
+                key={s.label}
+                className={s.color}
+                style={{ width: widthPct(s.count) }}
+                title={`${s.label}: ${s.count}`}
+              />
+            ),
+        )}
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        {stances.map((s) => (
+          <div key={s.label} className="flex items-center gap-1.5 text-small text-ink-secondary">
+            <span className={cn("h-2 w-2 rounded-full", s.color)} />
+            {s.label}
+            <span className="font-mono font-semibold text-ink">{s.count}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Weekly volume + WoW momentum */}
+      {coverage.weekly_volume.length > 1 && (
+        <div className="mt-1 flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <span className="label-overline">Weekly volume</span>
+            {wow !== null && wow !== undefined && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "gap-0.5 border px-1.5 py-0 font-mono text-micro",
+                  wow >= 0
+                    ? "border-bullish/30 bg-bullish/10 text-bullish"
+                    : "border-bearish/30 bg-bearish/10 text-bearish",
+                )}
+              >
+                {wow >= 0 ? "▲" : "▼"} {Math.abs(wow)}% WoW
+              </Badge>
+            )}
+          </div>
+          <div className="flex h-12 items-stretch gap-2">
+            {coverage.weekly_volume.map((w) => (
+              <div key={w.week_start} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+                <div className="flex w-full flex-1 items-end">
+                  <div
+                    className={cn("w-full rounded-t-sm", w.count > 0 ? "bg-signal/60" : "bg-line")}
+                    style={{ height: `${Math.max((w.count / maxCount) * 100, 6)}%` }}
+                    title={`${w.count} videos`}
+                  />
+                </div>
+                <span className="font-mono text-micro text-ink-faint">
+                  {new Date(`${w.week_start}T00:00:00`).toLocaleDateString(undefined, {
+                    month: "numeric",
+                    day: "numeric",
+                  })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+type DateRange = "all" | "7d" | "30d" | "90d";
+type SortMode = "relevance" | "recent";
+
+const RESULT_LIMIT_STEP = 20;
+
+const DATE_RANGE_DAYS: Record<Exclude<DateRange, "all">, number> = {
+  "7d": 7,
+  "30d": 30,
+  "90d": 90,
+};
+
+interface DateRangeFilter {
+  key: DateRange;
+  /** Epoch ms below which groups are excluded; null = no bound */
+  cutoffMs: number | null;
+}
+
+// Module scope so the impure clock read stays out of the component render path
+function resolveCutoff(key: Exclude<DateRange, "all">): number {
+  return Date.now() - DATE_RANGE_DAYS[key] * 86_400_000;
+};
+
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -55,13 +323,46 @@ function SearchPageContent() {
 
   const activeQuery = searchParams.get("q") || "";
   const activeType = (searchParams.get("type") as "keyword" | "semantic" | "hybrid") || "hybrid";
+  const activeSort: SortMode = searchParams.get("sort") === "recent" ? "recent" : "relevance";
 
   const [query, setQuery] = useState(activeQuery);
   const [type, setType] = useState<"keyword" | "semantic" | "hybrid">(activeType);
   const [playbackModal, setPlaybackModal] = useState<PlaybackModalState | null>(null);
   const [railOpen, setRailOpen] = useState(true);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [resultLimit, setResultLimit] = useState(RESULT_LIMIT_STEP);
+  const [dateFilter, setDateFilter] = useState<DateRangeFilter>({ key: "all", cutoffMs: null });
+  const [channelFilter, setChannelFilter] = useState<string | null>(null);
 
-  const { data: results, isLoading: loading } = useSearch(activeQuery, activeType);
+  const { data: results, isLoading: loading, isFetching: resultsFetching, isPlaceholderData } = useSearch(
+    activeQuery,
+    activeType,
+    activeSort,
+    resultLimit,
+  );
+
+  // Reset view-local state whenever the server-side result set changes
+  const [prevResultKey, setPrevResultKey] = useState("");
+  const resultKey = `${activeQuery}|${activeType}|${activeSort}`;
+  if (prevResultKey !== resultKey) {
+    setPrevResultKey(resultKey);
+    setResultLimit(RESULT_LIMIT_STEP);
+    setDateFilter({ key: "all", cutoffMs: null });
+    setChannelFilter(null);
+    setExpandedGroups(new Set());
+  }
+
+  const toggleGroup = (videoId: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(videoId)) {
+        next.delete(videoId);
+      } else {
+        next.add(videoId);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     setQuery(activeQuery);
@@ -71,24 +372,100 @@ function SearchPageContent() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
-    router.push(`/search?q=${encodeURIComponent(query.trim())}&type=${type}`);
+    router.push(`/search?q=${encodeURIComponent(query.trim())}&type=${type}&sort=${activeSort}`);
   };
 
   const handleTypeChange = (newType: "keyword" | "semantic" | "hybrid") => {
     setType(newType);
     if (query.trim()) {
-      router.push(`/search?q=${encodeURIComponent(query.trim())}&type=${newType}`);
+      router.push(
+        `/search?q=${encodeURIComponent(query.trim())}&type=${newType}&sort=${activeSort}`,
+      );
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  const handleSortChange = (newSort: SortMode) => {
+    if (newSort === activeSort) return;
+    router.push(`/search?q=${encodeURIComponent(activeQuery)}&type=${activeType}&sort=${newSort}`);
   };
 
   const revealAnim = reducedMotion ? {} : containerVariants;
   const itemAnim = reducedMotion ? {} : itemVariants;
+
+  const groups = results?.groups && results.groups.length > 0 ? results.groups : null;
+
+  // Channel facets derived from the returned groups (no extra endpoint needed)
+  const channelFacets = useMemo(() => {
+    const map = new Map<string, { key: string; title: string; count: number }>();
+    for (const g of results?.groups ?? []) {
+      const key = g.channel_id || g.channel_title || "";
+      if (!key) continue;
+      const entry = map.get(key);
+      if (entry) {
+        entry.count += g.hit_count;
+      } else {
+        map.set(key, { key, title: g.channel_title || key, count: g.hit_count });
+      }
+    }
+    return [...map.values()].sort((a, b) => b.count - a.count);
+  }, [results]);
+
+  const visibleGroups = useMemo(() => {
+    let gs = results?.groups ?? [];
+    if (channelFilter) {
+      gs = gs.filter((g) => (g.channel_id || g.channel_title || "") === channelFilter);
+    }
+    if (dateFilter.cutoffMs !== null) {
+      gs = gs.filter(
+        (g) => g.published_at && new Date(g.published_at).getTime() >= dateFilter.cutoffMs!,
+      );
+    }
+    return gs;
+  }, [results, channelFilter, dateFilter]);
+
+  const activeDateRange = dateFilter.key;
+  const hasActiveFilters = channelFilter !== null || activeDateRange !== "all";
+
+  // Resolve the cutoff at click time so rendering stays pure
+  const handleDateRangeChange = (r: DateRange) => {
+    setDateFilter({ key: r, cutoffMs: r === "all" ? null : resolveCutoff(r) });
+  };
+
+  const clearFilters = () => {
+    setDateFilter({ key: "all", cutoffMs: null });
+    setChannelFilter(null);
+  };
+
+  // ── AI answer — synthesized from the top fused-rank segments ──────────
+  // Avoid the keepPreviousData race: while a new query is fetching, results
+  // still holds the previous query's groups. Sending those stale ids with the
+  // new query poisons the answer cache (MSFT query + NVDA ids → "don't mention MSFT").
+  const answerSegmentIds = useMemo(() => {
+    if (isPlaceholderData || resultsFetching) return [];
+    return (results?.groups ?? [])
+      .flatMap((g) => [...g.top_segments, ...g.remaining_segments])
+      .map((s) => s.id)
+      .slice(0, 12);
+  }, [results, isPlaceholderData, resultsFetching]);
+  const { data: answer, isFetching: answerFetching } = useSearchAnswer(
+    activeQuery,
+    answerSegmentIds,
+  );
+  const { data: coverage } = useSearchCoverage(activeQuery, answerSegmentIds);
+  const showAnswerSkeleton =
+    !!activeQuery && !answer && answerSegmentIds.length >= 3 && answerFetching;
+  const showCoverage = !!coverage && coverage.total_videos > 0;
+
+  const handleCitationClick = (citation: AnswerCitation) => {
+    setPlaybackModal({
+      videoId: citation.video_id,
+      youtubeVideoId: citation.youtube_video_id ?? undefined,
+      title: citation.video_title ?? "Video",
+      channelTitle: citation.channel_title ?? undefined,
+      startSec: citation.start_sec,
+      text: citation.text,
+    });
+  };
 
   return (
     <div className="flex h-full flex-col gap-6 lg:flex-row">
@@ -139,6 +516,27 @@ function SearchPageContent() {
           </form>
         </div>
 
+        {/* AI Answer + Coverage Snapshot — lazy-loaded after segments render */}
+        {(showAnswerSkeleton || answer?.available || showCoverage) && (
+          <div
+            className={cn(
+              "grid gap-4",
+              showCoverage && (showAnswerSkeleton || answer?.available)
+                ? "lg:grid-cols-2"
+                : "grid-cols-1",
+            )}
+          >
+            {(showAnswerSkeleton || answer?.available) && (
+              <SearchAnswerCard
+                answer={answer}
+                skeleton={showAnswerSkeleton}
+                onCitationClick={handleCitationClick}
+              />
+            )}
+            {showCoverage && <CoverageSnapshotCard coverage={coverage} />}
+          </div>
+        )}
+
         {results && (
           <motion.div
             className="flex flex-col gap-4 pb-10"
@@ -174,9 +572,9 @@ function SearchPageContent() {
                     const SentimentIcon = stock.avg_sentiment > 0.2 ? TrendingUp : stock.avg_sentiment < -0.2 ? TrendingDown : BarChart3;
 
                     return (
-                      <motion.div key={stock.ticker} variants={itemAnim}>
-                        <Card className="h-full transition-colors hover:border-signal/40">
-                          <CardContent className="flex flex-col gap-3 p-4">
+                      <motion.div key={stock.ticker} variants={itemAnim} className="min-w-0">
+                        <Card className="h-full min-w-0 overflow-hidden transition-colors hover:border-signal/40">
+                          <CardContent className="flex min-w-0 flex-col gap-3 overflow-hidden p-4">
                             {/* Ticker + Score Row */}
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2.5">
@@ -218,14 +616,19 @@ function SearchPageContent() {
 
                             {/* Themes */}
                             {stock.themes.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5">
+                              <div className="flex flex-wrap gap-1.5 min-w-0 overflow-hidden">
                                 {stock.themes.slice(0, 3).map((theme) => (
-                                  <Badge key={theme} variant="outline" className="border-signal/20 bg-signal/5 px-2 py-0 text-micro text-signal">
-                                    {theme}
+                                  <Badge
+                                    key={theme}
+                                    variant="outline"
+                                    title={theme}
+                                    className="h-auto max-w-full min-w-0 shrink border-signal/20 bg-signal/5 px-2 py-1 text-micro leading-tight text-signal !whitespace-normal break-words"
+                                  >
+                                    <span className="block max-w-full break-words">{theme}</span>
                                   </Badge>
                                 ))}
                                 {stock.themes.length > 3 && (
-                                  <Badge variant="outline" className="border-line px-2 py-0 text-micro text-ink-faint">
+                                  <Badge variant="outline" className="shrink-0 border-line px-2 py-0 text-micro text-ink-faint">
                                     +{stock.themes.length - 3} more
                                   </Badge>
                                 )}
@@ -249,10 +652,93 @@ function SearchPageContent() {
               </div>
             )}
 
+            {/* Filter bar — only meaningful for grouped results */}
+            {groups && groups.length > 0 && (
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-line bg-panel p-3">
+                {/* Sort */}
+                <div className="flex items-center gap-2">
+                  <span className="label-overline">Sort</span>
+                  <div className="flex gap-0.5 rounded-md border border-line bg-panel p-0.5">
+                    {(["relevance", "recent"] as const).map((s) => (
+                      <Button
+                        key={s}
+                        type="button"
+                        variant={activeSort === s ? "default" : "ghost"}
+                        size="sm"
+                        disabled={loading}
+                        className={cn(
+                          "h-7 capitalize",
+                          activeSort === s ? "text-black" : "text-white",
+                        )}
+                        onClick={() => handleSortChange(s)}
+                      >
+                        {s === "recent" ? "Newest" : "Relevance"}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Date range */}
+                <div className="flex items-center gap-2">
+                  <span className="label-overline">Period</span>
+                  <div className="flex gap-0.5 rounded-md border border-line bg-panel p-0.5">
+                    {(["all", "7d", "30d", "90d"] as const).map((r) => (
+                      <Button
+                        key={r}
+                        type="button"
+                        variant={activeDateRange === r ? "default" : "ghost"}
+                        size="sm"
+                        className={cn("h-7", activeDateRange === r ? "text-black" : "text-white")}
+                        onClick={() => handleDateRangeChange(r)}
+                      >
+                        {r === "all" ? "All time" : r}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Channel facet */}
+                {channelFacets.length > 1 && (
+                  <div className="flex items-center gap-2">
+                    <span className="label-overline">Channel</span>
+                    <select
+                      value={channelFilter ?? ""}
+                      onChange={(e) => setChannelFilter(e.target.value || null)}
+                      className="h-8 rounded-md border border-line bg-panel px-2 text-small text-ink outline-none transition-colors focus:border-signal"
+                    >
+                      <option value="">All channels</option>
+                      {channelFacets.map((c) => (
+                        <option key={c.key} value={c.key}>
+                          {c.title} ({c.count})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {hasActiveFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="ml-auto gap-1 text-ink-secondary hover:text-ink"
+                    onClick={clearFilters}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Clear filters
+                  </Button>
+                )}
+              </div>
+            )}
+
             {/* Transcript Segments Header */}
             <div className="flex items-center justify-between">
               <h2 className="font-display text-heading font-semibold text-ink">
-                {results.stocks && results.stocks.length > 0 ? "Related Segments" : "Results"} ({results.segments?.length || 0})
+                {results.stocks && results.stocks.length > 0 ? "Related Segments" : "Results"}{" "}
+                {groups
+                  ? hasActiveFilters && visibleGroups.length !== results.groups.length
+                    ? `(${visibleGroups.length} of ${results.groups.length})`
+                    : `(${results.groups.length})`
+                  : `(${results.segments?.length || 0})`}
               </h2>
               {query && (
                 <span className="font-mono text-micro text-ink-faint">
@@ -261,73 +747,215 @@ function SearchPageContent() {
               )}
             </div>
 
-            <div className="grid gap-3">
-              {results.segments?.map((seg) => {
-                const video = results.videos?.[seg.video_id];
-                const channel = results.channels?.[video?.channel_id] || (seg.channel_title ? { title: seg.channel_title } : null);
+            {groups ? (
+              /* ── Consolidated: one collapsible card per video ── */
+              visibleGroups.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {visibleGroups.map((group) => {
+                    const isExpanded = expandedGroups.has(group.video_id);
+                    const videoTitle =
+                      group.video_title || `Video (${group.video_id.slice(0, 8)}...)`;
+                    const dateLabel = formatDate(group.published_at);
+                    const bestMatch = group.top_segments[0]?.rank ?? group.best_rank;
+                    const extraCount = group.remaining_segments.length;
 
-                const videoTitle = seg.video_title || video?.title || `Video Segment (${seg.video_id.slice(0, 8)}...)`;
-                const channelTitle = seg.channel_title || channel?.title;
-                const youtubeVideoId = seg.youtube_video_id || video?.youtube_video_id;
-
-                return (
-                  <motion.div key={seg.id} variants={itemAnim}>
-                    <Card className="transition-colors hover:border-line-strong">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex flex-1 flex-col gap-1.5">
-                            {channelTitle && (
-                              <div className="flex items-center gap-1.5 text-small text-ink-secondary">
-                                <Tv className="h-3.5 w-3.5 text-signal" />
-                                <span className="font-medium">{channelTitle}</span>
+                    return (
+                      <motion.div key={group.video_id} variants={itemAnim}>
+                        <Card className="transition-colors hover:border-line-strong">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex min-w-0 flex-1 items-start gap-3">
+                                {group.thumbnail_url && (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={group.thumbnail_url}
+                                    alt=""
+                                    className="hidden h-14 w-24 shrink-0 rounded-md border border-line object-cover sm:block"
+                                  />
+                                )}
+                                <div className="flex min-w-0 flex-col gap-1.5">
+                                  {group.channel_title && (
+                                    <div className="flex items-center gap-1.5 text-small text-ink-secondary">
+                                      <Tv className="h-3.5 w-3.5 shrink-0 text-signal" />
+                                      <span className="font-medium">{group.channel_title}</span>
+                                      {dateLabel && (
+                                        <>
+                                          <span className="text-ink-faint">·</span>
+                                          <span className="text-ink-faint">{dateLabel}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  )}
+                                  <Link
+                                    href={`/videos/${group.video_id}`}
+                                    className="group min-w-0"
+                                  >
+                                    <CardTitle className="truncate leading-snug text-title font-semibold transition-colors group-hover:text-signal">
+                                      {videoTitle}
+                                    </CardTitle>
+                                  </Link>
+                                </div>
                               </div>
+                              <div className="flex shrink-0 items-center gap-2">
+                                <Badge
+                                  variant="outline"
+                                  className="border-signal/30 bg-signal/10 font-mono text-micro text-signal"
+                                >
+                                  {group.hit_count} mention{group.hit_count === 1 ? "" : "s"}
+                                </Badge>
+                                <Badge
+                                  variant="outline"
+                                  className="border-bullish/30 bg-bullish/10 font-mono text-micro text-bullish"
+                                >
+                                  {(bestMatch * 100).toFixed(0)}% match
+                                </Badge>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="flex flex-col gap-3">
+                            {group.top_segments.map((seg) => (
+                              <SegmentQuote key={seg.id} seg={seg} />
+                            ))}
+
+                            {extraCount > 0 && (
+                              <>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="self-start gap-1.5 text-ink-secondary hover:text-ink"
+                                  onClick={() => toggleGroup(group.video_id)}
+                                >
+                                  {isExpanded ? (
+                                    <ChevronUp className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4" />
+                                  )}
+                                  {isExpanded
+                                    ? "Show less"
+                                    : `+${extraCount} more clip${extraCount === 1 ? "" : "s"} in this video`}
+                                </Button>
+                                {isExpanded && (
+                                  <div className="divide-y divide-line rounded-md border border-line bg-panel-raised/40">
+                                    {group.remaining_segments.map((seg) => (
+                                      <Link
+                                        key={seg.id}
+                                        href={`/videos/${seg.video_id}?t=${Math.floor(seg.start_sec)}`}
+                                        className="flex items-start gap-3 px-3 py-2.5 transition-colors hover:bg-panel"
+                                      >
+                                        <span className="shrink-0 pt-px font-mono text-micro font-semibold text-signal">
+                                          {formatTime(seg.start_sec)}
+                                        </span>
+                                        <span className="line-clamp-2 text-small text-ink-secondary">
+                                          {seg.text}
+                                        </span>
+                                      </Link>
+                                    ))}
+                                  </div>
+                                )}
+                              </>
                             )}
-                            <Link href={`/videos/${seg.video_id}?t=${Math.floor(seg.start_sec)}`} className="group">
-                              <CardTitle className="leading-snug text-title font-semibold transition-colors group-hover:text-signal">
-                                {videoTitle}
-                              </CardTitle>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-line px-6 py-10 text-center">
+                  <p className="text-body font-medium text-ink">No videos match your filters</p>
+                  <p className="mt-1 text-small text-ink-secondary">
+                    Try widening the period or clearing the channel filter.
+                  </p>
+                  <Button variant="outline" size="sm" className="mt-3" onClick={clearFilters}>
+                    Clear filters
+                  </Button>
+                </div>
+              )
+            ) : (
+              /* ── Fallback: flat segment list (legacy response shape) ── */
+              <div className="grid gap-3">
+                {results.segments?.map((seg) => {
+                  const video = results.videos?.[seg.video_id];
+                  const channel =
+                    results.channels?.[video?.channel_id] ||
+                    (seg.channel_title ? { title: seg.channel_title } : null);
+
+                  const videoTitle = seg.video_title || video?.title || `Video Segment (${seg.video_id.slice(0, 8)}...)`;
+                  const channelTitle = seg.channel_title || channel?.title;
+
+                  return (
+                    <motion.div key={seg.id} variants={itemAnim}>
+                      <Card className="transition-colors hover:border-line-strong">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex flex-1 flex-col gap-1.5">
+                              {channelTitle && (
+                                <div className="flex items-center gap-1.5 text-small text-ink-secondary">
+                                  <Tv className="h-3.5 w-3.5 text-signal" />
+                                  <span className="font-medium">{channelTitle}</span>
+                                </div>
+                              )}
+                              <Link href={`/videos/${seg.video_id}?t=${Math.floor(seg.start_sec)}`} className="group">
+                                <CardTitle className="leading-snug text-title font-semibold transition-colors group-hover:text-signal">
+                                  {videoTitle}
+                                </CardTitle>
+                              </Link>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <Badge variant="outline" className="border-bullish/30 bg-bullish/10 font-mono text-micro text-bullish">
+                                {(seg.rank * 100).toFixed(1)}% match
+                              </Badge>
+                              <Badge variant="outline" className="font-mono text-micro capitalize text-ink-secondary">
+                                {seg.search_type}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-3">
+                          {/* Evidence block quote */}
+                          <div className="rounded-r-md border-l-2 border-signal bg-panel-raised px-4 py-3">
+                            <p className="text-body italic leading-relaxed text-ink">
+                              &quot;{seg.text}&quot;
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Link href={`/videos/${seg.video_id}?t=${Math.floor(seg.start_sec)}`}>
+                              <Button variant="outline" size="sm" className="gap-1.5">
+                                <Play className="h-3.5 w-3.5" />
+                                Play @ {formatTime(seg.start_sec)}
+                              </Button>
                             </Link>
                           </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            <Badge variant="outline" className="border-bullish/30 bg-bullish/10 font-mono text-micro text-bullish">
-                              {(seg.rank * 100).toFixed(1)}% match
-                            </Badge>
-                            <Badge variant="outline" className="font-mono text-micro capitalize text-ink-secondary">
-                              {seg.search_type}
-                            </Badge>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="flex flex-col gap-3">
-                        {/* Evidence block quote */}
-                        <div className="rounded-r-md border-l-2 border-signal bg-panel-raised px-4 py-3">
-                          <p className="text-body italic leading-relaxed text-ink">
-                            &quot;{seg.text}&quot;
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Link href={`/videos/${seg.video_id}?t=${Math.floor(seg.start_sec)}`}>
-                            <Button variant="outline" size="sm" className="gap-1.5">
-                              <Play className="h-3.5 w-3.5" />
-                              Play @ {formatTime(seg.start_sec)}
-                            </Button>
-                          </Link>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })}
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
 
-              {(!results.segments || results.segments.length === 0) && (
-                <div className="rounded-lg border border-dashed border-line px-6 py-10 text-center">
-                  <p className="text-body font-medium text-ink">No transcript segments found</p>
-                  <p className="mt-1 text-small text-ink-secondary">
-                    Try a broader keyword, or switch to semantic search for concept matching.
-                  </p>
-                </div>
-              )}
-            </div>
+            {(!results.segments || results.segments.length === 0) && (
+              <div className="rounded-lg border border-dashed border-line px-6 py-10 text-center">
+                <p className="text-body font-medium text-ink">No transcript segments found</p>
+                <p className="mt-1 text-small text-ink-secondary">
+                  Try a broader keyword, or switch to semantic search for concept matching.
+                </p>
+              </div>
+            )}
+
+            {/* Load more — fetches a larger result set; hidden while filters narrow the view */}
+            {groups && results.has_more && !hasActiveFilters && (
+              <Button
+                variant="outline"
+                className="self-center"
+                disabled={loading}
+                onClick={() => setResultLimit((l) => l + RESULT_LIMIT_STEP)}
+              >
+                {loading && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+                Load more videos
+              </Button>
+            )}
           </motion.div>
         )}
       </div>

@@ -58,6 +58,7 @@ YT Chatter is an end-to-end platform that ingests YouTube financial commentary, 
 
 | Layer | Technologies |
 |---|---|
+| **Authentication** | Clerk (email+password, Google OAuth, magic link) with invite-only signup; `clerk-backend-api` JWT verification on FastAPI |
 | **Backend Framework** | Python 3.12, FastAPI, Uvicorn, Pydantic v2 |
 | **Task Queue & Async** | Celery, Redis 7, `asyncio` |
 | **Database & ORM** | PostgreSQL 16 with `pgvector`, SQLAlchemy 2.0 (Async), AsyncPG, Alembic |
@@ -321,6 +322,27 @@ Or `POST /api/websub/simulate` with JSON body
 ### Related env vars
 
 See `.env.example` for `WEBSUB_*`, `DISCOVERY_FALLBACK_POLL_HOURS`, and `TRANSCRIPT_RETRY_DELAYS_MINUTES`.
+
+---
+
+## 🔐 Authentication & Usage Analytics
+
+The API is fully authenticated (Clerk session JWTs) with an **invite-only
+signup gate**. All user activity — searches, entity views, page views,
+pipeline triggers, LLM token spend, per-request latency — is tracked in the
+app's own Postgres with daily rollups and a retention policy. Personal usage
+is visible at `/usage`; admins manage invites and platform metrics at
+`/admin`.
+
+Setup: create a Clerk app, fill `CLERK_*` vars in `.env` and
+`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` in `web/.env.local`, then run
+`make migrate`. Full guide: **[docs/authentication.md](docs/authentication.md)**.
+
+Quick invite creation:
+
+```bash
+make invite email=friend@example.com   # prints a single-use code
+```
 
 ---
 

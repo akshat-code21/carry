@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 if TYPE_CHECKING:
     from src.services.etf_mapping_service import ETFMappingService
 
+from src.analytics.service import analytics
 from src.api.deps import get_aggregation_service, get_market_data
 from src.database import get_db
 from src.models.performance import PerformanceRecord
@@ -108,6 +109,12 @@ async def get_ticker_detail(
     ticker = ticker.upper()
     etf_service = ETFMappingService()
     is_etf = etf_service.is_etf(ticker)
+
+    analytics.record_event(
+        "ticker_viewed",
+        payload={"ticker": ticker, "is_etf": is_etf},
+        counters={"ticker_views": 1},
+    )
 
     if is_etf:
         return await _get_etf_ticker_detail(ticker, db, etf_service)

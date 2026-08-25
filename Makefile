@@ -45,6 +45,30 @@ simulate-websub:
 		--mode "$(or $(mode),full)" \
 		--title "$(or $(title),Simulated new upload (dry run))"
 
+# Auth — create an invite code (invite-only signup gate)
+# Example: make invite email=friend@example.com max-uses=1 expires-in-days=30
+invite:
+	PYTHONPATH=. uv run python scripts/create_invite.py \
+		$(if $(email),--email $(email),) \
+		--role $(or $(role),user) \
+		--max-uses $(or $(max-uses),1) \
+		$(if $(expires-in-days),--expires-in-days $(expires-in-days),)
+
+promote-admin:
+	PYTHONPATH=. uv run python scripts/promote_admin.py --email "$(email)"
+
+# Auth — reconcile app users with Clerk (delete rows for deleted Clerk users,
+# repair placeholder emails). Dry-run by default? No: pass dry-run=1 to preview.
+sync-users:
+	PYTHONPATH=. uv run python scripts/sync_users_from_clerk.py $(if $(dry-run),--dry-run,)
+
+# Auth — bulk-provision pilot users with ready credentials from a CSV
+# (name,email[,role]). They can log in with those creds OR Google (same email).
+provision-users:
+	PYTHONPATH=. uv run python scripts/provision_pilot_users.py $(csv) \
+		--out $(or $(out),credentials.csv) \
+		--login-url "$(or $(login-url),http://localhost:3000/sign-in)"
+
 # Development
 test:
 	uv run pytest -v

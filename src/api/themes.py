@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.analytics.service import analytics
 from src.api.deps import get_theme_service
 from src.database import get_db
 from src.models.theme import ThemeHierarchy, ThemeMention
@@ -36,6 +37,11 @@ async def get_theme(
     if not theme:
         raise HTTPException(status_code=404, detail="Theme not found")
 
+    analytics.record_event(
+        "theme_viewed",
+        payload={"theme_id": str(theme_id), "name": theme.name[:200]},
+        counters={"theme_views": 1},
+    )
     return ThemeResponse.model_validate(theme)
 
 

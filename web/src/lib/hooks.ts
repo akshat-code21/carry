@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { ApiError } from "@/lib/auth-client";
 
 export function useVideos() {
   return useQuery({
@@ -144,11 +145,41 @@ export function useDashboardData() {
   };
 }
 
-export function useSearch(query: string, type: "keyword" | "semantic" | "hybrid" = "hybrid") {
+export function useSearch(
+  query: string,
+  type: "keyword" | "semantic" | "hybrid" = "hybrid",
+  sort: "relevance" | "recent" = "relevance",
+  limit = 20,
+) {
   return useQuery({
-    queryKey: ["search", query, type],
-    queryFn: () => api.search(query, type),
+    queryKey: ["search", query, type, sort, limit],
+    queryFn: () => api.search(query, type, sort, limit),
     enabled: !!query.trim(),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useSearchAnswer(query: string, segmentIds: string[]) {
+  // Key on the joined ids (stable identity) so refetches only happen when
+  // the underlying result set actually changes.
+  const joined = segmentIds.join(",");
+  return useQuery({
+    queryKey: ["searchAnswer", query, joined],
+    queryFn: () => api.searchAnswer(query, segmentIds),
+    enabled: !!query.trim() && segmentIds.length >= 3,
+    staleTime: 10 * 60_000,
+    retry: false,
+  });
+}
+
+export function useSearchCoverage(query: string, segmentIds: string[]) {
+  const joined = segmentIds.join(",");
+  return useQuery({
+    queryKey: ["searchCoverage", query, joined],
+    queryFn: () => api.searchCoverage(query, segmentIds),
+    enabled: !!query.trim() && segmentIds.length > 0,
+    staleTime: 10 * 60_000,
+    retry: false,
   });
 }
 
@@ -179,5 +210,42 @@ export function useIngestVideo() {
       queryClient.invalidateQueries({ queryKey: ["channel", variables.channelDbId] });
       queryClient.invalidateQueries({ queryKey: ["videos"] });
     },
+  });
+}
+
+/* ── Auth & usage hooks ─────────────────────────────────────────── */
+
+export function useMe() {
+  const query = useQuery({
+    queryKey: ["me"],
+    queryFn: () => api.getMe(),
+    retry: false,
+    staleTime: 60_000,
+  });
+
+  // Surface semantic flags for gating UI (invite gate, admin controls).
+  const error = query.error;
+  const inviteRequired = error instanceof ApiError && error.code === "invite_required";
+  const unauthorized =
+    error instanceof ApiError &&
+    (error.status === 401 || error.code === "unauthorized" || error.status === 0);
+
+  return { ...query, user: query.data, isAdmin: query.data?.role === "admin", inviteRequired, unauthorized };
+}
+
+export function useRedeemInvite() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (code: string) => api.redeemInvite(code),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+}
+
+export function useMyUsage(days = 30) {
+  return useQuery({
+    queryKey: ["myUsage", days],
+    queryFn: () => api.getMyUsage(days),
   });
 }

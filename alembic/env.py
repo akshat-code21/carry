@@ -17,15 +17,31 @@ from src.database import Base
 # Import all models so Alembic can detect them for autogenerate
 from src.models import (  # noqa: F401
     ActivityEvent,
+    ApiRequestLog,
     Channel,
+    DailyUserUsage,
+    Invite,
+    LlmUsageLog,
     PerformanceRecord,
+    PlatformDailyUsage,
     Prediction,
     SpeakerTickerAggregation,
     ThemeHierarchy,
     ThemeMention,
     ThemeTickerMapping,
     TranscriptSegment,
+    UsageEvent,
+    User,
     Video,
+    # HFI models
+    Investor,
+    HfiSource,
+    ContentItem,
+    PortfolioChange,
+    TickerCache,
+    ExtractedMention,
+    HfiReport,
+    HfiAlert,
 )
 
 config = context.config

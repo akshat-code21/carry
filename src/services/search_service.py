@@ -24,6 +24,10 @@ class SearchService:
     and pgvector semantic search.
     """
 
+    # Reciprocal Rank Fusion constant — higher values dampen the influence of
+    # top ranks. 60 is the standard default (Cormack et al., 2009).
+    RRF_K = 60
+
     def __init__(self, db: AsyncSession, embedding_provider: EmbeddingProvider) -> None:
         self.db = db
         self.embedding_provider = embedding_provider
@@ -37,8 +41,14 @@ class SearchService:
         ticker: str | None = None,
         limit: int = 20,
         offset: int = 0,
+        max_per_video: int = 4,
+        sort: str = "relevance",
     ) -> dict:
         """Perform hybrid search across transcript segments and predictions.
+
+        Keyword (ts_rank) and semantic (cosine similarity) result lists are
+        fused with Reciprocal Rank Fusion, then diversified by capping how many
+        segments a single video may contribute before being grouped per video.
 
         Args:
             query: Search query string
@@ -46,39 +56,50 @@ class SearchService:
             channel_id: Optional filter by channel
             ticker: Optional filter by ticker
             limit: Max results
-            offset: Pagination offset
+            offset: Pagination offset (applied only to single-mode searches;
+                hybrid mode always retrieves from rank 0 because grouping makes
+                pre-group offsets meaningless)
+            max_per_video: Max segments any single video may contribute
+            sort: Group ordering — "relevance" (fused rank) or "recent"
+                (published_at descending)
 
         Returns:
-            Dict with segments, predictions, and total count
+            Dict with segments, predictions, groups, has_more, and total count
         """
         results = {
             "segments": [],
             "predictions": [],
+            "groups": [],
             "total": 0,
         }
 
+        # Over-fetch from each retriever so fusion + diversity capping still
+        # leaves enough high-quality results after trimming.
+        pool_size = min(limit * 4, 100)
+
+        candidate_lists: list[list[dict]] = []
+
         if search_type in ("keyword", "hybrid"):
-            keyword_segments = await self._keyword_search_segments(query, channel_id, limit, offset)
+            keyword_segments = await self._keyword_search_segments(
+                query, channel_id, pool_size, offset
+            )
+            candidate_lists.append(keyword_segments)
+
             keyword_predictions = await self._keyword_search_predictions(
                 query, ticker, limit, offset
             )
-            results["segments"].extend(keyword_segments)
             results["predictions"].extend(keyword_predictions)
 
         if search_type in ("semantic", "hybrid"):
             semantic_segments = await self._semantic_search_segments(
-                query, channel_id, limit, offset
+                query, channel_id, pool_size, offset
             )
-            results["segments"].extend(semantic_segments)
+            candidate_lists.append(semantic_segments)
 
-        # Deduplicate segments by ID
-        seen_ids = set()
-        unique_segments = []
-        for seg in results["segments"]:
-            if seg["id"] not in seen_ids:
-                seen_ids.add(seg["id"])
-                unique_segments.append(seg)
-        results["segments"] = unique_segments[:limit]
+        # ── Fusion + diversity ────────────────────────────────────────────
+        fused = self._fuse_rrf(candidate_lists)
+        ranked = sorted(fused.values(), key=lambda s: s["_rrf"], reverse=True)
+        results["segments"] = self._select_diverse(ranked, limit, max_per_video)
 
         # Deduplicate predictions by ID
         seen_pred_ids = set()
@@ -131,6 +152,10 @@ class SearchService:
                     }
             except Exception as exc:
                 logger.warning(f"Error loading video metadata for search: {exc}")
+                try:
+                    await self.db.rollback()
+                except Exception:  # noqa: BLE001 — rollback is best-effort
+                    pass
 
         # Attach video & channel titles directly to segments and predictions
         for seg in results["segments"]:
@@ -148,10 +173,173 @@ class SearchService:
             pred["channel_title"] = c_info.get("title")
             pred["youtube_video_id"] = v_info.get("youtube_video_id")
 
+        # ── Grouping ──────────────────────────────────────────────────────
+        # Truthful mention counts per video come from the full-text index when
+        # available; the retrieved pool is the fallback (semantic-only mode).
+        hit_counts: dict[str, int] = {}
+        if search_type in ("keyword", "hybrid") and results["segments"]:
+            hit_counts = await self._keyword_match_counts(query, channel_id)
+        results["groups"] = self._build_groups(
+            results["segments"], videos_map, channels_map, hit_counts
+        )
+        self._apply_group_sort(results["groups"], sort)
+
+        # "More" means more distinct video groups exist server-side. Keyword
+        # mode knows the true matching-video count; semantic-only falls back to
+        # a pool-exhaustion heuristic.
+        results["has_more"] = self._compute_has_more(
+            hit_counts=hit_counts,
+            group_count=len(results["groups"]),
+            candidate_count=len(fused),
+            pool_size=pool_size,
+        )
+
+        # Strip the internal fusion score before serialization
+        for seg in results["segments"]:
+            seg.pop("_rrf", None)
+        for group in results["groups"]:
+            for seg in group["top_segments"] + group["remaining_segments"]:
+                seg.pop("_rrf", None)
+
         results["videos"] = videos_map
         results["channels"] = channels_map
         results["total"] = len(results["segments"]) + len(results["predictions"])
         return results
+
+    @classmethod
+    def _fuse_rrf(cls, candidate_lists: list[list[dict]]) -> dict[str, dict]:
+        """Fuse ranked segment lists with Reciprocal Rank Fusion.
+
+        Each segment accumulates ``1 / (k + rank)`` per list it appears in.
+        Returns candidates keyed by segment id, annotated with ``_rrf`` and a
+        merged ``search_type`` ("hybrid" when present in multiple lists).
+        """
+        fused: dict[str, dict] = {}
+        source_counts: dict[str, int] = {}
+        for items in candidate_lists:
+            for pos, seg in enumerate(items):
+                seg_id = seg["id"]
+                rrf_score = 1.0 / (cls.RRF_K + pos + 1)
+                source_counts[seg_id] = source_counts.get(seg_id, 0) + 1
+                existing = fused.get(seg_id)
+                if existing is None:
+                    candidate = dict(seg)
+                    candidate["_rrf"] = rrf_score
+                    fused[seg_id] = candidate
+                else:
+                    existing["_rrf"] += rrf_score
+                    existing["rank"] = max(existing["rank"], seg["rank"])
+
+        for seg_id, count in source_counts.items():
+            if count > 1:
+                fused[seg_id]["search_type"] = "hybrid"
+
+        return fused
+
+    @staticmethod
+    def _select_diverse(ranked: list[dict], limit: int, max_per_video: int) -> list[dict]:
+        """Pick the top-ranked segments while capping contributions per video."""
+        selected: list[dict] = []
+        per_video: dict[str, int] = {}
+        for seg in ranked:
+            vid = seg["video_id"]
+            if per_video.get(vid, 0) >= max_per_video:
+                continue
+            per_video[vid] = per_video.get(vid, 0) + 1
+            selected.append(seg)
+            if len(selected) >= limit:
+                break
+        return selected
+
+    @staticmethod
+    def _build_groups(
+        segments: list[dict],
+        videos_map: dict[str, dict],
+        channels_map: dict[str, dict],
+        hit_counts: dict[str, int],
+        top_n: int = 2,
+    ) -> list[dict]:
+        """Group flat segments by video into consolidated display groups.
+
+        Each group carries the two best segments inline plus the remainder for
+        client-side expansion, ordered by the group's best fused rank.
+        """
+        grouped: dict[str, list[dict]] = {}
+        for seg in segments:  # segments arrive in fused-rank order
+            grouped.setdefault(seg["video_id"], []).append(seg)
+
+        groups: list[dict] = []
+        for video_id, members in grouped.items():
+            v_info = videos_map.get(video_id, {})
+            c_info = channels_map.get(v_info.get("channel_id"), {})
+            groups.append(
+                {
+                    "video_id": video_id,
+                    "youtube_video_id": v_info.get("youtube_video_id"),
+                    "video_title": v_info.get("title"),
+                    "channel_id": v_info.get("channel_id"),
+                    "channel_title": c_info.get("title"),
+                    "published_at": v_info.get("published_at"),
+                    "thumbnail_url": v_info.get("thumbnail_url"),
+                    # Prefer the truthful full-text match count over the capped
+                    # number of pooled members.
+                    "hit_count": max(len(members), hit_counts.get(video_id, len(members))),
+                    "best_rank": round(members[0]["_rrf"], 6),
+                    "top_segments": members[:top_n],
+                    "remaining_segments": members[top_n:],
+                }
+            )
+
+        groups.sort(key=lambda g: g["best_rank"], reverse=True)
+        return groups
+
+    @staticmethod
+    def _apply_group_sort(groups: list[dict], sort: str) -> None:
+        """Sort groups in place. "recent" orders by published_at, newest first."""
+        if sort == "recent":
+            groups.sort(key=lambda g: g.get("published_at") or "", reverse=True)
+
+    @staticmethod
+    def _compute_has_more(
+        hit_counts: dict[str, int],
+        group_count: int,
+        candidate_count: int,
+        pool_size: int,
+    ) -> bool:
+        """Whether more distinct video groups exist beyond those returned."""
+        if hit_counts:
+            return len(hit_counts) > group_count
+        return candidate_count >= pool_size
+
+    async def _keyword_match_counts(
+        self,
+        query: str,
+        channel_id: uuid_mod.UUID | None = None,
+    ) -> dict[str, int]:
+        """Count total full-text matches per video for the query.
+
+        Returns {video_id_str: count}. Best-effort: failures return {}.
+        """
+        ts_query = func.plainto_tsquery("english", query)
+        stmt = (
+            select(TranscriptSegment.video_id, func.count())
+            .where(func.to_tsvector("english", TranscriptSegment.text).op("@@")(ts_query))
+            .group_by(TranscriptSegment.video_id)
+        )
+        if channel_id:
+            stmt = stmt.join(Video, TranscriptSegment.video_id == Video.id).where(
+                Video.channel_id == channel_id
+            )
+        try:
+            res = await self.db.execute(stmt)
+            return {str(row[0]): row[1] for row in res.all()}
+        except Exception as exc:
+            logger.warning(f"Keyword match counting failed, falling back to pool counts: {exc}")
+            try:
+                await self.db.rollback()
+            except Exception:  # noqa: BLE001 — rollback is best-effort
+                pass
+            return {}
 
     async def _keyword_search_segments(
         self,

@@ -95,6 +95,26 @@ class Settings(BaseSettings):
     )
     api_cors_origin_regex: str = r"https://.*\.vercel\.app"
 
+    # ── Authentication (Clerk) ───────────────────────────────────────────
+
+    # Clerk Backend API secret key (sk_test_... / sk_live_...)
+    clerk_secret_key: str = ""
+    # PEM RSA public key for networkless JWT verification (from Clerk Dashboard → API Keys)
+    clerk_jwt_key: str = ""
+    # Comma-separated list of origins allowed in the token `azp` claim.
+    # Leaving this empty disables azp validation (NOT recommended for production).
+    clerk_authorized_parties: str = "http://localhost:3000,http://127.0.0.1:3000"
+    # Clerk user ids that are auto-promoted to admin on first login
+    # (comma-separated). The very first user to sign up also becomes admin.
+    admin_clerk_user_ids: str = ""
+
+    # ── Usage analytics ──────────────────────────────────────────────────
+
+    # Master switch for usage-event / request-log recording
+    analytics_enabled: bool = True
+    # Retention (days) for raw event/request/LLM rows; daily rollups are kept forever
+    analytics_retention_days: int = 180
+
     # Watchlist worker
     pilot_watchlist: str = "AAPL,NVDA"
     enable_watchlist_worker: bool = False
@@ -136,6 +156,21 @@ class Settings(BaseSettings):
             if cleaned and cleaned not in origins:
                 origins.append(cleaned)
         return origins
+
+    @property
+    def clerk_authorized_parties_list(self) -> list[str]:
+        """Parse comma-separated authorized parties into a list."""
+        return [p.strip() for p in self.clerk_authorized_parties.split(",") if p.strip()]
+
+    @property
+    def admin_clerk_user_id_set(self) -> set[str]:
+        """Parse comma-separated admin Clerk user ids into a set."""
+        return {u.strip() for u in self.admin_clerk_user_ids.split(",") if u.strip()}
+
+    @property
+    def auth_enabled(self) -> bool:
+        """True when a Clerk secret key is configured."""
+        return bool(self.clerk_secret_key.strip())
 
     @property
     def pilot_symbols(self) -> list[str]:

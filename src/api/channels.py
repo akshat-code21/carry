@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.analytics.service import analytics
 from src.api.deps import get_aggregation_service
 from src.database import get_db
 from src.models.channel import Channel
@@ -37,6 +38,15 @@ async def get_channel(
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
 
+    analytics.record_event(
+        "channel_viewed",
+        payload={
+            "channel_id": str(channel_id),
+            "youtube_channel_id": channel.youtube_channel_id,
+            "title": channel.title[:200],
+        },
+        counters={"channel_views": 1},
+    )
     return ChannelResponse.model_validate(channel)
 
 
