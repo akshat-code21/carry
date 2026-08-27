@@ -9,9 +9,16 @@ export function QueryProvider({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60 * 1000, // 1 minute stale time default
+            staleTime: 2 * 60 * 1000, // 2 minute stale time for snappier back-nav
             refetchOnWindowFocus: false,
-            retry: 1,
+            retry: (failureCount, error) => {
+              // Never retry on auth failures — avoids doubling cold-load time
+              const apiErr = error as { status?: number; code?: string };
+              if (apiErr?.status === 401 || apiErr?.code === "unauthorized") {
+                return false;
+              }
+              return failureCount < 1;
+            },
           },
         },
       })

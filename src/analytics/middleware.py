@@ -50,10 +50,9 @@ class AnalyticsMiddleware(BaseHTTPMiddleware):
             route = request.scope.get("route")
             route_template = getattr(route, "path_format", None) or path
 
-            # user_id is stored on scope state by the auth dependency;
+            # user_id is stored on request.state by the auth dependency;
             # unavailable for unauthenticated/exempt routes.
-            state = getattr(request.scope, "state", None) or {}
-            user_id = state.get("user_id")
+            user_id = getattr(request.state, "user_id", None)
 
             analytics.record_api_request(
                 user_id=user_id,

@@ -33,8 +33,38 @@ function waitForClerkLoaded(timeoutMs = 8000): Promise<void> {
   return clerkReadyWaiter;
 }
 
+/**
+ * Cached token promise — when multiple hooks (e.g. 6 dashboard queries) call
+ * getAuthToken() concurrently, they share the same in-flight token acquisition
+ * instead of each independently waiting and calling getToken().
+ */
+let _tokenPromise: Promise<string | null> | null = null;
+let _tokenPromiseExpiry = 0;
+
 export async function getAuthToken(): Promise<string | null> {
   if (typeof window === "undefined") return null;
+
+  // Reuse a recent in-flight or freshly-resolved token promise (valid for 5s)
+  const now = Date.now();
+  if (_tokenPromise && now < _tokenPromiseExpiry) {
+    return _tokenPromise;
+  }
+
+  _tokenPromise = _acquireToken();
+  _tokenPromiseExpiry = now + 5000; // cache the promise for 5 seconds
+
+  // Clear the cached promise once it resolves (so next call after 5s gets fresh)
+  _tokenPromise.finally(() => {
+    // Only clear if this is still the current cached promise
+    if (Date.now() >= _tokenPromiseExpiry) {
+      _tokenPromise = null;
+    }
+  });
+
+  return _tokenPromise;
+}
+
+async function _acquireToken(): Promise<string | null> {
   await waitForClerkLoaded();
   const clerk = (window as unknown as {
     Clerk?: { session?: { getToken?: () => Promise<string | null> } };

@@ -101,7 +101,7 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Themes Extracted"
-          value={data.themes.length}
+          value={data.theme_counts?.themes ?? 0}
           icon={<Hash className="h-4 w-4" />}
         />
         <StatCard

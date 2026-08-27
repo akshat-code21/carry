@@ -312,6 +312,23 @@ export interface MCDashboardData {
   bearish_laggards: MCDashboardTickerItem[];
 }
 
+/* ── Dashboard Summary (aggregated) ──────────────────────────── */
+
+export interface DashboardThemeCounts {
+  sectors: number;
+  industries: number;
+  themes: number;
+  narratives: number;
+}
+
+export interface DashboardSummary {
+  videos: VideoItem[];
+  channels: ChannelItem[];
+  tickers: TickerItem[];
+  etfs: TickerItem[];
+  theme_counts: DashboardThemeCounts;
+}
+
 export const getApiBaseUrl = (): string => {
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
   if (envUrl && envUrl.trim()) {
@@ -453,6 +470,10 @@ export const api = {
 
   async getThemes(): Promise<SectorThemeNode[]> {
     return request("/themes");
+  },
+
+  async getDashboardSummary(): Promise<DashboardSummary> {
+    return request("/dashboard/summary");
   },
 
   async getTheme(id: string): Promise<ThemeDetail> {
