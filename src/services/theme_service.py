@@ -205,13 +205,15 @@ class ThemeService:
         for sector in children_by_parent[None]:
             if sector.level == "narrative":
                 # Narrative-level themes (free-text LLM extractions)
-                tree.append({
-                    "id": str(sector.id),
-                    "name": sector.name,
-                    "description": sector.description,
-                    "level": sector.level,
-                    "industries": [],
-                })
+                tree.append(
+                    {
+                        "id": str(sector.id),
+                        "name": sector.name,
+                        "description": sector.description,
+                        "level": sector.level,
+                        "industries": [],
+                    }
+                )
                 continue
 
             if sector.level != "sector":
@@ -260,8 +262,7 @@ class ThemeService:
     async def get_theme_stats(self) -> dict[str, int]:
         """Get theme counts grouped by level. Single query, ~4 rows returned."""
         result = await self.db.execute(
-            select(ThemeHierarchy.level, func.count())
-            .group_by(ThemeHierarchy.level)
+            select(ThemeHierarchy.level, func.count()).group_by(ThemeHierarchy.level)
         )
         counts = dict(result.all())
         return {

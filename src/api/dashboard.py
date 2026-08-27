@@ -94,10 +94,7 @@ async def dashboard_summary(
         etfs_data,
         theme_counts_result,
     ) = await asyncio.gather(
-        db.scalar(
-            select(sqlfunc.count(Video.id))
-            .where(Video.duration_sec > 60)
-        ),
+        db.scalar(select(sqlfunc.count(Video.id)).where(Video.duration_sec > 60)),
         db.execute(
             select(Video)
             .where(Video.duration_sec > 60)
@@ -114,10 +111,7 @@ async def dashboard_summary(
         ),
         _fetch_tickers(db),
         aggregation.get_top_etfs(limit=8),
-        db.execute(
-            select(ThemeHierarchy.level, sqlfunc.count())
-            .group_by(ThemeHierarchy.level)
-        ),
+        db.execute(select(ThemeHierarchy.level, sqlfunc.count()).group_by(ThemeHierarchy.level)),
     )
 
     videos = [
