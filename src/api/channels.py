@@ -57,8 +57,9 @@ async def get_channel(
         raise HTTPException(status_code=404, detail="Channel not found")
 
     video_count = await db.scalar(
-        select(sqlfunc.count(Video.id))
-        .where(Video.channel_id == channel_id, Video.duration_sec > 60)
+        select(sqlfunc.count(Video.id)).where(
+            Video.channel_id == channel_id, Video.duration_sec > 60
+        )
     )
 
     analytics.record_event(
