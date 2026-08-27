@@ -91,7 +91,7 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Videos"
-          value={data.videos.length}
+          value={data.total_videos}
           icon={<PlaySquare className="h-4 w-4" />}
         />
         <StatCard

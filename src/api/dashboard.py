@@ -77,13 +77,25 @@ async def dashboard_summary(
     co-located DB.
     """
     # Run all queries concurrently — same session, different coroutines
+    video_counts_subq = (
+        select(Video.channel_id, sqlfunc.count(Video.id).label("video_count"))
+        .where(Video.duration_sec > 60)
+        .group_by(Video.channel_id)
+        .subquery()
+    )
+
     (
+        total_videos,
         videos_result,
         channels_result,
         tickers_data,
         etfs_data,
         theme_counts_result,
     ) = await asyncio.gather(
+        db.scalar(
+            select(sqlfunc.count(Video.id))
+            .where(Video.duration_sec > 60)
+        ),
         db.execute(
             select(Video)
             .where(Video.duration_sec > 60)
@@ -91,7 +103,8 @@ async def dashboard_summary(
             .limit(20)
         ),
         db.execute(
-            select(Channel)
+            select(Channel, sqlfunc.coalesce(video_counts_subq.c.video_count, 0).label("video_count"))
+            .outerjoin(video_counts_subq, Channel.id == video_counts_subq.c.channel_id)
             .order_by(Channel.created_at.desc())
         ),
         _fetch_tickers(db),
@@ -106,14 +119,17 @@ async def dashboard_summary(
         VideoResponse.model_validate(v).model_dump(mode="json")
         for v in videos_result.scalars().all()
     ]
-    channels = [
-        ChannelResponse.model_validate(c).model_dump(mode="json")
-        for c in channels_result.scalars().all()
-    ]
+    channels = []
+    for c, count in channels_result.all():
+        resp = ChannelResponse.model_validate(c)
+        resp.video_count = count
+        channels.append(resp.model_dump(mode="json"))
+
     theme_counts = dict(theme_counts_result.all())
 
     return JSONResponse(
         content={
+            "total_videos": total_videos or 0,
             "videos": videos,
             "channels": channels,
             "tickers": tickers_data,

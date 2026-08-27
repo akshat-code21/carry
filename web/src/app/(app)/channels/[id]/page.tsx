@@ -149,7 +149,7 @@ export default function ChannelPage() {
         <div className="md:col-span-2 flex flex-col gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base font-semibold">Videos ({data.videos?.length || 0})</CardTitle>
+              <CardTitle className="text-base font-semibold">Videos ({data.channel.video_count ?? data.videos?.length ?? 0})</CardTitle>
               <CardDescription>Processed videos from this channel</CardDescription>
             </CardHeader>
             <CardContent>

@@ -117,6 +117,7 @@ export function useDashboardData() {
     isError: query.isError,
     data: query.data
       ? {
+          total_videos: query.data.total_videos ?? (query.data.videos?.length || 0),
           videos: query.data.videos || [],
           channels: query.data.channels || [],
           themes: [], // full themes no longer fetched; use theme_counts
@@ -125,6 +126,7 @@ export function useDashboardData() {
           theme_counts: query.data.theme_counts || { sectors: 0, industries: 0, themes: 0, narratives: 0 },
         }
       : {
+          total_videos: 0,
           videos: [],
           channels: [],
           themes: [],

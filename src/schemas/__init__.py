@@ -15,6 +15,7 @@ class ChannelResponse(BaseModel):
     description: str | None = None
     thumbnail_url: str | None = None
     channel_type: str = "individual"  # individual | institutional
+    video_count: int | None = None
     last_checked_at: datetime | None = None
     websub_subscribed_at: datetime | None = None
     websub_lease_expires_at: datetime | None = None

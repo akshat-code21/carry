@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, X, Tv } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
@@ -149,7 +150,14 @@ export default function ChannelsPage() {
           {channels.map((ch) => (
             <Card key={ch.id} className="flex flex-col justify-between">
               <CardHeader>
-                <CardTitle className="line-clamp-1">{ch.title}</CardTitle>
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="line-clamp-1">{ch.title}</CardTitle>
+                  {typeof ch.video_count === "number" && (
+                    <Badge variant="secondary" className="font-mono text-micro shrink-0">
+                      {ch.video_count} video{ch.video_count === 1 ? "" : "s"}
+                    </Badge>
+                  )}
+                </div>
                 <CardDescription className="line-clamp-2">{ch.description}</CardDescription>
               </CardHeader>
               <CardContent>

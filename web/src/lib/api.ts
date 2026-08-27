@@ -166,6 +166,7 @@ export interface ChannelItem {
   title: string;
   description: string;
   youtube_channel_id: string;
+  video_count?: number;
   created_at?: string;
 }
 
@@ -322,6 +323,7 @@ export interface DashboardThemeCounts {
 }
 
 export interface DashboardSummary {
+  total_videos?: number;
   videos: VideoItem[];
   channels: ChannelItem[];
   tickers: TickerItem[];
@@ -441,7 +443,7 @@ export const api = {
     const channel = await request<ChannelItem>(`/channels/${id}`);
 
     const [videos, top_stocks] = await Promise.all([
-      request<VideoItem[]>(`/videos?channel_id=${id}`).catch(() => []),
+      request<VideoItem[]>(`/videos?channel_id=${id}&limit=500`).catch(() => []),
       request<ChannelTopStock[]>(`/channels/${id}/top-stocks`).catch(() => []),
     ]);
 
