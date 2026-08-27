@@ -32,7 +32,10 @@ async def get_theme_stats(
 
 @router.get("")
 async def list_themes(
-    include_narratives: bool = Query(default=False, description="Include narrative-level nodes (adds ~909 KB)"),
+    include_narratives: bool = Query(
+        default=False,
+        description="Include narrative-level nodes (adds ~909 KB)",
+    ),
     theme_service: ThemeService = Depends(get_theme_service),
 ) -> JSONResponse:
     """Get hierarchical theme taxonomy (sector → industry → theme → tickers)."""

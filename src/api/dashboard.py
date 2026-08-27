@@ -58,7 +58,9 @@ async def _fetch_tickers(db: AsyncSession) -> list[dict]:
             "implicit_mentions": row.implicit_mentions or 0,
             "avg_sentiment": float(row.avg_sentiment) if row.avg_sentiment else None,
             "weighted_relevance": float(row.weighted_relevance) if row.weighted_relevance else None,
-            "last_mentioned_at": row.last_mentioned_at.isoformat() if row.last_mentioned_at else None,
+            "last_mentioned_at": (
+                row.last_mentioned_at.isoformat() if row.last_mentioned_at else None
+            ),
             "is_etf": etf_service.is_etf(row.ticker),
         }
         for row in rows
@@ -103,7 +105,10 @@ async def dashboard_summary(
             .limit(20)
         ),
         db.execute(
-            select(Channel, sqlfunc.coalesce(video_counts_subq.c.video_count, 0).label("video_count"))
+            select(
+                Channel,
+                sqlfunc.coalesce(video_counts_subq.c.video_count, 0).label("video_count"),
+            )
             .outerjoin(video_counts_subq, Channel.id == video_counts_subq.c.channel_id)
             .order_by(Channel.created_at.desc())
         ),
