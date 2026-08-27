@@ -39,6 +39,7 @@ import { useChartColors } from "@/lib/useChartColors";
 import { StatusBadge } from "@/components/market-chatter/StatusBadge";
 import { DashboardOverview } from "@/components/market-chatter/DashboardOverview";
 import { api, API_BASE_URL, MCDashboardData } from "@/lib/api";
+import { getAuthToken } from "@/lib/auth-client";
 import { LayoutDashboard, LineChart as ChartIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -555,11 +556,15 @@ export default function TickerFlowPage() {
           period_days: String(period),
           refresh: String(refresh),
         });
+        const headers: Record<string, string> = {};
+        const token = await getAuthToken();
+        if (token) headers["Authorization"] = `Bearer ${token}`;
         const response = await fetch(
           `${API_BASE}/tickers/${requestedSymbol}?${params}`,
           {
             cache: "no-store",
             signal: AbortSignal.timeout(120000),
+            headers,
           },
         );
         const contentType = response.headers.get("content-type");
