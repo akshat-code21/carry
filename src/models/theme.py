@@ -21,7 +21,7 @@ class ThemeHierarchy(Base):
         UUID(as_uuid=True), ForeignKey("theme_hierarchy.id"), nullable=True, index=True
     )
     level: Mapped[str] = mapped_column(
-        String(50), nullable=False
+        String(50), nullable=False, index=True
     )  # sector | industry | theme | narrative
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(Text)

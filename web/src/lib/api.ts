@@ -166,6 +166,7 @@ export interface ChannelItem {
   title: string;
   description: string;
   youtube_channel_id: string;
+  video_count?: number;
   created_at?: string;
 }
 
@@ -312,6 +313,24 @@ export interface MCDashboardData {
   bearish_laggards: MCDashboardTickerItem[];
 }
 
+/* ── Dashboard Summary (aggregated) ──────────────────────────── */
+
+export interface DashboardThemeCounts {
+  sectors: number;
+  industries: number;
+  themes: number;
+  narratives: number;
+}
+
+export interface DashboardSummary {
+  total_videos?: number;
+  videos: VideoItem[];
+  channels: ChannelItem[];
+  tickers: TickerItem[];
+  etfs: TickerItem[];
+  theme_counts: DashboardThemeCounts;
+}
+
 export const getApiBaseUrl = (): string => {
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
   if (envUrl && envUrl.trim()) {
@@ -424,7 +443,7 @@ export const api = {
     const channel = await request<ChannelItem>(`/channels/${id}`);
 
     const [videos, top_stocks] = await Promise.all([
-      request<VideoItem[]>(`/videos?channel_id=${id}`).catch(() => []),
+      request<VideoItem[]>(`/videos?channel_id=${id}&limit=500`).catch(() => []),
       request<ChannelTopStock[]>(`/channels/${id}/top-stocks`).catch(() => []),
     ]);
 
@@ -453,6 +472,10 @@ export const api = {
 
   async getThemes(): Promise<SectorThemeNode[]> {
     return request("/themes");
+  },
+
+  async getDashboardSummary(): Promise<DashboardSummary> {
+    return request("/dashboard/summary");
   },
 
   async getTheme(id: string): Promise<ThemeDetail> {

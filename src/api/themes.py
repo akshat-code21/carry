@@ -3,6 +3,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,13 +17,30 @@ from src.services.theme_service import ThemeService
 
 router = APIRouter(prefix="/api/themes", tags=["Themes"])
 
+# Cache-Control for taxonomy data (changes only on ingestion)
+_CACHE_HEADERS = {"Cache-Control": "public, max-age=60, stale-while-revalidate=300"}
+
+
+@router.get("/stats")
+async def get_theme_stats(
+    theme_service: ThemeService = Depends(get_theme_service),
+) -> JSONResponse:
+    """Get theme counts by level (lightweight — dashboard should call this, not full hierarchy)."""
+    stats = await theme_service.get_theme_stats()
+    return JSONResponse(content=stats, headers=_CACHE_HEADERS)
+
 
 @router.get("")
 async def list_themes(
+    include_narratives: bool = Query(
+        default=False,
+        description="Include narrative-level nodes (adds ~909 KB)",
+    ),
     theme_service: ThemeService = Depends(get_theme_service),
-) -> list[dict]:
+) -> JSONResponse:
     """Get hierarchical theme taxonomy (sector → industry → theme → tickers)."""
-    return await theme_service.get_theme_hierarchy_tree()
+    tree = await theme_service.get_theme_hierarchy_tree(include_narratives=include_narratives)
+    return JSONResponse(content=tree, headers=_CACHE_HEADERS)
 
 
 @router.get("/{theme_id}", response_model=ThemeResponse)

@@ -26,7 +26,7 @@ router = APIRouter(prefix="/api/videos", tags=["Videos"])
 @router.get("", response_model=list[VideoResponse])
 async def list_videos(
     channel_id: UUID | None = Query(default=None),
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
 ) -> list[VideoResponse]:

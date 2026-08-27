@@ -13,6 +13,7 @@ from src.analytics.middleware import AnalyticsMiddleware
 from src.api.activity import router as activity_router
 from src.api.admin import router as admin_router
 from src.api.channels import router as channels_router
+from src.api.dashboard import router as dashboard_router
 from src.api.hfi_alerts import router as hfi_alerts_router
 from src.api.hfi_analytics import router as hfi_analytics_router
 from src.api.hfi_reports import router as hfi_reports_router
@@ -148,6 +149,7 @@ app.include_router(predictions_router, dependencies=_protected)
 app.include_router(channels_router, dependencies=_protected)
 app.include_router(tickers_router, dependencies=_protected)
 app.include_router(themes_router, dependencies=_protected)
+app.include_router(dashboard_router, dependencies=_protected)
 app.include_router(pipeline_router)  # self-guards: auth + require_admin
 app.include_router(websub_router)  # callback public (HMAC), simulate admin-gated
 app.include_router(activity_router, dependencies=_protected)

@@ -2,9 +2,11 @@
 
 import logging
 import uuid as uuid_mod
+from collections import defaultdict
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.models.theme import ThemeHierarchy, ThemeMention, ThemeTickerMapping
 from src.services.interfaces import ExtractedTheme
@@ -170,12 +172,51 @@ class ThemeService:
         await self.db.flush()
         return mapping
 
-    async def get_theme_hierarchy_tree(self) -> list[dict]:
-        """Build a hierarchical tree structure of all themes for API responses."""
-        sectors = await self.get_themes_by_level("sector")
-        tree = []
+    async def get_theme_hierarchy_tree(self, include_narratives: bool = False) -> list[dict]:
+        """Build a hierarchical tree structure of all themes for API responses.
 
-        for sector in sectors:
+        Uses 2 queries (all nodes + ticker mappings via selectinload) instead of
+        the previous N+1 approach that fired 133 sequential queries.
+        """
+        # Single query: load all hierarchy nodes with their ticker mappings
+        # The selectinload fires one additional SELECT for ticker_mappings
+        stmt = (
+            select(ThemeHierarchy)
+            .options(selectinload(ThemeHierarchy.ticker_mappings))
+            .order_by(ThemeHierarchy.level, ThemeHierarchy.name)
+        )
+        if not include_narratives:
+            stmt = stmt.where(ThemeHierarchy.level != "narrative")
+
+        result = await self.db.execute(stmt)
+        all_nodes = result.scalars().all()
+
+        # Build lookup structures in-memory — O(n)
+        nodes_by_id: dict[uuid_mod.UUID, ThemeHierarchy] = {}
+        children_by_parent: dict[uuid_mod.UUID | None, list[ThemeHierarchy]] = defaultdict(list)
+
+        for node in all_nodes:
+            nodes_by_id[node.id] = node
+            children_by_parent[node.parent_id].append(node)
+
+        # Build the tree starting from root nodes (parent_id is None)
+        tree: list[dict] = []
+
+        for sector in children_by_parent[None]:
+            if sector.level == "narrative":
+                # Narrative-level themes (free-text LLM extractions)
+                tree.append({
+                    "id": str(sector.id),
+                    "name": sector.name,
+                    "description": sector.description,
+                    "level": sector.level,
+                    "industries": [],
+                })
+                continue
+
+            if sector.level != "sector":
+                continue
+
             sector_node = {
                 "id": str(sector.id),
                 "name": sector.name,
@@ -184,8 +225,7 @@ class ThemeService:
                 "industries": [],
             }
 
-            industries = await self.get_theme_children(sector.id)
-            for industry in industries:
+            for industry in children_by_parent.get(sector.id, []):
                 industry_node = {
                     "id": str(industry.id),
                     "name": industry.name,
@@ -194,9 +234,7 @@ class ThemeService:
                     "themes": [],
                 }
 
-                themes = await self.get_theme_children(industry.id)
-                for theme in themes:
-                    ticker_mappings = await self.get_ticker_mappings(theme.id)
+                for theme in children_by_parent.get(industry.id, []):
                     theme_node = {
                         "id": str(theme.id),
                         "name": theme.name,
@@ -208,7 +246,7 @@ class ThemeService:
                                 "relevance_score": m.relevance_score,
                                 "source": m.source,
                             }
-                            for m in ticker_mappings
+                            for m in theme.ticker_mappings
                         ],
                     }
                     industry_node["themes"].append(theme_node)
@@ -217,17 +255,18 @@ class ThemeService:
 
             tree.append(sector_node)
 
-        # Include narrative-level themes (free-text LLM extractions)
-        narratives = await self.get_themes_by_level("narrative")
-        for narrative in narratives:
-            tree.append(
-                {
-                    "id": str(narrative.id),
-                    "name": narrative.name,
-                    "description": narrative.description,
-                    "level": narrative.level,
-                    "industries": [],
-                }
-            )
-
         return tree
+
+    async def get_theme_stats(self) -> dict[str, int]:
+        """Get theme counts grouped by level. Single query, ~4 rows returned."""
+        result = await self.db.execute(
+            select(ThemeHierarchy.level, func.count())
+            .group_by(ThemeHierarchy.level)
+        )
+        counts = dict(result.all())
+        return {
+            "sectors": counts.get("sector", 0),
+            "industries": counts.get("industry", 0),
+            "themes": counts.get("theme", 0),
+            "narratives": counts.get("narrative", 0),
+        }
