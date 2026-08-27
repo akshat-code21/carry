@@ -33,6 +33,11 @@ jobs:
           username: ${{ secrets.GCP_SSH_USER }}
           key: ${{ secrets.GCP_SSH_KEY }}
           script: |
+            whoami
+            echo $HOME
+            ls -la ~/.ssh
+            ssh -vT git@github.com 2>&1 | tail -20
+            
             cd /opt/yt-chatter
 
             # Pull latest code

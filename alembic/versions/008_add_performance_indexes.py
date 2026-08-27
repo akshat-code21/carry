@@ -8,7 +8,7 @@ from alembic import op
 
 # revision identifiers
 revision = "008_perf_indexes"
-down_revision = "f8a92b113478"
+down_revision = "007"
 branch_labels = None
 depends_on = None
 
