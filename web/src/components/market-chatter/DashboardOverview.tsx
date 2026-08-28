@@ -34,8 +34,8 @@ export function DashboardOverview({
     filter === "stocks"
       ? data.top_stocks
       : filter === "etfs"
-      ? data.top_etfs
-      : [...data.top_stocks, ...data.top_etfs].slice(0, 12);
+        ? data.top_etfs
+        : [...data.top_stocks, ...data.top_etfs].slice(0, 12);
 
   const { summary, platform_breakdown } = data;
 
@@ -85,7 +85,7 @@ export function DashboardOverview({
           <GlowCard glowColor="neutral" className="p-5">
             <div className="flex items-center justify-between text-tf-faint">
               <span className="text-caption font-semibold uppercase tracking-[0.08em] text-tf-muted">
-                Market Sentiment Index
+                TickerFlow Sentiment Index
               </span>
               <TrendingUp className="h-4 w-4 text-tf-positive" />
             </div>
