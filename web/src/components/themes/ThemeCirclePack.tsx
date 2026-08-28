@@ -77,12 +77,12 @@ export function ThemeCirclePack({
         childThemes:
           d.level === "industry" && node.children
             ? node.children.map((c) => ({
-                id: c.data.id,
-                name: c.data.name,
-                description: c.data.description,
-                level: "theme",
-                tickers: c.data.tickers,
-              }))
+              id: c.data.id,
+              name: c.data.name,
+              description: c.data.description,
+              level: "theme",
+              tickers: c.data.tickers,
+            }))
             : undefined,
       };
     },
@@ -250,11 +250,10 @@ export function ThemeCirclePack({
       <div className="absolute top-3.5 left-3.5 z-20 flex flex-wrap items-center gap-1.5 bg-panel-raised/90 backdrop-blur-md px-3 py-1.5 rounded-md border border-line shadow-xs max-w-[calc(100%-120px)]">
         <button
           onClick={(e) => handleBreadcrumbClick(e, packRoot)}
-          className={`font-mono text-small px-2 py-0.5 rounded-sm transition-colors ${
-            currentFocus.data.level === "root"
+          className={`font-mono text-small px-2 py-0.5 rounded-sm transition-colors ${currentFocus.data.level === "root"
               ? "text-signal font-bold bg-signal/10 border border-signal/20"
               : "text-ink-secondary hover:text-ink hover:bg-panel"
-          }`}
+            }`}
         >
           All Sectors
         </button>
@@ -264,11 +263,10 @@ export function ThemeCirclePack({
             <ChevronRight className="h-3.5 w-3.5 text-ink-faint shrink-0" />
             <button
               onClick={(e) => handleBreadcrumbClick(e, crumb)}
-              className={`font-mono text-small px-2 py-0.5 rounded-sm truncate max-w-[150px] transition-colors ${
-                idx === breadcrumbs.length - 2
+              className={`font-mono text-small px-2 py-0.5 rounded-sm truncate max-w-[150px] transition-colors ${idx === breadcrumbs.length - 2
                   ? "text-signal font-bold bg-signal/10 border border-signal/20"
                   : "text-ink-secondary hover:text-ink hover:bg-panel"
-              }`}
+                }`}
             >
               {crumb.data.name}
             </button>

@@ -59,11 +59,10 @@ export function ThemeControls({
             variant={viewMode === "circle-pack" ? "secondary" : "ghost"}
             size="sm"
             onClick={() => onViewModeChange("circle-pack")}
-            className={`font-mono text-small gap-1.5 h-7 px-2.5 rounded-sm ${
-              viewMode === "circle-pack"
+            className={`font-mono text-small gap-1.5 h-7 px-2.5 rounded-sm ${viewMode === "circle-pack"
                 ? "bg-panel-raised text-signal font-semibold border border-line"
                 : "text-ink-secondary hover:text-ink"
-            }`}
+              }`}
           >
             <CircleDot className="h-3.5 w-3.5 text-signal" />
             <span>Bubble Map</span>
@@ -73,11 +72,10 @@ export function ThemeControls({
             variant={viewMode === "grid" ? "secondary" : "ghost"}
             size="sm"
             onClick={() => onViewModeChange("grid")}
-            className={`font-mono text-small gap-1.5 h-7 px-2.5 rounded-sm ${
-              viewMode === "grid"
+            className={`font-mono text-small gap-1.5 h-7 px-2.5 rounded-sm ${viewMode === "grid"
                 ? "bg-panel-raised text-signal font-semibold border border-line"
                 : "text-ink-secondary hover:text-ink"
-            }`}
+              }`}
           >
             <LayoutGrid className="h-3.5 w-3.5 text-ink-secondary" />
             <span>Card Grid</span>
@@ -91,11 +89,10 @@ export function ThemeControls({
           variant="outline"
           size="sm"
           onClick={() => onSelectSector(null)}
-          className={`h-7 px-2.5 font-mono text-micro rounded-md transition-all shrink-0 ${
-            selectedSectorId === null
+          className={`h-7 px-2.5 font-mono text-micro rounded-md transition-all shrink-0 ${selectedSectorId === null
               ? "bg-signal text-signal-foreground border-signal font-bold"
               : "border-line bg-panel text-ink-secondary hover:text-ink hover:bg-panel-raised"
-          }`}
+            }`}
         >
           All Sectors ({cleanSectors.length})
         </Button>
@@ -112,11 +109,10 @@ export function ThemeControls({
             <button
               key={sector.id}
               onClick={() => onSelectSector(isSelected ? null : sector.id)}
-              className={`h-7 px-2.5 font-mono text-micro rounded-md border transition-all shrink-0 flex items-center gap-1.5 ${
-                isSelected
+              className={`h-7 px-2.5 font-mono text-micro rounded-md border transition-all shrink-0 flex items-center gap-1.5 ${isSelected
                   ? "border-signal/50 bg-signal/10 text-signal font-bold shadow-2xs"
                   : "border-line bg-panel hover:bg-panel-raised text-ink-secondary hover:text-ink"
-              }`}
+                }`}
             >
               <span
                 className="h-1.5 w-1.5 rounded-full shrink-0"
