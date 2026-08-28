@@ -42,19 +42,16 @@ LLM_TIMEOUT_SECONDS = 8.0
 MAX_KEY_POINTS = 4
 ANSWER_MODEL = "gpt-5.4-nano"
 
-ANSWER_SYSTEM_PROMPT = """You synthesize answers about what financial commentators \
-said on YouTube, based on numbered transcript excerpts.
+ANSWER_SYSTEM_PROMPT = """You are a financial intelligence assistant synthesizing what financial creators, media channels, and analysts said on YouTube regarding the user's query, based on transcript excerpts.
 
 Rules:
-- Answer ONLY from the excerpts and the aggregate coverage context (if provided). \
-Never add outside knowledge.
-- The summary must directly address the user's query in 2-4 sentences.
-- Provide up to 4 key points as short standalone bullets.
-- Cite excerpts by their exact ids whenever a claim draws on them. \
-Prefer citing multiple supporting ids over one.
-- If the excerpts do not contain enough information to answer, set summary to \
-a single sentence saying the available clips don't cover it, cite nothing, \
-and leave key_points empty.
+1. Answer ONLY from the provided transcript excerpts and aggregate coverage context. Never add outside knowledge, speculate, or hallucinate.
+2. COMPULSORY CHANNEL ATTRIBUTION: Every single claim, valuation metric, price target, thesis, or sentiment point MUST explicitly state the specific YouTube channel name that said it (e.g., "According to CNBC...", "Meet Kevin argues that...", "Bloomberg reported...", "Both Graham Stephan and Plain Bagel noted..."). Never make generic unattributed statements.
+3. NO META-LANGUAGE: Do NOT refer to "the clips", "the excerpts", "one segment", "the transcripts", or "the video commentary". Synthesize the commentary directly as spoken thoughts and analyses from the respective channels.
+4. NO BRACKETED CITATIONS: Do NOT output citation numbers, brackets, or UUIDs (such as [1], [2], or [uuid]) in the summary or key points.
+5. The summary must directly answer the user's query in 2-4 cohesive sentences with explicit channel attributions.
+6. Provide up to 4 key points as short standalone bullet points. Each bullet point MUST explicitly name the channel that made the point.
+7. If the excerpts do not contain enough relevant information to answer, set summary to a single sentence stating that monitored channels have not discussed this topic, and leave key_points empty.
 
 Return ONLY valid JSON:
 {"summary": "...", "key_points": ["..."], "cited_segment_ids": ["id1", "id2"]}"""
@@ -80,13 +77,13 @@ def build_user_prompt(query: str, segments: list[dict[str, Any]]) -> str:
         channel = seg.get("channel_title") or "Unknown channel"
         title = seg.get("video_title") or "Unknown video"
         text = (seg.get("text") or "")[:SEGMENT_TEXT_LIMIT]
-        lines.append(f'[{seg["id"]}] ({channel} — "{title}"): {text}')
+        lines.append(f'[{seg["id"]}] (Channel: "{channel}" — "{title}"): {text}')
     return "\n".join(lines)
 
 
-# Matches bracketed UUID citations like "[28442ada-dea1-4b3b-8859-80c026260635]"
+# Matches bracketed UUID citations like "[28442ada-dea1-4b3b-8859-80c026260635]" or numbered markers like "[1]"
 _CITATION_BRACKET_RE = re.compile(
-    r"\[\s*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*\]",
+    r"\[\s*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d+)\s*\]",
     re.IGNORECASE,
 )
 _RAW_UUID_RE = re.compile(
@@ -95,23 +92,11 @@ _RAW_UUID_RE = re.compile(
 )
 
 
-def sanitize_citation_text(text: str, cited_ids: list[str]) -> str:
-    """Replace bracketed UUID citations with numbered markers [1], [2], etc.
-
-    UUIDs present in ``cited_ids`` are mapped by their LLM order; any stray
-    bracketed UUID or bare UUID not in the list is stripped so raw ids never
-    leak to the UI. Also cleans up empty brackets / parentheses left behind.
-    """
+def sanitize_citation_text(text: str, cited_ids: list[str] | None = None) -> str:
+    """Strip bracketed citations, numbered markers [1], and stray UUIDs from the text."""
     if not text:
         return text
-    id_to_index = {cid.lower(): str(idx + 1) for idx, cid in enumerate(cited_ids)}
-
-    def _repl(m: re.Match[str]) -> str:
-        uid = m.group(1).lower()
-        idx = id_to_index.get(uid)
-        return f"[{idx}]" if idx is not None else ""
-
-    text = _CITATION_BRACKET_RE.sub(_repl, text)
+    text = _CITATION_BRACKET_RE.sub("", text)
     text = _RAW_UUID_RE.sub("", text)
     # Clean artefacts left after stripping unknown citations
     text = re.sub(r"\(\s*,\s*", "(", text)

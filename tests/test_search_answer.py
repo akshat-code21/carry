@@ -43,7 +43,8 @@ class TestBuildUserPrompt:
 
         assert "Query: Anthropic IPO?" in prompt
         assert "[s1]" in prompt
-        assert 'Alpha Street — "Big Tech Bets"' in prompt
+        assert 'Channel: "Alpha Street"' in prompt
+        assert '"Big Tech Bets"' in prompt
         # Truncated to the limit, no overflow
         assert ("x" * SEGMENT_TEXT_LIMIT) in prompt
         assert ("x" * (SEGMENT_TEXT_LIMIT + 1)) not in prompt
