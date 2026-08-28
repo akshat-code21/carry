@@ -3,7 +3,6 @@
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
