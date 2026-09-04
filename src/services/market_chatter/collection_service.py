@@ -377,7 +377,7 @@ class CollectionService:
                         self._price_provider.get_daily_bars(symbol, max(period_days, 30)),
                         timeout=10.0,
                     )
-                except (Exception, TimeoutError):
+                except Exception:  # noqa: BLE001 - includes TimeoutError
                     bars = []
                 fetched_at = utcnow()
                 bars_by_date = {bar.date: bar for bar in bars}
@@ -466,8 +466,12 @@ class CollectionService:
         if period_days not in {7, 30}:
             raise ValueError("period_days must be 7 or 30")
         symbol = self._assert_supported(symbol)
-        collection = await self.collect(symbol, force=force)
-        prices = await self._ensure_prices(symbol, period_days)
+        # Run collection and price fetch concurrently — they are independent
+        # and running them sequentially was the main cause of outer timeouts.
+        collection, prices = await asyncio.gather(
+            self.collect(symbol, force=force),
+            self._ensure_prices(symbol, period_days),
+        )
 
         start_date = date.today() - timedelta(days=period_days - 1)
         async with self._session_factory() as session:

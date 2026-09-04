@@ -43,13 +43,14 @@ jobs:
             # Pull latest code
             git pull origin master
 
+            # Free disk space before building
+            docker builder prune -af
+            docker image prune -af
+
             # Rebuild and restart containers
             docker compose -f docker-compose.prod.yml up -d --build
 
             # Run database migrations
             docker compose -f docker-compose.prod.yml exec -T api alembic upgrade head
-
-            # Clean up old images
-            docker image prune -f
 
             echo "✅ Deploy complete"
