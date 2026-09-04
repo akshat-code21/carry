@@ -18,10 +18,10 @@ const activityColumns: Column<ActivityEvent>[] = [
   {
     key: "time",
     header: "Time",
-    numeric: true,
-    headerClassName: "w-36",
+    headerClassName: "w-44 min-w-[170px]",
+    className: "whitespace-nowrap",
     render: (evt) => (
-      <span className="numeric text-caption text-ink-faint">
+      <span className="font-mono text-caption text-ink-faint tabular-nums whitespace-nowrap">
         {new Date(evt.created_at).toLocaleString(undefined, {
           month: "short",
           day: "numeric",
@@ -34,10 +34,11 @@ const activityColumns: Column<ActivityEvent>[] = [
   {
     key: "type",
     header: "Type",
-    headerClassName: "w-28",
+    headerClassName: "w-48 min-w-[180px]",
+    className: "whitespace-nowrap",
     render: (evt) => (
       <span
-        className={`inline-flex items-center rounded-sm px-1.5 py-0.5 font-mono text-caption font-semibold uppercase tracking-wider ${eventBadgeClass(
+        className={`inline-flex items-center rounded px-2 py-0.5 font-mono text-micro font-semibold uppercase tracking-wider whitespace-nowrap ${eventBadgeClass(
           evt.event_type
         )}`}
       >
@@ -49,15 +50,15 @@ const activityColumns: Column<ActivityEvent>[] = [
     key: "event",
     header: "Event",
     render: (evt) => (
-      <div className="flex min-w-0 flex-col gap-0.5 py-0.5">
-        <span className="truncate text-small font-medium text-ink">{evt.title}</span>
+      <div className="flex min-w-0 flex-col gap-1 py-0.5">
+        <span className="text-small font-medium text-ink leading-snug break-words">{evt.title}</span>
         {evt.message && (
-          <span className="truncate text-caption text-ink-secondary">{evt.message}</span>
+          <span className="text-caption text-ink-secondary leading-snug break-words">{evt.message}</span>
         )}
         {evt.video_id && (
           <Link
             href={`/videos/${evt.video_id}`}
-            className="w-fit font-mono text-caption font-medium text-signal hover:underline"
+            className="mt-0.5 w-fit font-mono text-micro font-medium text-signal hover:underline"
             onClick={(e) => e.stopPropagation()}
           >
             VIEW VIDEO →

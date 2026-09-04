@@ -70,6 +70,7 @@ export function DataTable<T>({
               <TableHead
                 key={col.key}
                 className={cn(
+                  "px-3 py-2",
                   col.numeric && "text-right",
                   stickyFirstColumn && i === 0 && firstColStickyClasses,
                   stickyHeader && "bg-panel-raised",
@@ -95,7 +96,7 @@ export function DataTable<T>({
                 <TableCell
                   key={col.key}
                   className={cn(
-                    "py-1.5 text-body text-ink",
+                    "px-3 py-2.5 text-body text-ink align-top",
                     col.numeric && "text-right font-mono tabular-nums",
                     stickyFirstColumn && i === 0 && firstColStickyClasses,
                     col.className
