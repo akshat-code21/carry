@@ -717,7 +717,10 @@ export default function TickerFlowPage() {
                   variant={viewMode === "overview" ? "default" : "ghost"}
                   size="lg"
                   onClick={() => setViewMode("overview")}
-                  className={"text-base!"}
+                  className={cn(
+                    "text-base! flex items-center gap-1.5 rounded px-2.5 py-1 font-medium text-tf-muted transition-colors",
+                    viewMode === "overview" && "bg-tf-panel-raised text-tf-ink shadow-sm",
+                  )}
                 >
                   <LayoutDashboard className="h-3.5 w-3.5" />
                   Overview Dashboard
@@ -726,7 +729,6 @@ export default function TickerFlowPage() {
                   type="button"
                   variant={viewMode === "detail" ? "default" : "ghost"}
                   size="lg"
-                  className={"text-base!"}
                   onClick={() => {
                     if (!activeSymbol) {
                       chooseTicker("NVDA");
@@ -734,6 +736,10 @@ export default function TickerFlowPage() {
                       setViewMode("detail");
                     }
                   }}
+                  className={cn(
+                    "text-base! flex items-center gap-1.5 rounded px-2.5 py-1 font-medium text-tf-muted transition-colors",
+                    viewMode === "detail" && "bg-tf-panel-raised text-tf-ink shadow-sm",
+                  )}
                 >
                   <ChartIcon className="h-3.5 w-3.5" />
                   {activeSymbol ? `$${activeSymbol} Analysis` : "Single Ticker"}
