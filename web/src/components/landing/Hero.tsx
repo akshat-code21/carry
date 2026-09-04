@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
-import { ArrowRight, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ArrowRight, Search, Sparkles, Tv, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -19,35 +19,64 @@ const item: Variants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.65, ease: EASE } },
 };
 
-interface PreviewRow {
-  ticker: string;
-  company: string;
-  mentions: number;
-  bullish: number;
-  bearish: number;
-  daysAgo: string;
+/* ── Sample data mirroring the real Search Engine page ───────────────── */
+
+const sampleSummary = {
+  text: "NVIDIA remains the dominant AI infrastructure play. Analysts and YouTube creators highlight strong data-center revenue driven by H100/H200 demand, with consensus pointing to continued growth through 2026. Key concerns include valuation multiples and potential competition from custom ASICs.",
+  keyPoints: [
+    "Data-center revenue up 154% YoY, driven by hyperscaler AI capex",
+    "H200 and Blackwell ramp expected to sustain growth through mid-2026",
+    "Valuation concern: trading at ~35x forward earnings, above 5-year average",
+    "Custom ASIC competition from Google TPU and Amazon Trainium noted as risk",
+  ],
+  social: { symbol: "NVDA", mentions: 1284, sentiment: 0.42, bullishPct: 72 },
+};
+
+interface SampleResult {
+  channel: string;
+  title: string;
+  date: string;
+  hits: number;
+  snippet: string;
+  timestamp: string;
+  sentiment: "bullish" | "bearish" | "neutral";
 }
 
-/* Realistic ticker-mentions snapshot - the shape of Tickerflow/Dashboard output */
-const previewRows: PreviewRow[] = [
-  { ticker: "NVDA", company: "NVIDIA", mentions: 42, bullish: 78, bearish: 14, daysAgo: "2h ago" },
-  { ticker: "TSLA", company: "Tesla", mentions: 35, bullish: 44, bearish: 40, daysAgo: "5h ago" },
-  { ticker: "PLTR", company: "Palantir", mentions: 27, bullish: 61, bearish: 22, daysAgo: "1d ago" },
-  { ticker: "SOFI", company: "SoFi", mentions: 19, bullish: 52, bearish: 31, daysAgo: "1d ago" },
-  { ticker: "GLD", company: "SPDR Gold", mentions: 16, bullish: 66, bearish: 19, daysAgo: "3d ago" },
+const sampleResults: SampleResult[] = [
+  {
+    channel: "Meet Kevin",
+    title: "NVIDIA Just Changed Everything — Here's What Nobody Sees Coming",
+    date: "Aug 28, 2026",
+    hits: 6,
+    snippet: "The Blackwell architecture is going to be a massive upgrade cycle. Every single hyperscaler is lining up for these chips...",
+    timestamp: "12:34",
+    sentiment: "bullish",
+  },
+  {
+    channel: "Joseph Carlson",
+    title: "Is NVIDIA Still a Buy After the Earnings Beat?",
+    date: "Aug 26, 2026",
+    hits: 4,
+    snippet: "Data center revenue came in at $26.3 billion, which is just staggering. But at 35x forward, you have to ask yourself...",
+    timestamp: "8:15",
+    sentiment: "neutral",
+  },
+  {
+    channel: "Tom Nash",
+    title: "The AI Trade Is NOT Over — NVDA, MSFT, GOOGL Deep Dive",
+    date: "Aug 22, 2026",
+    hits: 3,
+    snippet: "Custom ASICs are not replacing NVIDIA. They're complementary. Google's TPU handles specific workloads but CUDA's ecosystem moat is enormous...",
+    timestamp: "22:07",
+    sentiment: "bullish",
+  },
 ];
 
-const sentimentMeta = {
-  bullish: { Icon: TrendingUp, className: "text-bullish", bg: "bg-bullish/10 border-bullish/25" },
-  bearish: { Icon: TrendingDown, className: "text-bearish", bg: "bg-bearish/10 border-bearish/25" },
-  neutral: { Icon: Minus, className: "text-ink-secondary", bg: "bg-panel-raised border-line-strong" },
+const sentimentColors = {
+  bullish: "text-bullish",
+  bearish: "text-bearish",
+  neutral: "text-ink-secondary",
 } as const;
-
-function netSentiment(row: PreviewRow): "bullish" | "bearish" | "neutral" {
-  if (row.bullish - row.bearish >= 20) return "bullish";
-  if (row.bearish - row.bullish >= 20) return "bearish";
-  return "neutral";
-}
 
 function DataPreview() {
   const reducedMotion = useReducedMotion();
@@ -59,7 +88,7 @@ function DataPreview() {
       transition={{ duration: 0.75, delay: 0.5, ease: EASE }}
       className="relative mx-auto mt-14 w-full max-w-4xl lg:mt-16"
     >
-      {/* Single focal shimmer - the only scan animation on the page */}
+      {/* Single focal shimmer */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 overflow-hidden rounded-lg"
@@ -72,87 +101,151 @@ function DataPreview() {
         />
       </div>
 
-      <div className="relative overflow-hidden rounded-lg border border-line-strong bg-panel">
-        {/* Window chrome - echoes the app's dashboard framing */}
+      <div className="relative overflow-hidden rounded-lg border border-line-strong bg-panel shadow-lg">
+        {/* ── Window chrome ──────────────────────────────────────────── */}
         <div className="flex h-10 items-center justify-between border-b border-line px-4">
-          <p className="font-mono text-micro font-semibold uppercase tracking-[0.12em] text-ink-faint">
-            Ticker mentions · last 7 days
-          </p>
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1.5" aria-hidden="true">
+              <span className="size-2.5 rounded-full bg-bearish/60" />
+              <span className="size-2.5 rounded-full bg-warning/60" />
+              <span className="size-2.5 rounded-full bg-bullish/60" />
+            </div>
+            <p className="ml-2 font-mono text-micro font-semibold uppercase tracking-[0.12em] text-ink-faint">
+              Search Engine
+            </p>
+          </div>
           <div className="flex items-center gap-1.5 font-mono text-micro text-ink-faint">
             <span className="size-1.5 rounded-full bg-signal" aria-hidden="true" />
             sample data
           </div>
         </div>
 
-        {/* Dense mentions table - mirrors the dashboard's terminal-table style */}
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[540px] border-collapse font-mono text-small tabular-nums">
-            <thead>
-              <tr className="border-b border-line bg-canvas/60 text-left">
-                <th className="px-4 py-2 text-micro font-semibold uppercase tracking-[0.1em] text-ink-faint">
-                  Ticker
-                </th>
-                <th className="px-3 py-2 text-right text-micro font-semibold uppercase tracking-[0.1em] text-ink-faint">
-                  Mentions
-                </th>
-                <th className="px-3 py-2 text-right text-micro font-semibold uppercase tracking-[0.1em] text-ink-faint">
-                  Bullish
-                </th>
-                <th className="px-3 py-2 text-right text-micro font-semibold uppercase tracking-[0.1em] text-ink-faint">
-                  Bearish
-                </th>
-                <th className="px-4 py-2 text-right text-micro font-semibold uppercase tracking-[0.1em] text-ink-faint">
-                  Last
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {previewRows.map((row) => {
-                const meta = sentimentMeta[netSentiment(row)];
-                return (
-                  <tr
-                    key={row.ticker}
-                    className="border-b border-line/70 transition-colors last:border-0 hover:bg-panel-raised"
-                  >
-                    <td className="px-4 py-2.5">
-                      <span className="font-semibold tracking-tight text-ink">
-                        {row.ticker}
-                      </span>
-                      <span className="ml-2.5 hidden text-caption text-ink-faint sm:inline">
-                        {row.company}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-ink">
-                      {row.mentions}
-                    </td>
-                    <td className="px-3 py-2.5 text-right">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-micro font-semibold ${meta.bg} ${meta.className}`}
-                      >
-                        <meta.Icon className="size-3" />
-                        {row.bullish}%
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-ink-secondary">
-                      {row.bearish}%
-                    </td>
-                    <td className="px-4 py-2.5 text-right text-ink-faint">
-                      {row.daysAgo}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        {/* ── Search bar + type toggles ──────────────────────────────── */}
+        <div className="border-b border-line bg-canvas/40 px-4 py-3">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-ink-faint" />
+              <div className="flex h-9 items-center rounded-md border border-line bg-panel pl-9 pr-3 text-small text-ink">
+                NVIDIA AI outlook 2026
+              </div>
+            </div>
+            <div className="flex h-9 items-center rounded-md bg-signal px-4 font-mono text-small font-semibold text-canvas">
+              Search
+            </div>
+          </div>
+          <div className="mt-2.5 flex items-center gap-2">
+            <span className="font-mono text-micro font-semibold uppercase tracking-[0.14em] text-ink-faint">
+              Search type
+            </span>
+            <div className="flex gap-0.5 rounded-md border border-line bg-panel p-0.5">
+              {(["keyword", "semantic", "hybrid"] as const).map((t) => (
+                <span
+                  key={t}
+                  className={`rounded-md px-2.5 py-1 font-mono text-micro font-medium capitalize ${t === "hybrid"
+                    ? "bg-signal text-canvas"
+                    : "text-ink-faint"
+                    }`}
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
 
+        {/* ── AI Summary card ────────────────────────────────────────── */}
+        <div className="border-b border-line px-4 py-4">
+          <div className="rounded-lg border border-signal/30 bg-panel p-4">
+            <div className="mb-2.5 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-signal" />
+              <span className="font-mono text-micro font-semibold uppercase tracking-[0.14em] text-signal">
+                Summary
+              </span>
+            </div>
+            <p className="text-small leading-relaxed text-ink">
+              {sampleSummary.text}
+            </p>
+            <ul className="mt-3 flex flex-col gap-1.5">
+              {sampleSummary.keyPoints.map((point, i) => (
+                <li
+                  key={i}
+                  className="flex items-start gap-2 text-small text-ink-secondary"
+                >
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-signal" />
+                  {point}
+                </li>
+              ))}
+            </ul>
+            {/* Social strip */}
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-line/60 pt-2.5">
+              <span className="font-mono text-micro font-semibold uppercase tracking-[0.14em] text-ink-faint">
+                Social
+              </span>
+              <span className="font-mono text-micro font-semibold text-ink">
+                {sampleSummary.social.symbol}
+              </span>
+              <span className="font-mono text-micro text-ink-secondary">
+                {sampleSummary.social.mentions.toLocaleString()} mentions
+              </span>
+              <span className="font-mono text-micro font-semibold text-bullish">
+                +{sampleSummary.social.sentiment.toFixed(2)}
+              </span>
+              <span className="font-mono text-micro text-bullish/70">
+                {sampleSummary.social.bullishPct}% bull
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Grouped video results ──────────────────────────────────── */}
+        <div className="divide-y divide-line/70">
+          {sampleResults.map((result) => (
+            <div key={result.title} className="px-4 py-3 transition-colors hover:bg-panel-raised">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Tv className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
+                    <span className="font-mono text-micro font-semibold text-ink-faint">
+                      {result.channel}
+                    </span>
+                    <span className="font-mono text-micro text-ink-faint">
+                      · {result.date}
+                    </span>
+                    <span className={`ml-auto font-mono text-micro font-semibold ${sentimentColors[result.sentiment]}`}>
+                      {result.sentiment === "bullish" ? "▲ Bullish" : result.sentiment === "bearish" ? "▼ Bearish" : "— Neutral"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-small font-medium leading-snug text-ink line-clamp-1">
+                    {result.title}
+                  </p>
+                  <div className="mt-1.5 border-l-2 border-line-strong py-0.5 pl-3">
+                    <p className="text-small italic text-ink-secondary line-clamp-2">
+                      &quot;{result.snippet}&quot;
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center gap-3">
+                <span className="inline-flex items-center gap-1 rounded border border-line bg-panel-raised px-1.5 py-0.5 font-mono text-micro text-ink-faint">
+                  {result.hits} clips matched
+                </span>
+                <span className="font-mono text-micro text-ink-faint">
+                  @ {result.timestamp}
+                </span>
+                <ChevronDown className="ml-auto h-3.5 w-3.5 text-ink-faint" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Footer bar ─────────────────────────────────────────────── */}
         <div className="flex items-center justify-between border-t border-line px-4 py-2.5">
           <p className="font-mono text-micro text-ink-faint">
-            5 of 1,284 tracked tickers · aggregated across 4 social + news sources
+            3 of 47 videos · 13 clips
           </p>
-          <p className="font-mono text-micro text-ink-faint">
+          {/* <p className="font-mono text-micro text-ink-faint">
             not investment advice
-          </p>
+          </p> */}
         </div>
       </div>
     </motion.div>
