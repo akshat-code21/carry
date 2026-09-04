@@ -6,9 +6,10 @@ const columns = [
   {
     title: "Product",
     links: [
-      { label: "Search", href: "/search" },
-      { label: "Overview", href: "/dashboard" },
+      { label: "Dashboard", href: "/dashboard" },
       { label: "Tickerflow", href: "/tickerflow" },
+      { label: "Themes", href: "/themes" },
+      { label: "Consensus", href: "/consensus" },
     ],
   },
   {
@@ -44,8 +45,9 @@ export function Footer() {
           <div className="max-w-sm">
             <Logo />
             <p className="mt-4 text-body leading-relaxed text-ink-faint">
-              Market commentary intelligence. Search the tape, verify the calls,
-              and read the mood — sourced to the second.
+              Carry aggregates YouTube, Reddit, X, and news coverage, then
+              distills it into searchable tickers, themes, and sentiment -
+              every claim traceable to its source.
             </p>
             <div className="mt-6 flex items-center gap-1.5">
               {socials.map(({ Icon, label, href }) => (
