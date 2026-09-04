@@ -137,7 +137,7 @@ export function DashboardOverview({
               onClick={() => setFilter("all")}
               className={cn(
                 "rounded px-3 py-1 text-caption font-medium text-tf-muted transition-colors",
-                filter === "all" && "bg-tf-panel-raised text-tf-ink shadow-sm"
+                filter === "all" && "bg-tf-panel-raised text-tf-ink"
               )}
             >
               All Tickers
@@ -147,7 +147,7 @@ export function DashboardOverview({
               onClick={() => setFilter("stocks")}
               className={cn(
                 "rounded px-3 py-1 text-caption font-medium text-tf-muted transition-colors",
-                filter === "stocks" && "bg-tf-panel-raised text-tf-ink shadow-sm"
+                filter === "stocks" && "bg-tf-panel-raised text-tf-ink"
               )}
             >
               Stocks Only
@@ -157,7 +157,7 @@ export function DashboardOverview({
               onClick={() => setFilter("etfs")}
               className={cn(
                 "rounded px-3 py-1 text-caption font-medium text-tf-muted transition-colors",
-                filter === "etfs" && "bg-tf-panel-raised text-tf-ink shadow-sm"
+                filter === "etfs" && "bg-tf-panel-raised text-tf-ink"
               )}
             >
               ETFs Only
@@ -171,7 +171,7 @@ export function DashboardOverview({
               key={item.symbol}
               whileHover={{ y: -2 }}
               onClick={() => onSelectTicker(item.symbol)}
-              className="group cursor-pointer rounded-xl border border-tf-stroke bg-tf-panel p-4 transition-all hover:border-tf-signal/30 hover:bg-tf-panel-raised"
+              className="group cursor-pointer rounded-md border border-tf-stroke bg-tf-panel p-4 transition-all hover:border-tf-signal/30 hover:bg-tf-panel-raised"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>

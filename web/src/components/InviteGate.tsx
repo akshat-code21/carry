@@ -47,7 +47,7 @@ export function InviteGate({ email }: { email?: string | null }) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-canvas p-4">
-      <div className="w-full max-w-md rounded-xl border border-line bg-panel p-8 shadow-lg">
+      <div className="w-full max-w-md rounded-md border border-line bg-panel p-8">
         <div className="flex h-9 w-9 items-center justify-center rounded-md bg-signal font-display text-body font-bold text-black">
           C
         </div>
