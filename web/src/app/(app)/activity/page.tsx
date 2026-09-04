@@ -19,9 +19,9 @@ const activityColumns: Column<ActivityEvent>[] = [
     key: "time",
     header: "Time",
     numeric: true,
-    headerClassName: "w-36",
+    headerClassName: "w-40",
     render: (evt) => (
-      <span className="numeric text-caption text-ink-faint">
+      <span className="numeric text-caption text-ink-faint whitespace-nowrap">
         {new Date(evt.created_at).toLocaleString(undefined, {
           month: "short",
           day: "numeric",
@@ -34,10 +34,10 @@ const activityColumns: Column<ActivityEvent>[] = [
   {
     key: "type",
     header: "Type",
-    headerClassName: "w-28",
+    headerClassName: "w-48",
     render: (evt) => (
       <span
-        className={`inline-flex items-center rounded-sm px-1.5 py-0.5 font-mono text-caption font-semibold uppercase tracking-wider ${eventBadgeClass(
+        className={`inline-flex items-center rounded-sm px-2 py-0.5 font-mono text-caption font-semibold uppercase tracking-wider whitespace-nowrap ${eventBadgeClass(
           evt.event_type
         )}`}
       >
