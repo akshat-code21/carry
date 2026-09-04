@@ -39,21 +39,21 @@ interface PreviewRow {
 
 const previewRows: PreviewRow[] = [
   {
-    ticker: "$NVDA",
+    ticker: "NVDA",
     theme: "Semiconductors",
     snippet: "\u201c…compute demand is still growing faster than supply…\u201d",
     sentiment: "bullish",
     score: 92,
   },
   {
-    ticker: "$TLT",
+    ticker: "TLT",
     theme: "Rates / Bonds",
     snippet: "\u201c…the Fed starts easing in September, this tape rips…\u201d",
     sentiment: "bullish",
     score: 78,
   },
   {
-    ticker: "$XBI",
+    ticker: "XBI",
     theme: "Biotech",
     snippet: "\u201c…rate-sensitive names finally catch a bid…\u201d",
     sentiment: "neutral",

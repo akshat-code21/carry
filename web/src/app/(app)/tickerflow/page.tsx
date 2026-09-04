@@ -706,7 +706,7 @@ export default function TickerFlowPage() {
                       activeSymbol === ticker && viewMode === "detail" && "bg-tf-signal/10 text-tf-signal",
                     )}
                   >
-                    ${ticker}
+                    {ticker}
                   </button>
                 ))}
               </div>
@@ -742,7 +742,7 @@ export default function TickerFlowPage() {
                   )}
                 >
                   <ChartIcon className="h-3.5 w-3.5" />
-                  {activeSymbol ? `$${activeSymbol} Analysis` : "Single Ticker"}
+                  {activeSymbol ? `${activeSymbol} Analysis` : "Single Ticker"}
                 </Button>
               </div>
             </div>
@@ -816,7 +816,7 @@ export default function TickerFlowPage() {
                 <div>
                   <div className="flex items-center gap-2.5">
                     <h2 className="font-mono text-display font-medium tracking-[-0.05em] text-tf-ink">
-                      ${data.symbol}
+                      {data.symbol}
                     </h2>
                     {/* <StatusBadge status={data.data_status} /> */}
                   </div>

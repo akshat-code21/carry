@@ -175,7 +175,7 @@ export function DashboardOverview({
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-title font-semibold text-tf-ink group-hover:text-tf-signal transition-colors">
-                      ${item.symbol}
+                      {item.symbol}
                     </span>
                     {item.is_etf ? (
                       <span className="rounded bg-info/10 px-1.5 py-0.5 font-mono text-micro uppercase tracking-wider text-info border border-info/30">
@@ -242,7 +242,7 @@ export function DashboardOverview({
               >
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-title font-semibold text-tf-ink">
-                    ${item.symbol}
+                    {item.symbol}
                   </span>
                   <span className="text-small text-tf-muted line-clamp-1">
                     {item.company_name}
@@ -272,7 +272,7 @@ export function DashboardOverview({
               >
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-title font-semibold text-tf-ink">
-                    ${item.symbol}
+                    {item.symbol}
                   </span>
                   <span className="text-small text-tf-muted line-clamp-1">
                     {item.company_name}

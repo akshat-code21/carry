@@ -545,7 +545,7 @@ export default function InvestorDetailPage() {
                           <td className="py-2.5 px-3 font-mono font-semibold text-signal sticky left-[220px] z-10 bg-canvas group-hover:bg-panel/70 transition-colors min-w-[90px] max-w-[90px] w-[90px] border-r border-line">
                             {h.ticker_symbol && h.ticker_symbol !== "—" ? (
                               <Link href={`/tickers/${h.ticker_symbol}`} className="hover:underline">
-                                ${h.ticker_symbol}
+                                {h.ticker_symbol}
                               </Link>
                             ) : (
                               "—"
@@ -653,7 +653,7 @@ export default function InvestorDetailPage() {
                                     <td className="px-4 py-2.5 font-mono font-semibold text-signal">
                                       {pc.ticker_symbol ? (
                                         <Link href={`/tickers/${pc.ticker_symbol}`} className="hover:underline">
-                                          ${pc.ticker_symbol}
+                                          {pc.ticker_symbol}
                                         </Link>
                                       ) : (
                                         "—"

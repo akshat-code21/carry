@@ -179,11 +179,11 @@ export default function TickerPage() {
           items={[
             { label: "Dashboard", href: "/dashboard" },
             { label: "Tickers", href: "/dashboard" },
-            { label: `$${ticker.toUpperCase()}` },
+            { label: ticker.toUpperCase() },
           ]}
         />
         <PageHeader
-          title={`$${ticker.toUpperCase()}`}
+          title={ticker.toUpperCase()}
           description={`Market Intelligence & Video Predictions for ${ticker.toUpperCase()}`}
         />
         {(data.social || data.combined_avg_sentiment != null) && (

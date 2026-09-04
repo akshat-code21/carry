@@ -97,7 +97,7 @@ export default function ThemePage() {
                 <div key={t.ticker} className="flex items-center justify-between border-b border-line pb-2.5 last:border-0 last:pb-0">
                   <div className="flex flex-col">
                     <Link href={`/tickers/${t.ticker}`} className="font-mono font-semibold text-ink hover:text-signal hover:underline">
-                      ${t.ticker}
+                      {t.ticker}
                     </Link>
                     <span className="text-micro capitalize text-ink-secondary">
                       Source: {t.source}

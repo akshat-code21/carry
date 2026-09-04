@@ -167,7 +167,7 @@ export function ThemeGridView({
                                             key={tk.ticker}
                                             className="font-mono text-micro text-signal bg-signal/10 px-1 py-0.5 rounded-sm font-bold"
                                           >
-                                            ${tk.ticker}
+                                            {tk.ticker}
                                           </span>
                                         ))}
                                         {theme.tickers.length > 2 && (

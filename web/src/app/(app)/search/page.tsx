@@ -148,7 +148,7 @@ function SearchAnswerCard({
               {answer.social_context!.map((snap) => (
                 <div key={snap.symbol} className="flex flex-wrap items-center gap-2">
                   <span className="font-mono text-micro font-semibold text-ink">
-                    ${snap.symbol}
+                    {snap.symbol}
                   </span>
                   <span className="font-mono text-micro text-ink-secondary">
                     {snap.total_mentions ?? 0} mentions
@@ -275,7 +275,7 @@ function CoverageSnapshotCard({ coverage }: { coverage: SearchCoverageResponse }
       {coverage.social?.available && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line/60 pt-2.5">
           <span className="label-overline text-ink-faint">
-            Social · ${coverage.social.symbol}
+            Social · {coverage.social.symbol}
           </span>
           <span className="font-mono text-small text-ink-secondary">
             {coverage.social.mentions} mentions
@@ -669,7 +669,7 @@ function SearchPageContent() {
                                   onClick={(e) => e.stopPropagation()}
                                   className="transition-colors hover:text-signal"
                                 >
-                                  <span className="font-mono text-title font-semibold tracking-tight text-ink">${stock.ticker}</span>
+                                  <span className="font-mono text-title font-semibold tracking-tight text-ink">{stock.ticker}</span>
                                 </Link>
                                 {stock.is_etf && (
                                   <Badge variant="outline" className="border-info/30 bg-info/10 px-1.5 py-0 text-micro text-info">
@@ -1098,7 +1098,7 @@ function SearchPageContent() {
                     <div className="flex max-w-[160px] flex-col gap-0.5">
                       <div className="flex items-center gap-1.5">
                         <Link href={`/tickers/${stock.ticker}`} className="font-mono text-small font-semibold text-ink hover:text-signal hover:underline">
-                          ${stock.ticker}
+                          {stock.ticker}
                         </Link>
                         {stock.is_etf && (
                           <Badge variant="outline" className="border-info/30 bg-info/10 px-1 py-0 text-micro text-info">
@@ -1130,7 +1130,7 @@ function SearchPageContent() {
                     <div key={i} className="flex items-center justify-between border-b border-line pb-2.5 last:border-0 last:pb-0">
                       <div className="flex max-w-[160px] flex-col gap-0.5">
                         <Link href={`/tickers/${p.ticker}`} className="font-mono text-small font-semibold text-ink hover:text-signal hover:underline">
-                          ${p.ticker}
+                          {p.ticker}
                         </Link>
                         <span className="line-clamp-1 text-small text-ink-secondary">
                           {p.prediction_text}

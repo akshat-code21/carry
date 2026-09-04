@@ -574,7 +574,7 @@ export function ThemeCirclePack({
                                 fill="var(--signal)"
                                 style={{ fontSize: "9px" }}
                               >
-                                ${tk.ticker}
+                                {tk.ticker}
                               </text>
                             </g>
                           );
@@ -600,7 +600,7 @@ export function ThemeCirclePack({
             <span className="text-signal font-semibold">{hoveredNode.data.name}</span>
             {hoveredNode.data.tickers && hoveredNode.data.tickers.length > 0 && (
               <span className="text-ink-secondary ml-1.5 font-bold">
-                (${hoveredNode.data.tickers.map((t) => t.ticker).join(", $")})
+                ({hoveredNode.data.tickers.map((t) => t.ticker).join(", ")})
               </span>
             )}
           </div>

@@ -159,7 +159,7 @@ export function ThemeInspector({
                         variant="outline"
                         className="font-mono text-small py-1 px-2.5 gap-1.5 rounded-md transition-all hover:border-signal/40 hover:bg-signal/10 hover:text-signal cursor-pointer"
                       >
-                        <span className="font-bold text-signal">${tk.ticker}</span>
+                        <span className="font-bold text-signal">{tk.ticker}</span>
                         {tk.relevance_score > 0 && (
                           <span className="text-micro text-ink-faint tabular-nums">
                             {(tk.relevance_score * 100).toFixed(0)}%
@@ -211,7 +211,7 @@ export function ThemeInspector({
                       </span>
                       {th.tickers && th.tickers.length > 0 && (
                         <span className="font-mono text-micro text-signal bg-signal/10 px-1.5 py-0.5 rounded-sm shrink-0 font-bold">
-                          ${th.tickers[0].ticker}
+                          {th.tickers[0].ticker}
                           {th.tickers.length > 1 ? ` +${th.tickers.length - 1}` : ""}
                         </span>
                       )}

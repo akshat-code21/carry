@@ -40,7 +40,7 @@ export function ThemeControls({
           <Input
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search themes, sectors, tickers (e.g. AI, Semiconductors, $NVDA)..."
+            placeholder="Search themes, sectors, tickers (e.g. AI, Semiconductors, NVDA)..."
             className="pl-9 pr-8 h-8 font-mono text-small bg-panel border-line text-ink placeholder:text-ink-faint focus-visible:ring-signal rounded-md"
           />
           {searchQuery && (

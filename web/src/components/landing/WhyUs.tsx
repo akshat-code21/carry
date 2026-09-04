@@ -27,11 +27,11 @@ const reasons = [
 ];
 
 const leaderboard = [
-  { ticker: "$NVDA", theme: "Semiconductors", score: 92 },
-  { ticker: "$TLT", theme: "Rates / Bonds", score: 78 },
-  { ticker: "$QQQ", theme: "Broad Tech", score: 71 },
-  { ticker: "$GLD", theme: "Precious Metals", score: 63 },
-  { ticker: "$XBI", theme: "Biotech", score: 54 },
+  { ticker: "NVDA", theme: "Semiconductors", score: 92 },
+  { ticker: "TLT", theme: "Rates / Bonds", score: 78 },
+  { ticker: "QQQ", theme: "Broad Tech", score: 71 },
+  { ticker: "GLD", theme: "Precious Metals", score: 63 },
+  { ticker: "XBI", theme: "Biotech", score: 54 },
 ];
 
 function WhyVisual() {

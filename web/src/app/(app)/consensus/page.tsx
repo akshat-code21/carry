@@ -265,7 +265,7 @@ export default function ConsensusPage() {
                   {mostPopular.company_name || mostPopular.ticker_symbol}
                 </div>
                 {mostPopular.ticker_symbol && (
-                  <div className="text-micro font-mono text-signal font-bold">${mostPopular.ticker_symbol}</div>
+                  <div className="text-micro font-mono text-signal font-bold">{mostPopular.ticker_symbol}</div>
                 )}
                 <div className="mt-2 text-small text-ink-secondary">
                   Held by <span className="font-bold text-ink font-mono">{mostPopular.total_funds_holding}</span> funds
@@ -321,7 +321,7 @@ export default function ConsensusPage() {
                     <td className="px-6 py-4 font-mono text-micro">
                       {h.ticker_symbol ? (
                         <span className="bg-signal/15 text-signal px-2 py-0.5 rounded font-bold border border-signal/20">
-                          ${h.ticker_symbol}
+                          {h.ticker_symbol}
                         </span>
                       ) : (
                         <span className="text-ink-faint/50">—</span>
@@ -414,7 +414,7 @@ export default function ConsensusPage() {
                   <div className="flex items-center gap-2 mt-1">
                     {selectedHolding.ticker_symbol && (
                       <span className="bg-signal/15 text-signal text-micro px-2.5 py-0.5 rounded font-mono font-bold border border-signal/25">
-                        ${selectedHolding.ticker_symbol}
+                        {selectedHolding.ticker_symbol}
                       </span>
                     )}
                     <span className="text-micro px-2.5 py-0.5 rounded-full bg-panel text-ink-secondary font-mono font-semibold border border-line">

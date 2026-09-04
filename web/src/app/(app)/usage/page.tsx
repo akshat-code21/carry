@@ -238,7 +238,7 @@ function EventLabel({ type, payload }: { type: string; payload: Record<string, u
   const label = EVENT_LABELS[type] ?? type.replace(/_/g, " ");
   let detail = "";
   if (type === "search_performed") detail = String(payload.query ?? "");
-  else if (type === "ticker_viewed") detail = `$${String(payload.ticker ?? "")}`;
+  else if (type === "ticker_viewed") detail = String(payload.ticker ?? "");
   else if (type === "channel_viewed") detail = String(payload.title ?? "");
   else if (type === "theme_viewed") detail = String(payload.name ?? "");
   return (
