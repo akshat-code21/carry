@@ -27,12 +27,12 @@ export function GlowCard({
   return (
     <div
       className={cn(
-        "relative rounded-lg border border-tf-stroke bg-tf-panel",
-        "before:absolute before:inset-x-0 before:top-0 before:h-px before:rounded-t-lg",
-        "transition-[background-color,border-color,transform] duration-200",
+        "relative rounded-md border border-tf-stroke bg-tf-panel",
+        // Flat accent hairline retained as the only source-color cue (no glow/translate)
+        "before:absolute before:inset-x-0 before:top-0 before:h-px before:rounded-t-md",
+        "transition-colors duration-150",
         accentClasses[glowColor],
-        hover &&
-          "hover:-translate-y-px hover:border-tf-stroke-strong hover:bg-tf-panel-raised",
+        hover && "hover:border-tf-stroke-strong hover:bg-tf-panel-raised",
         className,
       )}
     >

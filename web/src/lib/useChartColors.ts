@@ -9,6 +9,7 @@ export interface ChartColors {
   warning: string;
   info: string;
   primary: string;
+  price: string;
   mutedForeground: string;
   chart1: string;
   chart2: string;
@@ -38,33 +39,35 @@ export function useChartColors(): ChartColors {
     subscribe,
     () =>
       JSON.stringify({
-        success: getVar("--success", "#3CB173"),
-        danger: getVar("--danger", "#E3645E"),
-        warning: getVar("--warning", "#E6AC3D"),
-        info: getVar("--info", "#7EA9D5"),
-        primary: getVar("--primary", "#BED540"),
-        mutedForeground: getVar("--muted-foreground", "#9A9FA6"),
-        chart1: getVar("--chart-1", "#BED540"),
-        chart2: getVar("--chart-2", "#7EA9D5"),
-        canvas: getVar("--canvas", "#10141C"),
-        ink: getVar("--ink", "#E8EBF0"),
-        inkSecondary: getVar("--ink-secondary", "#9A9FA6"),
-        line: getVar("--line", "#3A4250"),
+        success: getVar("--success", "#2E7D5F"),
+        danger: getVar("--danger", "#C24A31"),
+        warning: getVar("--warning", "#AF7C2B"),
+        info: getVar("--info", "#0284C7"),
+        primary: getVar("--primary", "#2E7D46"),
+        price: getVar("--price", "#F59E0B"),
+        mutedForeground: getVar("--muted-foreground", "#656C77"),
+        chart1: getVar("--chart-1", "#2E7D46"),
+        chart2: getVar("--chart-2", "#F59E0B"),
+        canvas: getVar("--canvas", "#F7F8FA"),
+        ink: getVar("--ink", "#343B47"),
+        inkSecondary: getVar("--ink-secondary", "#656C77"),
+        line: getVar("--line", "#E1E4E9"),
       }),
     () =>
       JSON.stringify({
-        success: "#3CB173",
-        danger: "#E3645E",
-        warning: "#E6AC3D",
-        info: "#7EA9D5",
-        primary: "#BED540",
-        mutedForeground: "#9A9FA6",
-        chart1: "#BED540",
-        chart2: "#7EA9D5",
-        canvas: "#10141C",
-        ink: "#E8EBF0",
-        inkSecondary: "#9A9FA6",
-        line: "#3A4250",
+        success: "#2E7D5F",
+        danger: "#C24A31",
+        warning: "#AF7C2B",
+        info: "#0284C7",
+        primary: "#2E7D46",
+        price: "#F59E0B",
+        mutedForeground: "#656C77",
+        chart1: "#2E7D46",
+        chart2: "#F59E0B",
+        canvas: "#F7F8FA",
+        ink: "#343B47",
+        inkSecondary: "#656C77",
+        line: "#E1E4E9",
       })
   );
 
