@@ -21,6 +21,7 @@ import { StatCard } from "@/components/StatCard";
 import { Skeleton } from "@/components/Skeleton";
 import { ErrorState } from "@/components/ErrorState";
 import { useMe } from "@/lib/hooks";
+import { useChartColors } from "@/lib/useChartColors";
 import { api, type InviteDto } from "@/lib/api";
 
 export default function AdminPage() {
@@ -40,6 +41,7 @@ export default function AdminPage() {
 
 function AdminDashboard() {
   const [days, setDays] = useState<7 | 30>(30);
+  const c = useChartColors();
   const overview = useQuery({
     queryKey: ["platformOverview", days],
     queryFn: () => api.getPlatformOverview(days),
@@ -100,15 +102,15 @@ function AdminDashboard() {
                     <AreaChart data={data.daily_active} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}>
                       <defs>
                         <linearGradient id="gDau" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#16a34a" stopOpacity={0.35} />
-                          <stop offset="100%" stopColor="#16a34a" stopOpacity={0.02} />
+                          <stop offset="0%" stopColor={c.success} stopOpacity={0.35} />
+                          <stop offset="100%" stopColor={c.success} stopOpacity={0.02} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                      <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#a1a1aa" }} tickFormatter={(v: string) => v.slice(5)} tickLine={false} axisLine={false} />
-                      <YAxis tick={{ fontSize: 10, fill: "#a1a1aa" }} tickLine={false} axisLine={false} allowDecimals={false} />
-                      <Tooltip contentStyle={{ backgroundColor: "#141414", border: "1px solid #27272a", borderRadius: 8, fontSize: 12 }} />
-                      <Area type="monotone" dataKey="users" name="Active users" stroke="#16a34a" fill="url(#gDau)" strokeWidth={1.5} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={c.line} vertical={false} />
+                      <XAxis dataKey="day" tick={{ fontSize: 10, fill: c.mutedForeground }} tickFormatter={(v: string) => v.slice(5)} tickLine={false} axisLine={false} />
+                      <YAxis tick={{ fontSize: 10, fill: c.mutedForeground }} tickLine={false} axisLine={false} allowDecimals={false} />
+                      <Tooltip contentStyle={{ backgroundColor: c.canvas, border: `1px solid ${c.line}`, borderRadius: 4, fontSize: 12 }} />
+                      <Area type="monotone" dataKey="users" name="Active users" stroke={c.success} fill="url(#gDau)" strokeWidth={1.5} />
                     </AreaChart>
                   </ResponsiveContainer>
                 )}

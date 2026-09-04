@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/Skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
 import { useMe, useMyUsage } from "@/lib/hooks";
+import { useChartColors } from "@/lib/useChartColors";
 import type { UsageDailyPoint } from "@/lib/api";
 
 const RANGES = [7, 30, 90] as const;
@@ -18,6 +19,7 @@ export default function MyUsagePage() {
   const { isAdmin, isLoading: meLoading } = useMe();
   const [days, setDays] = useState<(typeof RANGES)[number]>(30);
   const { data, isLoading, isError, refetch } = useMyUsage(days);
+  const c = useChartColors();
 
   if (meLoading) return <Skeleton className="h-96" />;
   if (!isAdmin) {
@@ -130,34 +132,34 @@ export default function MyUsagePage() {
                 <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gSearches" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#16a34a" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#16a34a" stopOpacity={0.02} />
+                      <stop offset="0%" stopColor={c.success} stopOpacity={0.35} />
+                      <stop offset="100%" stopColor={c.success} stopOpacity={0.02} />
                     </linearGradient>
                     <linearGradient id="gViews" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="#60a5fa" stopOpacity={0.02} />
+                      <stop offset="0%" stopColor={c.info} stopOpacity={0.3} />
+                      <stop offset="100%" stopColor={c.info} stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={c.line} vertical={false} />
                   <XAxis
                     dataKey="day"
-                    tick={{ fontSize: 10, fill: "#a1a1aa" }}
+                    tick={{ fontSize: 10, fill: c.mutedForeground }}
                     tickFormatter={(v: string) => v.slice(5)}
                     tickLine={false}
                     axisLine={false}
                   />
-                  <YAxis tick={{ fontSize: 10, fill: "#a1a1aa" }} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <YAxis tick={{ fontSize: 10, fill: c.mutedForeground }} tickLine={false} axisLine={false} allowDecimals={false} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "#141414",
-                      border: "1px solid #27272a",
-                      borderRadius: 8,
+                      backgroundColor: c.canvas,
+                      border: `1px solid ${c.line}`,
+                      borderRadius: 4,
                       fontSize: 12,
                     }}
-                    labelStyle={{ color: "#a1a1aa" }}
+                    labelStyle={{ color: c.mutedForeground }}
                   />
-                  <Area type="monotone" dataKey="searches" name="Searches" stroke="#16a34a" fill="url(#gSearches)" strokeWidth={1.5} />
-                  <Area type="monotone" dataKey="page_views" name="Page views" stroke="#60a5fa" fill="url(#gViews)" strokeWidth={1.5} />
+                  <Area type="monotone" dataKey="searches" name="Searches" stroke={c.success} fill="url(#gSearches)" strokeWidth={1.5} />
+                  <Area type="monotone" dataKey="page_views" name="Page views" stroke={c.info} fill="url(#gViews)" strokeWidth={1.5} />
                 </AreaChart>
               </ResponsiveContainer>
             )}
