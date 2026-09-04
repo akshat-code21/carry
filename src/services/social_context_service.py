@@ -24,8 +24,9 @@ from src.services.market_chatter.collection_service import CollectionService
 
 logger = logging.getLogger(__name__)
 
-# Bounded wait per ticker so search pages never hang on a slow collection run.
-FETCH_TIMEOUT_SECONDS = 6.0
+# Bounded wait per ticker so pages don't hang indefinitely on slow collection runs.
+FETCH_TIMEOUT_SECONDS_DETAIL = 25.0
+FETCH_TIMEOUT_SECONDS_CARD = 10.0
 # TickerFlow only accepts 7 or 30 day periods.
 PERIOD_DAYS_CARD = 7
 PERIOD_DAYS_DETAIL = 30
@@ -80,7 +81,10 @@ class SocialContextService:
             return None
 
     async def get_ticker(
-        self, symbol: str, period_days: int = PERIOD_DAYS_DETAIL
+        self,
+        symbol: str,
+        period_days: int = PERIOD_DAYS_DETAIL,
+        timeout: float | None = None,
     ) -> MCTickerResponse | None:
         """Fetch the full TickerFlow response for a symbol, or None on failure."""
         service = self._service()
@@ -88,13 +92,26 @@ class SocialContextService:
             logger.debug("social_context: TickerFlow service not initialised")
             return None
         normalized = symbol.strip().upper()
+        effective_timeout = (
+            timeout
+            if timeout is not None
+            else (
+                FETCH_TIMEOUT_SECONDS_DETAIL
+                if period_days == PERIOD_DAYS_DETAIL
+                else FETCH_TIMEOUT_SECONDS_CARD
+            )
+        )
         try:
             return await asyncio.wait_for(
                 service.ticker_response(normalized, CHART_SOURCE, period_days),
-                timeout=FETCH_TIMEOUT_SECONDS,
+                timeout=effective_timeout,
             )
         except TimeoutError:
-            logger.warning("social_context: fetch timed out for %s", normalized)
+            logger.warning(
+                "social_context: fetch timed out for %s (after %.1fs)",
+                normalized,
+                effective_timeout,
+            )
             return None
         except Exception as exc:  # noqa: BLE001 — unsupported/unknown tickers are expected
             logger.debug("social_context: no social data for %s: %s", normalized, exc)
@@ -102,7 +119,9 @@ class SocialContextService:
 
     async def get_snapshot(self, symbol: str) -> SocialTickerSnapshot | None:
         """Fetch the compact card snapshot for a single symbol."""
-        response = await self.get_ticker(symbol, period_days=PERIOD_DAYS_CARD)
+        response = await self.get_ticker(
+            symbol, period_days=PERIOD_DAYS_CARD, timeout=FETCH_TIMEOUT_SECONDS_CARD
+        )
         if response is None or not response.sources:
             return None
         return snapshot_from_response(response)
