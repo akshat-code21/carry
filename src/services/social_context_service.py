@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 # Inner per-source timeout (15s) in CollectionService.collect() handles individual
 # source hangs; these outer timeouts cover the full ticker_response path
 # (collect + prices + DB queries).
-FETCH_TIMEOUT_SECONDS_DETAIL = 20.0
-FETCH_TIMEOUT_SECONDS_CARD = 12.0
+FETCH_TIMEOUT_SECONDS_DETAIL = 30.0
+FETCH_TIMEOUT_SECONDS_CARD = 30.0
 # TickerFlow only accepts 7 or 30 day periods.
 PERIOD_DAYS_CARD = 7
 PERIOD_DAYS_DETAIL = 30
