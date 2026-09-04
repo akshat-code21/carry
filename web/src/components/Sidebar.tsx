@@ -55,7 +55,7 @@ export function Sidebar({ isOpen = false, onClose, isAdmin }: SidebarProps) {
       {/* Sidebar Container */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-full w-60 flex-col border-r border-line bg-canvas transition-transform duration-200 ease-out md:static md:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex h-full w-52 shrink-0 flex-col border-r border-line bg-canvas transition-transform duration-200 ease-out md:static md:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -89,34 +89,40 @@ export function Sidebar({ isOpen = false, onClose, isAdmin }: SidebarProps) {
 
         {/* Nav */}
         <div className="flex-1 overflow-y-auto py-3">
-          <nav className="grid items-start gap-0.5 px-2.5">
+          <nav className="grid items-start gap-px px-2">
             {items.map((item) => {
               const active = isLinkActive(item.href);
               const Icon = item.icon;
+              const isAdminItem = adminItems.some((a) => a.href === item.href);
 
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={onClose}
-                  className={cn(
-                    "group relative flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-body font-medium transition-colors",
-                    active
-                      ? "bg-panel text-signal"
-                      : "text-ink-secondary hover:bg-panel hover:text-ink"
+                <div key={item.href}>
+                  {/* Section divider — admin tools live under their own overline */}
+                  {isAdminItem && adminItems[0].href === item.href && (
+                    <p className="label-overline mt-4 mb-1 px-2.5">admin</p>
                   )}
-                >
-                  {active && (
-                    <span className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-signal" />
-                  )}
-                  <Icon
+                  <Link
+                    href={item.href}
+                    onClick={onClose}
                     className={cn(
-                      "h-4 w-4",
-                      active ? "text-signal" : "text-ink-faint group-hover:text-ink-secondary"
+                      "group relative flex items-center gap-2 rounded px-2.5 py-1.5 text-body font-medium transition-colors",
+                      active
+                        ? "bg-panel text-ink"
+                        : "text-ink-secondary hover:bg-panel hover:text-ink"
                     )}
-                  />
-                  {item.label}
-                </Link>
+                  >
+                    {active && (
+                      <span className="absolute inset-y-0.5 left-0 w-0.5 rounded-full bg-signal" />
+                    )}
+                    <Icon
+                      className={cn(
+                        "h-3.5 w-3.5",
+                        active ? "text-signal" : "text-ink-faint group-hover:text-ink-secondary"
+                      )}
+                    />
+                    {item.label}
+                  </Link>
+                </div>
               );
             })}
           </nav>
