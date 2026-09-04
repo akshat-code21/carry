@@ -398,6 +398,19 @@
     color: transparent;
   }
 
+  /* Oversized brand wordmark – vertical fade into canvas */
+  .wordmark-fade {
+    background-image: linear-gradient(
+      to bottom,
+      var(--signal) 0%,
+      color-mix(in oklch, var(--signal) 40%, var(--canvas)) 55%,
+      var(--canvas) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
   /* Vertical "live tape" shimmer for the hero preview */
   @keyframes lnd-scan {
     0% {
