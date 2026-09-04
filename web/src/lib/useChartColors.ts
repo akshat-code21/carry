@@ -9,6 +9,7 @@ export interface ChartColors {
   warning: string;
   info: string;
   primary: string;
+  price: string;
   mutedForeground: string;
   chart1: string;
   chart2: string;
@@ -41,11 +42,12 @@ export function useChartColors(): ChartColors {
         success: getVar("--success", "#2E7D5F"),
         danger: getVar("--danger", "#C24A31"),
         warning: getVar("--warning", "#AF7C2B"),
-        info: getVar("--info", "#4A6FA5"),
+        info: getVar("--info", "#0284C7"),
         primary: getVar("--primary", "#2E7D46"),
+        price: getVar("--price", "#F59E0B"),
         mutedForeground: getVar("--muted-foreground", "#656C77"),
         chart1: getVar("--chart-1", "#2E7D46"),
-        chart2: getVar("--chart-2", "#4A6FA5"),
+        chart2: getVar("--chart-2", "#F59E0B"),
         canvas: getVar("--canvas", "#F7F8FA"),
         ink: getVar("--ink", "#343B47"),
         inkSecondary: getVar("--ink-secondary", "#656C77"),
@@ -56,11 +58,12 @@ export function useChartColors(): ChartColors {
         success: "#2E7D5F",
         danger: "#C24A31",
         warning: "#AF7C2B",
-        info: "#4A6FA5",
+        info: "#0284C7",
         primary: "#2E7D46",
+        price: "#F59E0B",
         mutedForeground: "#656C77",
         chart1: "#2E7D46",
-        chart2: "#4A6FA5",
+        chart2: "#F59E0B",
         canvas: "#F7F8FA",
         ink: "#343B47",
         inkSecondary: "#656C77",

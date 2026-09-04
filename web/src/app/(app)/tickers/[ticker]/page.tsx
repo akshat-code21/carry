@@ -55,7 +55,7 @@ function SignalMarker({
         dominantBaseline="central"
         fontSize={11}
         fontWeight="bold"
-        fontFamily="var(--font-plex-mono)"
+        fontFamily="var(--font-geist-mono)"
         fill={bgColor}
       >
         {signal}
@@ -253,8 +253,8 @@ export default function TickerPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={priceChartData} margin={{ top: 30, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.3} stroke={lineColor} vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-plex-mono)" }} tickLine={false} axisLine={{ stroke: lineColor }} />
-                  <YAxis domain={["auto", "auto"]} tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-plex-mono)" }} tickLine={false} axisLine={false} width={56} />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-geist-mono)" }} tickLine={false} axisLine={{ stroke: lineColor }} />
+                  <YAxis domain={["auto", "auto"]} tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-geist-mono)" }} tickLine={false} axisLine={false} width={56} />
                   <Tooltip content={<PriceTooltip />} wrapperStyle={{ outline: "none" }} />
                   <Line type="monotone" dataKey="close" stroke={chart1Color} dot={false} name="Close Price" strokeWidth={2} />
                   {signalMarkers.map((m, i) => (
@@ -293,10 +293,10 @@ export default function TickerPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={perfChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.3} stroke={lineColor} vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-plex-mono)" }} tickLine={false} axisLine={{ stroke: lineColor }} />
-                  <YAxis domain={["auto", "auto"]} tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-plex-mono)" }} tickLine={false} axisLine={false} width={56} />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-geist-mono)" }} tickLine={false} axisLine={{ stroke: lineColor }} />
+                  <YAxis domain={["auto", "auto"]} tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-geist-mono)" }} tickLine={false} axisLine={false} width={56} />
                   <Tooltip content={<PerfTooltip />} wrapperStyle={{ outline: "none" }} />
-                  <Legend wrapperStyle={{ fontFamily: "var(--font-plex-mono)", fontSize: 10 }} />
+                  <Legend wrapperStyle={{ fontFamily: "var(--font-geist-mono)", fontSize: 10 }} />
                   <Line type="monotone" dataKey="price" stroke={chart1Color} name="Price at Prediction" strokeWidth={2} />
                   <Line type="monotone" dataKey="price_1w" stroke={chart2Color} name="Price 1W Later" strokeWidth={2} />
                   {data.predictions?.map((pred: any, i: number) => {
@@ -342,10 +342,10 @@ export default function TickerPage() {
                   margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke={lineColor} opacity={0.3} vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-plex-mono)" }} tickLine={false} axisLine={{ stroke: lineColor }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-plex-mono)" }} tickLine={false} axisLine={false} width={40} />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-geist-mono)" }} tickLine={false} axisLine={{ stroke: lineColor }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-geist-mono)" }} tickLine={false} axisLine={false} width={40} />
                   <Tooltip content={<MentionsTooltip />} wrapperStyle={{ outline: "none" }} />
-                  <Legend wrapperStyle={{ fontFamily: "var(--font-plex-mono)", fontSize: 10 }} />
+                  <Legend wrapperStyle={{ fontFamily: "var(--font-geist-mono)", fontSize: 10 }} />
                   <Bar dataKey="bullish_count" name="Bullish" fill={successColor} radius={[2, 2, 0, 0]} />
                   <Bar dataKey="bearish_count" name="Bearish" fill={dangerColor} radius={[2, 2, 0, 0]} />
                 </BarChart>

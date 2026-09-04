@@ -40,6 +40,7 @@ import { DashboardOverview } from "@/components/market-chatter/DashboardOverview
 import { api, API_BASE_URL, MCDashboardData } from "@/lib/api";
 import { getAuthToken } from "@/lib/auth-client";
 import { LayoutDashboard, LineChart as ChartIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type Source = "reddit" | "x" | "news";
@@ -150,16 +151,16 @@ function LoadingSkeleton() {
           Analyzing market chatter...
         </span>
       </div>
-      <div className="tf-skeleton-shimmer h-16 rounded-lg border border-tf-stroke bg-tf-panel" />
+      <div className="tf-skeleton-shimmer h-16 rounded-lg border border-tf-stroke" />
       <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
         {Array.from({ length: 4 }, (_, index) => (
           <div
             key={`metric-skeleton-${index}`}
-            className="tf-skeleton-shimmer h-40 rounded-lg border border-tf-stroke bg-tf-panel"
+            className="tf-skeleton-shimmer h-40 rounded-lg border border-tf-stroke"
           />
         ))}
       </div>
-      <div className="tf-skeleton-shimmer h-[430px] rounded-lg border border-tf-stroke bg-tf-panel" />
+      <div className="tf-skeleton-shimmer h-[430px] rounded-lg border border-tf-stroke" />
     </div>
   );
 }
@@ -189,7 +190,7 @@ function CustomSignalDot({
         fill={canvasColor}
         fontSize={9}
         fontWeight="bold"
-        fontFamily="var(--font-plex-mono)"
+        fontFamily="var(--font-geist-mono)"
       >
         {label}
       </text>
@@ -344,7 +345,7 @@ function DualLineChart({
           <XAxis
             dataKey="date"
             tickFormatter={formatXTick}
-            tick={{ fill: inkSecondaryColor, fontSize: 10, fontFamily: "var(--font-plex-mono)" }}
+            tick={{ fill: inkSecondaryColor, fontSize: 10, fontFamily: "var(--font-geist-mono)" }}
             axisLine={{ stroke: lineColor }}
             tickLine={false}
             minTickGap={36}
@@ -353,7 +354,7 @@ function DualLineChart({
           <YAxis
             yAxisId="metric"
             orientation="left"
-            tick={{ fill: inkSecondaryColor, fontSize: 10, fontFamily: "var(--font-plex-mono)" }}
+            tick={{ fill: inkSecondaryColor, fontSize: 10, fontFamily: "var(--font-geist-mono)" }}
             axisLine={false}
             tickLine={false}
             width={54}
@@ -366,7 +367,7 @@ function DualLineChart({
               style={{
                 fill: inkSecondaryColor,
                 fontSize: 10,
-                fontFamily: "var(--font-plex-mono)",
+                fontFamily: "var(--font-geist-mono)",
                 textAnchor: "middle",
               }}
             />
@@ -374,7 +375,7 @@ function DualLineChart({
           <YAxis
             yAxisId="price"
             orientation="right"
-            tick={{ fill: inkSecondaryColor, fontSize: 10, fontFamily: "var(--font-plex-mono)" }}
+            tick={{ fill: inkSecondaryColor, fontSize: 10, fontFamily: "var(--font-geist-mono)" }}
             axisLine={false}
             tickLine={false}
             width={60}
@@ -388,7 +389,7 @@ function DualLineChart({
               style={{
                 fill: inkSecondaryColor,
                 fontSize: 10,
-                fontFamily: "var(--font-plex-mono)",
+                fontFamily: "var(--font-geist-mono)",
                 textAnchor: "middle",
               }}
             />
@@ -473,11 +474,11 @@ function MetricCard({
           <span className="text-caption font-semibold uppercase tracking-[0.08em] text-tf-muted">
             {label}
           </span>
-          {featured && (
+          {/* {featured && (
             <span className="rounded border border-tf-signal/20 bg-tf-signal/10 px-1.5 py-0.5 font-mono text-micro uppercase tracking-[0.08em] text-tf-signal">
               Composite
             </span>
-          )}
+          )} */}
         </div>
 
         <div>
@@ -639,7 +640,7 @@ export default function TickerFlowPage() {
         <section aria-labelledby="tf-page-title">
           <div className="flex items-end justify-between gap-12 max-lg:flex-col max-lg:items-start max-lg:gap-5">
             <div>
-              <SectionLabel>Market intelligence workspace</SectionLabel>
+              {/* <SectionLabel>Market intelligence workspace</SectionLabel> */}
               <h1
                 id="tf-page-title"
                 className="mt-5 max-w-[720px] text-display font-medium leading-[0.98] tracking-[-0.065em] text-tf-ink sm:text-display-xl lg:text-5xl"
@@ -679,14 +680,14 @@ export default function TickerFlowPage() {
                   placeholder="ENTER TICKER"
                 />
               </div>
-              <button
+              <Button
                 type="submit"
                 disabled={loading && !data}
-                className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-md bg-tf-signal px-5 text-body font-semibold text-tf-canvas transition-colors hover:bg-tf-signal/85 disabled:opacity-50 max-sm:flex-1"
+                className="h-12 px-5 text-body font-semibold max-sm:flex-1"
               >
                 <Search className="h-3.5 w-3.5" aria-hidden="true" />
                 Analyze ticker
-              </button>
+              </Button>
             </form>
 
             <div className="flex items-center justify-between border-t border-tf-stroke/50 px-3 pb-1 pt-3 max-sm:flex-col max-sm:align-start max-sm:gap-2 max-sm:overflow-x-auto">
@@ -710,20 +711,22 @@ export default function TickerFlowPage() {
                 ))}
               </div>
 
-              <div className="flex rounded-md border border-tf-stroke bg-tf-canvas p-0.5">
-                <button
+              <div className="inline-flex items-center gap-1 rounded-lg border border-line bg-canvas p-1">
+                <Button
                   type="button"
+                  variant={viewMode === "overview" ? "default" : "ghost"}
+                  size="lg"
                   onClick={() => setViewMode("overview")}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded px-2.5 py-1 text-caption font-medium text-tf-muted transition-colors",
-                    viewMode === "overview" && "bg-tf-panel-raised text-tf-ink",
-                  )}
+                  className={"text-base!"}
                 >
-                  <LayoutDashboard className="h-3 w-3 text-tf-signal" />
+                  <LayoutDashboard className="h-3.5 w-3.5" />
                   Overview Dashboard
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant={viewMode === "detail" ? "default" : "ghost"}
+                  size="lg"
+                  className={"text-base!"}
                   onClick={() => {
                     if (!activeSymbol) {
                       chooseTicker("NVDA");
@@ -731,14 +734,10 @@ export default function TickerFlowPage() {
                       setViewMode("detail");
                     }
                   }}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded px-2.5 py-1 text-caption font-medium text-tf-muted transition-colors",
-                    viewMode === "detail" && "bg-tf-panel-raised text-tf-ink",
-                  )}
                 >
-                  <ChartIcon className="h-3 w-3 text-tf-price" />
+                  <ChartIcon className="h-3.5 w-3.5" />
                   {activeSymbol ? `$${activeSymbol} Analysis` : "Single Ticker"}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -861,8 +860,8 @@ export default function TickerFlowPage() {
               >
                 <div className="flex items-start justify-between gap-6 border-b border-tf-stroke px-5 py-5 max-lg:flex-col">
                   <div>
-                    <SectionLabel dotClassName="bg-tf-warning">Price context</SectionLabel>
-                    <h3 className="mt-2.5 text-title font-semibold tracking-[-0.025em] text-tf-ink">
+                    {/* <SectionLabel dotClassName="bg-tf-warning">Price context</SectionLabel> */}
+                    <h3 className="mt-1 text-title font-semibold tracking-[-0.025em] text-tf-ink">
                       Conversation activity vs. closing price
                     </h3>
                     <div className="mt-3 flex items-center gap-5 text-micro uppercase tracking-[0.07em] text-tf-muted">
@@ -879,7 +878,7 @@ export default function TickerFlowPage() {
 
                   <div className="flex flex-wrap items-center gap-2 max-sm:w-full">
                     <div
-                      className="flex rounded-md border border-tf-stroke bg-tf-canvas p-1"
+                      className="inline-flex items-center gap-1 rounded-lg border border-line bg-canvas p-1"
                       aria-label="Chart source"
                     >
                       {(Object.keys(sourceLabels) as Source[]).map((value) => (
@@ -889,9 +888,9 @@ export default function TickerFlowPage() {
                           onClick={() => setSource(value)}
                           aria-pressed={source === value}
                           className={cn(
-                            "rounded px-2.5 py-1.5 text-caption font-medium text-tf-muted transition-colors hover:text-tf-ink",
+                            "cursor-pointer rounded px-2.5 py-1.5 text-caption font-medium text-tf-muted transition-colors hover:text-tf-ink",
                             source === value &&
-                            "bg-tf-panel-raised text-tf-ink",
+                            "bg-signal/10 text-signal font-semibold",
                           )}
                         >
                           {value === "x" ? "X" : sourceLabels[value]}
@@ -909,8 +908,8 @@ export default function TickerFlowPage() {
                           onClick={() => setPeriod(value)}
                           aria-pressed={period === value}
                           className={cn(
-                            "rounded px-2.5 py-1.5 font-mono text-micro text-tf-muted transition-colors hover:text-tf-ink",
-                            period === value && "bg-tf-panel-raised text-tf-ink",
+                            "cursor-pointer rounded px-2.5 py-1.5 font-mono text-micro text-tf-muted transition-colors hover:text-tf-ink",
+                            period === value && "bg-signal/10 text-signal font-semibold",
                           )}
                         >
                           {value}D
@@ -930,8 +929,8 @@ export default function TickerFlowPage() {
                   <DualLineChart
                     data={data.chart}
                     metric={data.chart_metric}
-                    signalColor={chartColors.primary}
-                    priceColor={chartColors.info}
+                    signalColor={chartColors.primary || "var(--tf-signal)"}
+                    priceColor={chartColors.price || "var(--tf-price)"}
                     lineColor={chartColors.line}
                     inkSecondaryColor={chartColors.inkSecondary}
                     canvasColor={chartColors.canvas}
@@ -950,7 +949,7 @@ export default function TickerFlowPage() {
               <section id="tf-sources" className="mt-12 scroll-mt-24">
                 <div className="mb-5 flex items-end justify-between gap-6 max-sm:items-start">
                   <div>
-                    <SectionLabel>Source coverage</SectionLabel>
+                    {/* <SectionLabel>Source coverage</SectionLabel> */}
                     <h3 className="mt-2.5 text-heading font-medium tracking-[-0.035em] text-tf-ink">
                       The signal, source by source
                     </h3>

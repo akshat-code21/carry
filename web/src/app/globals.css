@@ -32,11 +32,12 @@
   /* Informational */
   --color-info: var(--info);
   --color-warning: var(--warning);
+  --color-price: var(--price);
   --color-scrim: var(--scrim);
   /* Fonts */
-  --font-sans: var(--font-plex-sans);
-  --font-mono: var(--font-plex-mono);
-  /* v2: app headings use Plex Sans; the landing page re-scopes to Space
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  /* v2: app headings use Geist Sans; the landing page re-scopes to Space
      Grotesk via the .landing wrapper (see :root/.landing below). */
   --font-display: var(--font-app-display);
   --font-heading: var(--font-app-display);
@@ -112,9 +113,9 @@
 /* ── Instrument palette ─────────────────────────────────────────── */
 
 :root {
-  /* v2: product headings render in Plex Sans; Space Grotesk is scoped to the
+  /* v2: product headings render in Geist Sans; Space Grotesk is scoped to the
      marketing landing page only. */
-  --font-app-display: var(--font-plex-sans);
+  --font-app-display: var(--font-geist-sans);
   --canvas: oklch(0.975 0.004 260);
   --panel: oklch(1 0 0);
   --panel-raised: oklch(0.995 0.003 260);
@@ -123,13 +124,16 @@
   --ink-faint: oklch(0.56 0.012 260);
   --line: oklch(0.9 0.006 260);
   --line-strong: oklch(0.82 0.008 260);
-  --signal: oklch(0.47 0.14 130);
-  --signal-foreground: oklch(0.12 0.02 265);
+  --signal: oklch(0.50 0.19 258);
+  --signal-foreground: oklch(0.98 0.005 260);
   --bullish: oklch(0.45 0.12 156);
   --bearish: oklch(0.5 0.17 28);
   --neutral: oklch(0.5 0.01 260);
-  --info: oklch(0.46 0.08 250);
+  --info: oklch(0.54 0.14 215);
   --warning: oklch(0.52 0.12 75);
+  --price: oklch(0.66 0.18 68);
+  --skeleton-base: oklch(0.91 0.008 260);
+  --skeleton-highlight: oklch(0.965 0.004 260);
   --scrim: oklch(0.16 0.02 265 / 0.55);
 
   --background: var(--canvas);
@@ -155,7 +159,7 @@
   --danger: var(--bearish);
   --danger-foreground: oklch(0.985 0.002 260);
   --chart-1: var(--signal);
-  --chart-2: var(--info);
+  --chart-2: var(--price);
   --chart-3: var(--bullish);
   --chart-4: var(--bearish);
   --chart-5: var(--neutral);
@@ -179,13 +183,16 @@
   --ink-faint: oklch(0.58 0.012 260);
   --line: oklch(0.3 0.012 265);
   --line-strong: oklch(0.4 0.015 265);
-  --signal: oklch(0.83 0.17 118);
+  --signal: oklch(0.72 0.15 258);
   --signal-foreground: oklch(0.16 0.02 265);
   --bullish: oklch(0.68 0.14 156);
   --bearish: oklch(0.66 0.16 25);
   --neutral: oklch(0.72 0.01 260);
-  --info: oklch(0.72 0.08 250);
+  --info: oklch(0.74 0.13 215);
   --warning: oklch(0.78 0.14 80);
+  --price: oklch(0.82 0.18 78);
+  --skeleton-base: oklch(0.245 0.014 265);
+  --skeleton-highlight: oklch(0.32 0.016 265);
   --scrim: oklch(0.08 0.01 265 / 0.7);
 
   --background: var(--canvas);
@@ -211,7 +218,7 @@
   --danger: var(--bearish);
   --danger-foreground: oklch(0.16 0.02 265);
   --chart-1: var(--signal);
-  --chart-2: var(--info);
+  --chart-2: var(--price);
   --chart-3: var(--bullish);
   --chart-4: var(--bearish);
   --chart-5: var(--neutral);
@@ -234,41 +241,48 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-canvas text-ink;
   }
+
   html {
     @apply font-sans;
   }
+
   /* Native color-scheme hooks — also drives Clerk's default theme
      (light primary; .dark flips Clerk components to their dark palette). */
   :root {
     color-scheme: light;
   }
+
   .dark {
     color-scheme: dark;
   }
 }
 
 @layer components {
+
   /* Overline label — the recurring section/column label treatment */
   .label-overline {
     @apply font-mono text-caption font-medium uppercase tracking-[0.1em] text-ink-faint;
   }
+
   /* Numeric data — monospaced, aligned digits (prices, %, counts, scores) */
   .numeric {
     @apply font-mono tabular-nums tracking-tight;
   }
+
   /* Destination-shaped skeleton shimmer */
   .skeleton-shimmer {
-    background: linear-gradient(
-      90deg,
-      color-mix(in oklch, var(--panel) 70%, var(--canvas)) 25%,
-      color-mix(in oklch, var(--panel-raised) 70%, var(--canvas)) 50%,
-      color-mix(in oklch, var(--panel) 70%, var(--canvas)) 75%
-    );
+    background: linear-gradient(90deg,
+        var(--skeleton-base) 0%,
+        var(--skeleton-base) 20%,
+        var(--skeleton-highlight) 50%,
+        var(--skeleton-base) 80%,
+        var(--skeleton-base) 100%);
     background-size: 200% 100%;
-    animation: yt-shimmer 1.6s ease-in-out infinite;
+    animation: yt-shimmer 1.8s ease-in-out infinite;
   }
 }
 
@@ -283,6 +297,7 @@
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
@@ -316,7 +331,7 @@
   --tf-muted: var(--ink-secondary);
   --tf-faint: var(--ink-faint);
   --tf-signal: var(--signal);
-  --tf-price: var(--info);
+  --tf-price: var(--price);
   --tf-positive: var(--bullish);
   --tf-negative: var(--bearish);
   --tf-warning: var(--warning);
@@ -325,20 +340,21 @@
 }
 
 .tickerflow-theme .tf-skeleton-shimmer {
-  background: linear-gradient(
-    90deg,
-    var(--tf-panel) 25%,
-    var(--tf-panel-raised) 50%,
-    var(--tf-panel) 75%
-  );
+  background: linear-gradient(90deg,
+      var(--skeleton-base) 0%,
+      var(--skeleton-base) 20%,
+      var(--skeleton-highlight) 50%,
+      var(--skeleton-base) 80%,
+      var(--skeleton-base) 100%);
   background-size: 200% 100%;
-  animation: tf-shimmer 1.6s ease-in-out infinite;
+  animation: tf-shimmer 1.8s ease-in-out infinite;
 }
 
 @keyframes tf-shimmer {
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
@@ -347,6 +363,7 @@
 /* ── Motion guard ────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -362,30 +379,25 @@
  */
 
 @layer components {
+
   /* Subtle blueprint grid, tinted with ink-faint */
   .bg-grid {
     background-image:
-      linear-gradient(
-        to right,
+      linear-gradient(to right,
         color-mix(in oklch, var(--ink-faint) 12%, transparent) 1px,
-        transparent 1px
-      ),
-      linear-gradient(
-        to bottom,
+        transparent 1px),
+      linear-gradient(to bottom,
         color-mix(in oklch, var(--ink-faint) 12%, transparent) 1px,
-        transparent 1px
-      );
+        transparent 1px);
     background-size: 56px 56px;
   }
 
   /* Wide, bold gradient accent text */
   .text-gradient {
-    background-image: linear-gradient(
-      100deg,
-      color-mix(in oklch, var(--signal) 70%, white) 0%,
-      var(--signal) 45%,
-      color-mix(in oklch, var(--signal) 55%, var(--info)) 100%
-    );
+    background-image: linear-gradient(100deg,
+        color-mix(in oklch, var(--signal) 70%, white) 0%,
+        var(--signal) 45%,
+        color-mix(in oklch, var(--signal) 55%, var(--info)) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -398,6 +410,7 @@
       box-shadow 0.25s var(--ease-out),
       background-color 0.25s var(--ease-out);
   }
+
   .card-glow:hover {
     border-color: color-mix(in oklch, var(--signal) 35%, var(--line));
     box-shadow:
@@ -411,6 +424,7 @@
       0 0 0 1px color-mix(in oklch, var(--signal) 60%, transparent),
       0 12px 40px -12px color-mix(in oklch, var(--signal) 55%, transparent);
   }
+
   .btn-glow:hover {
     box-shadow:
       0 0 0 1px var(--signal),
@@ -419,16 +433,19 @@
 
   /* Slow breathing pulse for ambient glow orbs */
   @keyframes lnd-pulse {
+
     0%,
     100% {
       opacity: 0.55;
       transform: scale(1);
     }
+
     50% {
       opacity: 0.9;
       transform: scale(1.06);
     }
   }
+
   .animate-glow-pulse {
     animation: lnd-pulse 7s ease-in-out infinite;
   }
@@ -438,11 +455,67 @@
     0% {
       transform: translateY(-100%);
     }
+
     100% {
       transform: translateY(100%);
     }
   }
+
   .animate-scan {
     animation: lnd-scan 3.5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+
+  /* Clerk authentication styling safeguards */
+  .cl-card {
+    border: 1px solid var(--line-strong) !important;
+    background-color: var(--panel) !important;
+    box-shadow: 0 10px 30px -10px oklch(0 0 0 / 0.12) !important;
+  }
+
+  .cl-socialButtonsBlockButton {
+    border: 1px solid var(--line-strong) !important;
+    background-color: var(--panel) !important;
+    color: var(--ink) !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease !important;
+  }
+
+  .cl-socialButtonsBlockButton:hover {
+    background-color: var(--panel-raised) !important;
+    border-color: var(--ink-faint) !important;
+  }
+
+  .cl-socialButtonsBlockButtonText {
+    color: var(--ink) !important;
+    font-weight: 500 !important;
+  }
+
+  .cl-formFieldInput {
+    border: 1px solid var(--line-strong) !important;
+    background-color: var(--panel) !important;
+    color: var(--ink) !important;
+    box-shadow: inset 0 1px 2px oklch(0 0 0 / 0.04) !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  }
+
+  .cl-formFieldInput:focus {
+    border-color: var(--signal) !important;
+    outline: none !important;
+    box-shadow: 0 0 0 1px var(--signal) !important;
+  }
+
+  .cl-lastAuthenticationStrategyBadge,
+  .cl-badge,
+  .cl-badge--neutral,
+  [class*="lastAuthenticationStrategyBadge"],
+  [class*="LastAuthenticationStrategyBadge"] {
+    /* border: 1px solid var(--line) !important; */
+    /* background-color: var(--panel-raised) !important; */
+    color: var(--ink-secondary) !important;
+    font-size: 0.6875rem !important;
+    font-weight: 500 !important;
+    padding: 2px 6px !important;
+    border-radius: var(--radius-sm) !important;
+    display: flex;
+    align-items: center;
   }
 }

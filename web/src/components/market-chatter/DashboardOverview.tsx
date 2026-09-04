@@ -17,6 +17,7 @@ import { MCDashboardData, MCDashboardTickerItem } from "@/lib/api";
 import { GlowCard } from "@/components/market-chatter/GlowCard";
 import { AnimatedCounter } from "@/components/market-chatter/AnimatedCounter";
 import { SectionLabel } from "@/components/market-chatter/SectionLabel";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface DashboardOverviewProps {
@@ -34,8 +35,8 @@ export function DashboardOverview({
     filter === "stocks"
       ? data.top_stocks
       : filter === "etfs"
-      ? data.top_etfs
-      : [...data.top_stocks, ...data.top_etfs].slice(0, 12);
+        ? data.top_etfs
+        : [...data.top_stocks, ...data.top_etfs].slice(0, 12);
 
   const { summary, platform_breakdown } = data;
 
@@ -126,42 +127,39 @@ export function DashboardOverview({
       <section aria-labelledby="top-tickers-title">
         <div className="flex items-center justify-between gap-4 border-b border-tf-stroke pb-4 max-sm:flex-col max-sm:items-start">
           <div>
-            <SectionLabel dotClassName="bg-tf-warning">Market Chatter Leaders</SectionLabel>
+            {/* <SectionLabel dotClassName="bg-tf-warning">Market Chatter Leaders</SectionLabel> */}
             <h2 id="top-tickers-title" className="mt-1 text-heading font-semibold text-tf-ink tracking-tight">
               Top Tracked Equities & Sector ETFs
             </h2>
           </div>
-          <div className="flex rounded-md border border-tf-stroke bg-tf-panel p-1">
-            <button
+          <div className="inline-flex items-center gap-1 rounded-lg border border-line bg-canvas p-1">
+            <Button
               type="button"
+              variant={filter === "all" ? "default" : "ghost"}
+              size="lg"
+              className={"text-base!"}
               onClick={() => setFilter("all")}
-              className={cn(
-                "rounded px-3 py-1 text-caption font-medium text-tf-muted transition-colors",
-                filter === "all" && "bg-tf-panel-raised text-tf-ink"
-              )}
             >
               All Tickers
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant={filter === "stocks" ? "default" : "ghost"}
+              size="lg"
+              className={"text-base!"}
               onClick={() => setFilter("stocks")}
-              className={cn(
-                "rounded px-3 py-1 text-caption font-medium text-tf-muted transition-colors",
-                filter === "stocks" && "bg-tf-panel-raised text-tf-ink"
-              )}
             >
               Stocks Only
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant={filter === "etfs" ? "default" : "ghost"}
+              size="lg"
+              className={"text-base!"}
               onClick={() => setFilter("etfs")}
-              className={cn(
-                "rounded px-3 py-1 text-caption font-medium text-tf-muted transition-colors",
-                filter === "etfs" && "bg-tf-panel-raised text-tf-ink"
-              )}
             >
               ETFs Only
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -180,7 +178,7 @@ export function DashboardOverview({
                       ${item.symbol}
                     </span>
                     {item.is_etf ? (
-                      <span className="rounded bg-tf-warning/10 px-1.5 py-0.5 font-mono text-micro uppercase tracking-wider text-tf-warning border border-tf-warning/20">
+                      <span className="rounded bg-info/10 px-1.5 py-0.5 font-mono text-micro uppercase tracking-wider text-info border border-info/30">
                         ETF
                       </span>
                     ) : (
@@ -217,7 +215,7 @@ export function DashboardOverview({
 
               <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-tf-stroke">
                 <div
-                  className="h-full bg-tf-positive transition-all duration-500"
+                  className="h-full bg-signal transition-all duration-500"
                   style={{ width: `${Math.min(100, Math.max(0, item.bullish_pct))}%` }}
                 />
               </div>
