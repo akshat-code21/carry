@@ -1,6 +1,6 @@
 /**
  * Sector color palettes and helper utilities for Theme visualizers.
- * Designed to harmonize with yt-chatter's dark/light instrument token layer.
+ * Harmonized with yt-chatter's dark/light instrument token layer.
  */
 
 export interface SectorPalette {
@@ -19,113 +19,113 @@ export interface SectorPalette {
 export const SECTOR_PALETTES: Record<string, SectorPalette> = {
   technology: {
     name: "Technology",
-    stroke: "#00e5ff", // Bright Electric Cyan
-    fill: "rgba(0, 229, 255, 0.08)",
-    glow: "rgba(0, 229, 255, 0.4)",
-    text: "#38bdf8",
-    badgeBg: "rgba(0, 229, 255, 0.15)",
-    badgeBorder: "rgba(0, 229, 255, 0.4)",
-    innerFill: "rgba(0, 229, 255, 0.12)",
-    leafFill: "rgba(0, 229, 255, 0.22)",
-    leafStroke: "rgba(0, 229, 255, 0.6)",
+    stroke: "#0284c7", // Sky Blue
+    fill: "rgba(2, 132, 199, 0.08)",
+    glow: "rgba(2, 132, 199, 0.35)",
+    text: "var(--signal)",
+    badgeBg: "rgba(2, 132, 199, 0.12)",
+    badgeBorder: "rgba(2, 132, 199, 0.35)",
+    innerFill: "rgba(2, 132, 199, 0.06)",
+    leafFill: "rgba(2, 132, 199, 0.14)",
+    leafStroke: "rgba(2, 132, 199, 0.5)",
   },
   healthcare: {
     name: "Healthcare",
-    stroke: "#10b981", // Vibrant Emerald Green
-    fill: "rgba(16, 185, 129, 0.08)",
-    glow: "rgba(16, 185, 129, 0.4)",
-    text: "#34d399",
-    badgeBg: "rgba(16, 185, 129, 0.15)",
-    badgeBorder: "rgba(16, 185, 129, 0.4)",
-    innerFill: "rgba(16, 185, 129, 0.12)",
-    leafFill: "rgba(16, 185, 129, 0.22)",
-    leafStroke: "rgba(16, 185, 129, 0.6)",
+    stroke: "#059669", // Emerald Green
+    fill: "rgba(5, 150, 105, 0.08)",
+    glow: "rgba(5, 150, 105, 0.35)",
+    text: "var(--bullish)",
+    badgeBg: "rgba(5, 150, 105, 0.12)",
+    badgeBorder: "rgba(5, 150, 105, 0.35)",
+    innerFill: "rgba(5, 150, 105, 0.06)",
+    leafFill: "rgba(5, 150, 105, 0.14)",
+    leafStroke: "rgba(5, 150, 105, 0.5)",
   },
   financials: {
     name: "Financials",
-    stroke: "#f59e0b", // Radiant Amber / Gold
-    fill: "rgba(245, 158, 11, 0.08)",
-    glow: "rgba(245, 158, 11, 0.4)",
-    text: "#fbbf24",
-    badgeBg: "rgba(245, 158, 11, 0.15)",
-    badgeBorder: "rgba(245, 158, 11, 0.4)",
-    innerFill: "rgba(245, 158, 11, 0.12)",
-    leafFill: "rgba(245, 158, 11, 0.22)",
-    leafStroke: "rgba(245, 158, 11, 0.6)",
+    stroke: "#d97706", // Amber / Gold
+    fill: "rgba(217, 119, 6, 0.08)",
+    glow: "rgba(217, 119, 6, 0.35)",
+    text: "var(--warning)",
+    badgeBg: "rgba(217, 119, 6, 0.12)",
+    badgeBorder: "rgba(217, 119, 6, 0.35)",
+    innerFill: "rgba(217, 119, 6, 0.06)",
+    leafFill: "rgba(217, 119, 6, 0.14)",
+    leafStroke: "rgba(217, 119, 6, 0.5)",
   },
   industrials: {
     name: "Industrials",
-    stroke: "#3b82f6", // Vibrant Blue
-    fill: "rgba(59, 130, 246, 0.08)",
-    glow: "rgba(59, 130, 246, 0.4)",
-    text: "#60a5fa",
-    badgeBg: "rgba(59, 130, 246, 0.15)",
-    badgeBorder: "rgba(59, 130, 246, 0.4)",
-    innerFill: "rgba(59, 130, 246, 0.12)",
-    leafFill: "rgba(59, 130, 246, 0.22)",
-    leafStroke: "rgba(59, 130, 246, 0.6)",
+    stroke: "#2563eb", // Blue
+    fill: "rgba(37, 99, 235, 0.08)",
+    glow: "rgba(37, 99, 235, 0.35)",
+    text: "var(--info)",
+    badgeBg: "rgba(37, 99, 235, 0.12)",
+    badgeBorder: "rgba(37, 99, 235, 0.35)",
+    innerFill: "rgba(37, 99, 235, 0.06)",
+    leafFill: "rgba(37, 99, 235, 0.14)",
+    leafStroke: "rgba(37, 99, 235, 0.5)",
   },
   consumer: {
     name: "Consumer",
-    stroke: "#f43f5e", // Coral Rose
-    fill: "rgba(244, 63, 94, 0.08)",
-    glow: "rgba(244, 63, 94, 0.4)",
-    text: "#fb7185",
-    badgeBg: "rgba(244, 63, 94, 0.15)",
-    badgeBorder: "rgba(244, 63, 94, 0.4)",
-    innerFill: "rgba(244, 63, 94, 0.12)",
-    leafFill: "rgba(244, 63, 94, 0.22)",
-    leafStroke: "rgba(244, 63, 94, 0.6)",
+    stroke: "#e11d48", // Rose / Coral
+    fill: "rgba(225, 29, 72, 0.08)",
+    glow: "rgba(225, 29, 72, 0.35)",
+    text: "var(--price)",
+    badgeBg: "rgba(225, 29, 72, 0.12)",
+    badgeBorder: "rgba(225, 29, 72, 0.35)",
+    innerFill: "rgba(225, 29, 72, 0.06)",
+    leafFill: "rgba(225, 29, 72, 0.14)",
+    leafStroke: "rgba(225, 29, 72, 0.5)",
   },
   "consumer discretionary": {
     name: "Consumer Discretionary",
-    stroke: "#f43f5e",
-    fill: "rgba(244, 63, 94, 0.08)",
-    glow: "rgba(244, 63, 94, 0.4)",
-    text: "#fb7185",
-    badgeBg: "rgba(244, 63, 94, 0.15)",
-    badgeBorder: "rgba(244, 63, 94, 0.4)",
-    innerFill: "rgba(244, 63, 94, 0.12)",
-    leafFill: "rgba(244, 63, 94, 0.22)",
-    leafStroke: "rgba(244, 63, 94, 0.6)",
+    stroke: "#e11d48",
+    fill: "rgba(225, 29, 72, 0.08)",
+    glow: "rgba(225, 29, 72, 0.35)",
+    text: "var(--price)",
+    badgeBg: "rgba(225, 29, 72, 0.12)",
+    badgeBorder: "rgba(225, 29, 72, 0.35)",
+    innerFill: "rgba(225, 29, 72, 0.06)",
+    leafFill: "rgba(225, 29, 72, 0.14)",
+    leafStroke: "rgba(225, 29, 72, 0.5)",
   },
   "geopolitics / macro": {
     name: "Geopolitics / Macro",
-    stroke: "#a855f7", // Electric Purple / Violet
-    fill: "rgba(168, 85, 247, 0.08)",
-    glow: "rgba(168, 85, 247, 0.4)",
-    text: "#c084fc",
-    badgeBg: "rgba(168, 85, 247, 0.15)",
-    badgeBorder: "rgba(168, 85, 247, 0.4)",
-    innerFill: "rgba(168, 85, 247, 0.12)",
-    leafFill: "rgba(168, 85, 247, 0.22)",
-    leafStroke: "rgba(168, 85, 247, 0.6)",
+    stroke: "#7c3aed", // Purple
+    fill: "rgba(124, 58, 237, 0.08)",
+    glow: "rgba(124, 58, 237, 0.35)",
+    text: "#a855f7",
+    badgeBg: "rgba(124, 58, 237, 0.12)",
+    badgeBorder: "rgba(124, 58, 237, 0.35)",
+    innerFill: "rgba(124, 58, 237, 0.06)",
+    leafFill: "rgba(124, 58, 237, 0.14)",
+    leafStroke: "rgba(124, 58, 237, 0.5)",
   },
   energy: {
     name: "Energy",
-    stroke: "#eab308", // Vivid Yellow
-    fill: "rgba(234, 179, 8, 0.08)",
-    glow: "rgba(234, 179, 8, 0.4)",
-    text: "#fde047",
-    badgeBg: "rgba(234, 179, 8, 0.15)",
-    badgeBorder: "rgba(234, 179, 8, 0.4)",
-    innerFill: "rgba(234, 179, 8, 0.12)",
-    leafFill: "rgba(234, 179, 8, 0.22)",
-    leafStroke: "rgba(234, 179, 8, 0.6)",
+    stroke: "#ca8a04", // Yellow / Gold
+    fill: "rgba(202, 138, 4, 0.08)",
+    glow: "rgba(202, 138, 4, 0.35)",
+    text: "#eab308",
+    badgeBg: "rgba(202, 138, 4, 0.12)",
+    badgeBorder: "rgba(202, 138, 4, 0.35)",
+    innerFill: "rgba(202, 138, 4, 0.06)",
+    leafFill: "rgba(202, 138, 4, 0.14)",
+    leafStroke: "rgba(202, 138, 4, 0.5)",
   },
 };
 
 const DEFAULT_PALETTE: SectorPalette = {
   name: "Sector",
-  stroke: "#22c55e", // Green Signal
-  fill: "rgba(34, 197, 94, 0.08)",
-  glow: "rgba(34, 197, 94, 0.4)",
-  text: "#4ade80",
-  badgeBg: "rgba(34, 197, 94, 0.15)",
-  badgeBorder: "rgba(34, 197, 94, 0.4)",
-  innerFill: "rgba(34, 197, 94, 0.12)",
-  leafFill: "rgba(34, 197, 94, 0.22)",
-  leafStroke: "rgba(34, 197, 94, 0.6)",
+  stroke: "var(--signal)",
+  fill: "color-mix(in oklch, var(--signal) 8%, transparent)",
+  glow: "color-mix(in oklch, var(--signal) 30%, transparent)",
+  text: "var(--signal)",
+  badgeBg: "color-mix(in oklch, var(--signal) 12%, transparent)",
+  badgeBorder: "color-mix(in oklch, var(--signal) 35%, transparent)",
+  innerFill: "color-mix(in oklch, var(--signal) 6%, transparent)",
+  leafFill: "color-mix(in oklch, var(--signal) 14%, transparent)",
+  leafStroke: "color-mix(in oklch, var(--signal) 50%, transparent)",
 };
 
 export function getSectorPalette(sectorName?: string | null): SectorPalette {
@@ -133,3 +133,4 @@ export function getSectorPalette(sectorName?: string | null): SectorPalette {
   const key = sectorName.toLowerCase().trim();
   return SECTOR_PALETTES[key] || DEFAULT_PALETTE;
 }
+

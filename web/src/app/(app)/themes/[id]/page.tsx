@@ -33,7 +33,7 @@ export default function ThemePage() {
   const { theme, mapped_tickers, videos } = data;
 
   return (
-    <div className="flex flex-col gap-6 pb-10">
+    <div className="flex flex-col gap-6 pb-12">
       <div className="mb-2 flex gap-2 flex-col items-start">
         <Breadcrumbs
           items={[
@@ -41,8 +41,10 @@ export default function ThemePage() {
             { label: theme.name },
           ]}
         />
-        <div className="flex items-center gap-3 mb-2">
-          <Badge variant="outline" className="font-mono text-micro uppercase tracking-[0.1em] text-ink-secondary">{theme.level}</Badge>
+        <div className="flex items-center gap-3 mb-1">
+          <Badge variant="outline" className="font-mono text-micro uppercase tracking-wider text-ink-secondary rounded-sm">
+            {theme.level}
+          </Badge>
         </div>
         <PageHeader
           title={theme.name}
@@ -52,20 +54,20 @@ export default function ThemePage() {
 
       <div className="grid gap-6 md:grid-cols-3">
         <div className="md:col-span-2 flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">Videos Discussing This Theme</CardTitle>
+          <Card className="rounded-md border-line bg-panel overflow-hidden">
+            <CardHeader className="bg-panel-raised border-b border-line py-3.5 px-4">
+              <CardTitle className="text-title font-semibold text-ink">Videos Discussing This Theme</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid gap-4">
+            <CardContent className="p-4">
+              <div className="grid gap-3">
                 {videos?.map((v) => (
-                  <div key={v.id} className="flex flex-col gap-2 rounded-md border border-line p-4">
+                  <div key={v.id} className="flex flex-col gap-2 rounded-md border border-line p-4 bg-panel hover:border-signal/40 transition-colors">
                     <div className="flex justify-between items-start">
                       <Link href={`/videos/${v.id}`} className="font-medium text-ink hover:text-signal hover:underline">
                         {v.title}
                       </Link>
                     </div>
-                    <p className="mt-2 border-l-2 border-signal pl-4 text-small italic text-ink-secondary">
+                    <p className="mt-1 border-l-2 border-signal pl-3 text-small italic text-ink-secondary">
                       &quot;{v.mention_text}&quot;
                     </p>
                     <div className="mt-2 flex items-center justify-between">
@@ -85,24 +87,24 @@ export default function ThemePage() {
         </div>
 
         <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">Mapped Tickers</CardTitle>
-              <CardDescription>Stocks directly associated with this theme</CardDescription>
+          <Card className="rounded-md border-line bg-panel overflow-hidden">
+            <CardHeader className="bg-panel-raised border-b border-line py-3.5 px-4">
+              <CardTitle className="text-title font-semibold text-ink">Mapped Tickers</CardTitle>
+              <CardDescription className="text-micro text-ink-secondary">Stocks directly associated with this theme</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col gap-4">
+            <CardContent className="p-4 flex flex-col gap-3">
               {mapped_tickers?.map((t) => (
-                <div key={t.ticker} className="flex items-center justify-between border-b border-line pb-2 last:border-0 last:pb-0">
+                <div key={t.ticker} className="flex items-center justify-between border-b border-line pb-2.5 last:border-0 last:pb-0">
                   <div className="flex flex-col">
                     <Link href={`/tickers/${t.ticker}`} className="font-mono font-semibold text-ink hover:text-signal hover:underline">
                       ${t.ticker}
                     </Link>
-                    <span className="text-small capitalize text-ink-secondary">
+                    <span className="text-micro capitalize text-ink-secondary">
                       Source: {t.source}
                     </span>
                   </div>
-                  <Badge variant="outline" className="font-mono">
-                    Score: {(t.relevance_score * 100).toFixed(0)}
+                  <Badge variant="outline" className="font-mono text-micro tabular-nums rounded-sm">
+                    Score: {(t.relevance_score * 100).toFixed(0)}%
                   </Badge>
                 </div>
               ))}

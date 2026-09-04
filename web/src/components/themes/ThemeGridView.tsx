@@ -79,7 +79,7 @@ export function ThemeGridView({
 
   if (filteredSectors.length === 0) {
     return (
-      <div className="rounded-xl border border-line bg-panel/50 p-12 text-center">
+      <div className="rounded-md border border-line bg-panel p-12 text-center">
         <Hash className="h-8 w-8 text-ink-faint mx-auto mb-3" />
         <h3 className="font-display text-title font-semibold text-ink">No matching themes found</h3>
         <p className="text-small text-ink-secondary mt-1 max-w-sm mx-auto">
@@ -100,11 +100,11 @@ export function ThemeGridView({
         const palette = getSectorPalette(sector.name);
 
         return (
-          <Card key={sector.id} className="overflow-hidden border-line bg-panel">
-            <CardHeader className="bg-panel-raised/80 pb-4 flex flex-row items-center justify-between border-b border-line">
+          <Card key={sector.id} className="overflow-hidden border-line bg-panel rounded-md">
+            <CardHeader className="bg-panel-raised py-3 px-4 flex flex-row items-center justify-between border-b border-line">
               <div className="flex items-center gap-3">
                 <span
-                  className="h-3 w-3 rounded-full"
+                  className="h-2.5 w-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: palette.stroke }}
                 />
                 <div>
@@ -118,11 +118,11 @@ export function ThemeGridView({
                   )}
                 </div>
               </div>
-              <Badge variant="outline" className="font-mono text-micro text-ink-faint">
+              <Badge variant="outline" className="font-mono text-micro text-ink-faint rounded-sm tabular-nums">
                 {industries.length} industries · {totalThemesInSector} themes
               </Badge>
             </CardHeader>
-            <CardContent className="pt-6">
+            <CardContent className="p-4 pt-4">
               {industries.length === 0 ? (
                 <p className="text-small text-ink-faint py-2 italic">
                   No sub-themes or industries configured for this sector yet.
@@ -134,13 +134,13 @@ export function ThemeGridView({
                     return (
                       <div
                         key={industry.id}
-                        className="flex flex-col gap-3 rounded-lg border border-line bg-panel-raised/30 p-4 hover:border-line-strong transition-colors"
+                        className="flex flex-col gap-3 rounded-md border border-line bg-panel-raised/30 p-3.5 hover:border-line-strong transition-colors"
                       >
-                        <div className="flex items-center justify-between border-b border-line/70 pb-2">
+                        <div className="flex items-center justify-between border-b border-line pb-2">
                           <h3 className="font-display text-title font-semibold text-ink">
                             {industry.name}
                           </h3>
-                          <Badge variant="outline" className="font-mono text-micro text-ink-faint">
+                          <Badge variant="outline" className="font-mono text-micro text-ink-faint rounded-sm tabular-nums">
                             {industryThemes.length}
                           </Badge>
                         </div>
@@ -154,7 +154,7 @@ export function ThemeGridView({
                               <Link key={theme.id} href={`/themes/${theme.id}`}>
                                 <Badge
                                   variant="outline"
-                                  className="w-full justify-between py-2 px-3 text-small transition-all hover:border-signal/40 hover:bg-panel-raised group cursor-pointer"
+                                  className="w-full justify-between py-2 px-3 text-small rounded-md border-line bg-panel transition-all hover:border-signal/40 hover:bg-panel-raised group cursor-pointer"
                                 >
                                   <span className="truncate group-hover:text-signal transition-colors font-medium">
                                     {theme.name}
@@ -165,13 +165,13 @@ export function ThemeGridView({
                                         {theme.tickers.slice(0, 2).map((tk) => (
                                           <span
                                             key={tk.ticker}
-                                            className="font-mono text-micro text-signal/90 bg-signal/10 px-1 rounded font-bold"
+                                            className="font-mono text-micro text-signal bg-signal/10 px-1 py-0.5 rounded-sm font-bold"
                                           >
                                             ${tk.ticker}
                                           </span>
                                         ))}
                                         {theme.tickers.length > 2 && (
-                                          <span className="font-mono text-micro text-ink-faint">
+                                          <span className="font-mono text-micro text-ink-faint tabular-nums">
                                             +{theme.tickers.length - 2}
                                           </span>
                                         )}
@@ -196,3 +196,4 @@ export function ThemeGridView({
     </div>
   );
 }
+

@@ -29,8 +29,8 @@ export function ThemeInspector({
 }: ThemeInspectorProps) {
   if (!selectedNode) {
     return (
-      <Card className="h-full flex flex-col justify-between border-line bg-panel/70 backdrop-blur-md">
-        <CardHeader className="pb-3 border-b border-line/60">
+      <Card className="h-full flex flex-col justify-between border-line bg-panel rounded-md overflow-hidden">
+        <CardHeader className="p-4 pb-3 border-b border-line bg-panel-raised">
           <div className="flex items-center gap-2 text-ink-secondary">
             <Sparkles className="h-4 w-4 text-signal" />
             <span className="font-mono text-caption uppercase tracking-wider">Explore Market Clusters</span>
@@ -39,27 +39,27 @@ export function ThemeInspector({
             Click any sector or industry bubble to zoom in. Click a sub-theme bubble to inspect mapped stocks and video mentions.
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-5 flex-1 flex flex-col justify-between">
+        <CardContent className="p-4 pt-5 flex-1 flex flex-col justify-between">
           <div className="space-y-4">
             {stats && (
               <div className="grid grid-cols-3 gap-2">
-                <div className="rounded-md border border-line bg-panel-raised/60 p-2.5 text-center">
-                  <div className="font-mono text-title font-bold text-ink">{stats.totalSectors}</div>
+                <div className="rounded-md border border-line bg-panel-raised p-2.5 text-center">
+                  <div className="font-mono text-title font-bold text-ink tabular-nums">{stats.totalSectors}</div>
                   <div className="text-micro text-ink-faint uppercase font-mono">Sectors</div>
                 </div>
-                <div className="rounded-md border border-line bg-panel-raised/60 p-2.5 text-center">
-                  <div className="font-mono text-title font-bold text-ink">{stats.totalIndustries}</div>
+                <div className="rounded-md border border-line bg-panel-raised p-2.5 text-center">
+                  <div className="font-mono text-title font-bold text-ink tabular-nums">{stats.totalIndustries}</div>
                   <div className="text-micro text-ink-faint uppercase font-mono">Industries</div>
                 </div>
-                <div className="rounded-md border border-line bg-panel-raised/60 p-2.5 text-center">
-                  <div className="font-mono text-title font-bold text-signal">{stats.totalThemes}</div>
+                <div className="rounded-md border border-line bg-panel-raised p-2.5 text-center">
+                  <div className="font-mono text-title font-bold text-signal tabular-nums">{stats.totalThemes}</div>
                   <div className="text-micro text-ink-faint uppercase font-mono">Themes</div>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="mt-6 rounded-lg border border-signal/20 bg-signal/5 p-3 text-micro text-ink-secondary flex items-start gap-2">
+          <div className="mt-6 rounded-md border border-signal/20 bg-signal/5 p-3 text-micro text-ink-secondary flex items-start gap-2">
             <TrendingUp className="h-4 w-4 text-signal shrink-0 mt-0.5" />
             <span>
               Themes and tickers are automatically extracted from finance YouTube channels via Whisper and LLM pipelines.
@@ -73,14 +73,14 @@ export function ThemeInspector({
   const palette = getSectorPalette(selectedNode.sectorName);
 
   return (
-    <Card className="h-full flex flex-col border-line bg-panel/90 backdrop-blur-md overflow-hidden">
+    <Card className="h-full flex flex-col border-line bg-panel rounded-md overflow-hidden">
       {/* Header with Level & Close */}
-      <CardHeader className="p-4 pb-3 border-b border-line bg-panel-raised/60">
+      <CardHeader className="p-4 pb-3 border-b border-line bg-panel-raised">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Badge
               variant="outline"
-              className="font-mono text-micro uppercase tracking-wider px-2 py-0.5"
+              className="font-mono text-micro uppercase tracking-wider px-2 py-0.5 rounded-sm"
               style={{
                 borderColor: palette.stroke,
                 color: palette.text,
@@ -99,7 +99,7 @@ export function ThemeInspector({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="h-7 w-7 p-0 text-ink-faint hover:text-ink hover:bg-panel-raised"
+            className="h-7 w-7 p-0 text-ink-faint hover:text-ink hover:bg-panel rounded-sm"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -131,7 +131,7 @@ export function ThemeInspector({
       {/* Body Content */}
       <CardContent className="p-4 flex-1 overflow-y-auto space-y-4">
         {selectedNode.description && (
-          <p className="text-small text-ink-secondary leading-relaxed bg-panel-raised/40 p-3 rounded-lg border border-line/60">
+          <p className="text-small text-ink-secondary leading-relaxed bg-panel-raised/50 p-3 rounded-md border border-line">
             {selectedNode.description}
           </p>
         )}
@@ -157,11 +157,11 @@ export function ThemeInspector({
                     <Link key={tk.ticker} href={`/tickers/${tk.ticker}`}>
                       <Badge
                         variant="outline"
-                        className="font-mono text-small py-1 px-2.5 gap-1.5 transition-all hover:border-signal hover:bg-signal/10 hover:text-signal cursor-pointer"
+                        className="font-mono text-small py-1 px-2.5 gap-1.5 rounded-md transition-all hover:border-signal/40 hover:bg-signal/10 hover:text-signal cursor-pointer"
                       >
                         <span className="font-bold text-signal">${tk.ticker}</span>
                         {tk.relevance_score > 0 && (
-                          <span className="text-micro text-ink-faint">
+                          <span className="text-micro text-ink-faint tabular-nums">
                             {(tk.relevance_score * 100).toFixed(0)}%
                           </span>
                         )}
@@ -175,7 +175,7 @@ export function ThemeInspector({
             {/* Primary Action Button */}
             <div className="pt-2">
               <Link href={`/themes/${selectedNode.id}`} className="w-full block">
-                <Button className="w-full font-mono text-small gap-2 bg-signal text-signal-foreground hover:bg-signal/90 font-medium">
+                <Button className="w-full font-mono text-small gap-2 bg-signal text-signal-foreground hover:bg-signal/90 font-medium rounded-md">
                   <ExternalLink className="h-4 w-4" />
                   Explore Theme Videos & Sentiment
                 </Button>
@@ -189,7 +189,7 @@ export function ThemeInspector({
           <div className="space-y-4">
             <div className="flex items-center justify-between text-small py-1 border-b border-line">
               <span className="text-ink-secondary">Active Sub-themes</span>
-              <Badge variant="outline" className="font-mono text-micro">
+              <Badge variant="outline" className="font-mono text-micro tabular-nums">
                 {selectedNode.subThemesCount ?? selectedNode.childThemes?.length ?? 0}
               </Badge>
             </div>
@@ -204,13 +204,13 @@ export function ThemeInspector({
                     <button
                       key={th.id}
                       onClick={() => onSelectThemeById?.(th.id)}
-                      className="text-left w-full flex items-center justify-between p-2 rounded-md border border-line bg-panel-raised/50 hover:border-signal/50 hover:bg-panel-raised transition-colors group text-small"
+                      className="text-left w-full flex items-center justify-between p-2 rounded-md border border-line bg-panel hover:border-signal/40 hover:bg-panel-raised transition-colors group text-small"
                     >
                       <span className="truncate group-hover:text-signal transition-colors font-medium text-ink">
                         {th.name}
                       </span>
                       {th.tickers && th.tickers.length > 0 && (
-                        <span className="font-mono text-micro text-signal/80 bg-signal/10 px-1.5 py-0.5 rounded shrink-0">
+                        <span className="font-mono text-micro text-signal bg-signal/10 px-1.5 py-0.5 rounded-sm shrink-0 font-bold">
                           ${th.tickers[0].ticker}
                           {th.tickers.length > 1 ? ` +${th.tickers.length - 1}` : ""}
                         </span>
@@ -225,7 +225,7 @@ export function ThemeInspector({
               <Button
                 variant="outline"
                 onClick={() => onZoomToNode(selectedNode.id)}
-                className="w-full font-mono text-small gap-2 hover:border-signal/50"
+                className="w-full font-mono text-small gap-2 rounded-md hover:border-signal/50"
               >
                 <ZoomIn className="h-4 w-4 text-signal" />
                 Zoom into {selectedNode.name}
@@ -238,24 +238,24 @@ export function ThemeInspector({
         {selectedNode.level === "sector" && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-lg border border-line bg-panel-raised/40 p-3 text-center">
-                <div className="font-mono text-heading font-semibold text-ink">
+              <div className="rounded-md border border-line bg-panel-raised p-3 text-center">
+                <div className="font-mono text-heading font-semibold text-ink tabular-nums">
                   {selectedNode.industriesCount ?? 0}
                 </div>
-                <div className="text-micro text-ink-faint uppercase">Industries</div>
+                <div className="text-micro text-ink-faint uppercase font-mono">Industries</div>
               </div>
-              <div className="rounded-lg border border-line bg-panel-raised/40 p-3 text-center">
-                <div className="font-mono text-heading font-semibold text-signal">
+              <div className="rounded-md border border-line bg-panel-raised p-3 text-center">
+                <div className="font-mono text-heading font-semibold text-signal tabular-nums">
                   {selectedNode.subThemesCount ?? 0}
                 </div>
-                <div className="text-micro text-ink-faint uppercase">Total Themes</div>
+                <div className="text-micro text-ink-faint uppercase font-mono">Total Themes</div>
               </div>
             </div>
 
             {onZoomToNode && (
               <Button
                 onClick={() => onZoomToNode(selectedNode.id)}
-                className="w-full font-mono text-small gap-2 bg-signal text-signal-foreground hover:bg-signal/90"
+                className="w-full font-mono text-small gap-2 bg-signal text-signal-foreground hover:bg-signal/90 rounded-md"
               >
                 <ZoomIn className="h-4 w-4" />
                 Zoom into {selectedNode.name}
@@ -267,3 +267,4 @@ export function ThemeInspector({
     </Card>
   );
 }
+

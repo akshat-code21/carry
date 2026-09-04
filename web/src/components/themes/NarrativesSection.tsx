@@ -18,8 +18,8 @@ export function NarrativesSection({ narratives }: NarrativesSectionProps) {
   if (narratives.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-line bg-panel overflow-hidden">
-      <div className="p-4 bg-panel-raised flex items-center justify-between border-b border-line">
+    <div className="rounded-md border border-line bg-panel overflow-hidden">
+      <div className="p-3.5 px-4 bg-panel-raised flex items-center justify-between border-b border-line">
         <div className="flex items-center gap-2.5">
           <div className="p-1.5 rounded-md bg-signal/10 border border-signal/20 text-signal">
             <Sparkles className="h-4 w-4" />
@@ -27,7 +27,7 @@ export function NarrativesSection({ narratives }: NarrativesSectionProps) {
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-display text-title font-semibold text-ink">Extracted Narratives</h3>
-              <Badge variant="outline" className="font-mono text-micro text-signal border-signal/30">
+              <Badge variant="outline" className="font-mono text-micro text-signal border-signal/30 rounded-sm tabular-nums">
                 {narratives.length} Active
               </Badge>
             </div>
@@ -41,27 +41,27 @@ export function NarrativesSection({ narratives }: NarrativesSectionProps) {
           variant="ghost"
           size="sm"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="h-8 px-2 text-ink-secondary hover:text-ink"
+          className="h-7 px-2 text-ink-secondary hover:text-ink font-mono text-micro rounded-sm"
         >
           {isExpanded ? (
             <>
-              <span className="text-micro font-mono mr-1">Collapse</span>
-              <ChevronUp className="h-4 w-4" />
+              <span className="mr-1">Collapse</span>
+              <ChevronUp className="h-3.5 w-3.5" />
             </>
           ) : (
             <>
-              <span className="text-micro font-mono mr-1">Expand</span>
-              <ChevronDown className="h-4 w-4" />
+              <span className="mr-1">Expand</span>
+              <ChevronDown className="h-3.5 w-3.5" />
             </>
           )}
         </Button>
       </div>
 
       {isExpanded && (
-        <div className="p-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {narratives.map((n) => (
             <Link key={n.id} href={`/themes/${n.id}`}>
-              <Card className="h-full border-line hover:border-signal/50 bg-panel-raised/30 hover:bg-panel-raised transition-all group cursor-pointer">
+              <Card className="h-full rounded-md border-line hover:border-signal/40 bg-panel-raised/30 hover:bg-panel-raised transition-all group cursor-pointer">
                 <CardHeader className="p-4">
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="line-clamp-2 text-title font-semibold text-ink group-hover:text-signal transition-colors">
@@ -83,3 +83,4 @@ export function NarrativesSection({ narratives }: NarrativesSectionProps) {
     </div>
   );
 }
+

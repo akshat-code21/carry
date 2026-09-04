@@ -41,7 +41,7 @@ export function ThemeControls({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search themes, sectors, tickers (e.g. AI, Semiconductors, $NVDA)..."
-            className="pl-9 pr-8 h-9 font-mono text-small bg-panel border-line focus-visible:ring-signal"
+            className="pl-9 pr-8 h-8 font-mono text-small bg-panel border-line text-ink placeholder:text-ink-faint focus-visible:ring-signal rounded-md"
           />
           {searchQuery && (
             <button
@@ -54,14 +54,14 @@ export function ThemeControls({
         </div>
 
         {/* View Mode Toggle */}
-        <div className="flex items-center gap-1 bg-panel border border-line p-1 rounded-lg shrink-0">
+        <div className="flex items-center gap-0.5 bg-panel border border-line p-0.5 rounded-md shrink-0">
           <Button
             variant={viewMode === "circle-pack" ? "secondary" : "ghost"}
             size="sm"
             onClick={() => onViewModeChange("circle-pack")}
-            className={`font-mono text-small gap-1.5 h-7 px-2.5 ${
+            className={`font-mono text-small gap-1.5 h-7 px-2.5 rounded-sm ${
               viewMode === "circle-pack"
-                ? "bg-panel-raised text-signal font-semibold border border-signal/20 shadow-xs"
+                ? "bg-panel-raised text-signal font-semibold border border-line"
                 : "text-ink-secondary hover:text-ink"
             }`}
           >
@@ -73,9 +73,9 @@ export function ThemeControls({
             variant={viewMode === "grid" ? "secondary" : "ghost"}
             size="sm"
             onClick={() => onViewModeChange("grid")}
-            className={`font-mono text-small gap-1.5 h-7 px-2.5 ${
+            className={`font-mono text-small gap-1.5 h-7 px-2.5 rounded-sm ${
               viewMode === "grid"
-                ? "bg-panel-raised text-signal font-semibold border border-signal/20 shadow-xs"
+                ? "bg-panel-raised text-signal font-semibold border border-line"
                 : "text-ink-secondary hover:text-ink"
             }`}
           >
@@ -91,10 +91,10 @@ export function ThemeControls({
           variant="outline"
           size="sm"
           onClick={() => onSelectSector(null)}
-          className={`h-7 px-2.5 font-mono text-micro rounded-full transition-all shrink-0 ${
+          className={`h-7 px-2.5 font-mono text-micro rounded-md transition-all shrink-0 ${
             selectedSectorId === null
               ? "bg-signal text-signal-foreground border-signal font-bold"
-              : "border-line text-ink-secondary hover:text-ink hover:bg-panel-raised"
+              : "border-line bg-panel text-ink-secondary hover:text-ink hover:bg-panel-raised"
           }`}
         >
           All Sectors ({cleanSectors.length})
@@ -112,23 +112,18 @@ export function ThemeControls({
             <button
               key={sector.id}
               onClick={() => onSelectSector(isSelected ? null : sector.id)}
-              className={`h-7 px-2.5 font-mono text-micro rounded-full border transition-all shrink-0 flex items-center gap-1.5 ${
+              className={`h-7 px-2.5 font-mono text-micro rounded-md border transition-all shrink-0 flex items-center gap-1.5 ${
                 isSelected
-                  ? "font-bold shadow-xs"
-                  : "hover:bg-panel-raised text-ink-secondary hover:text-ink"
+                  ? "border-signal/50 bg-signal/10 text-signal font-bold shadow-2xs"
+                  : "border-line bg-panel hover:bg-panel-raised text-ink-secondary hover:text-ink"
               }`}
-              style={{
-                borderColor: isSelected ? palette.stroke : "var(--line)",
-                backgroundColor: isSelected ? palette.fill : "var(--panel)",
-                color: isSelected ? palette.text : undefined,
-              }}
             >
               <span
                 className="h-1.5 w-1.5 rounded-full shrink-0"
                 style={{ backgroundColor: palette.stroke }}
               />
               <span>{sector.name}</span>
-              <span className="opacity-60 text-[10px]">({totalThemes})</span>
+              <span className="opacity-60 text-micro">({totalThemes})</span>
             </button>
           );
         })}
@@ -136,3 +131,4 @@ export function ThemeControls({
     </div>
   );
 }
+

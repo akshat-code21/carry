@@ -244,16 +244,16 @@ export function ThemeCirclePack({
     <div
       ref={containerRef}
       onClick={handleZoomOut}
-      className="relative w-full h-full min-h-[580px] lg:min-h-[680px] rounded-xl border border-line bg-[#0a0f1d] overflow-hidden select-none flex flex-col justify-between shadow-2xl"
+      className="relative w-full h-full min-h-[580px] lg:min-h-[680px] rounded-md border border-line bg-panel overflow-hidden select-none flex flex-col justify-between"
     >
       {/* ── Top Canvas HUD: Interactive Breadcrumbs & Stats ───────── */}
-      <div className="absolute top-4 left-4 z-20 flex flex-wrap items-center gap-1.5 bg-[#0f172a]/90 backdrop-blur-md px-3 py-2 rounded-lg border border-slate-700/60 shadow-lg max-w-[calc(100%-120px)]">
+      <div className="absolute top-3.5 left-3.5 z-20 flex flex-wrap items-center gap-1.5 bg-panel-raised/90 backdrop-blur-md px-3 py-1.5 rounded-md border border-line shadow-xs max-w-[calc(100%-120px)]">
         <button
           onClick={(e) => handleBreadcrumbClick(e, packRoot)}
-          className={`font-mono text-small px-2 py-0.5 rounded transition-colors ${
+          className={`font-mono text-small px-2 py-0.5 rounded-sm transition-colors ${
             currentFocus.data.level === "root"
-              ? "text-signal font-bold bg-signal/15"
-              : "text-slate-400 hover:text-white hover:bg-slate-800"
+              ? "text-signal font-bold bg-signal/10 border border-signal/20"
+              : "text-ink-secondary hover:text-ink hover:bg-panel"
           }`}
         >
           All Sectors
@@ -261,13 +261,13 @@ export function ThemeCirclePack({
 
         {breadcrumbs.slice(1).map((crumb, idx) => (
           <React.Fragment key={crumb.data.id}>
-            <ChevronRight className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+            <ChevronRight className="h-3.5 w-3.5 text-ink-faint shrink-0" />
             <button
               onClick={(e) => handleBreadcrumbClick(e, crumb)}
-              className={`font-mono text-small px-2 py-0.5 rounded truncate max-w-[150px] transition-colors ${
+              className={`font-mono text-small px-2 py-0.5 rounded-sm truncate max-w-[150px] transition-colors ${
                 idx === breadcrumbs.length - 2
-                  ? "text-signal font-bold bg-signal/15"
-                  : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  ? "text-signal font-bold bg-signal/10 border border-signal/20"
+                  : "text-ink-secondary hover:text-ink hover:bg-panel"
               }`}
             >
               {crumb.data.name}
@@ -276,23 +276,23 @@ export function ThemeCirclePack({
         ))}
 
         {currentFocus.data.level !== "root" && (
-          <Badge variant="outline" className="font-mono text-micro text-slate-400 border-slate-700 ml-1">
+          <Badge variant="outline" className="font-mono text-micro text-ink-secondary border-line ml-1 bg-panel">
             {currentFocus.children?.length || 0} sub-clusters
           </Badge>
         )}
       </div>
 
       {/* ── Top Right: Zoom & Reset Controls ─────────────────────── */}
-      <div className="absolute top-4 right-4 z-20 flex flex-col gap-1.5 bg-[#0f172a]/90 backdrop-blur-md p-1 rounded-lg border border-slate-700/60 shadow-lg">
+      <div className="absolute top-3.5 right-3.5 z-20 flex flex-col gap-1 bg-panel-raised/90 backdrop-blur-md p-1 rounded-md border border-line shadow-xs">
         {/* Reset View Button */}
         <Button
           variant="ghost"
           size="sm"
           title="Reset Zoom to All Sectors"
           onClick={handleResetView}
-          className="h-8 w-8 p-0 text-slate-300 hover:text-signal hover:bg-slate-800 rounded-md transition-colors"
+          className="h-7 w-7 p-0 text-ink-secondary hover:text-signal hover:bg-panel rounded-sm transition-colors"
         >
-          <RotateCcw className="h-4 w-4" />
+          <RotateCcw className="h-3.5 w-3.5" />
         </Button>
 
         {/* Zoom In Button */}
@@ -302,9 +302,9 @@ export function ThemeCirclePack({
           title="Zoom In"
           disabled={!canZoomIn}
           onClick={handleZoomIn}
-          className="h-8 w-8 p-0 text-slate-300 hover:text-signal hover:bg-slate-800 disabled:opacity-20 rounded-md transition-colors"
+          className="h-7 w-7 p-0 text-ink-secondary hover:text-signal hover:bg-panel disabled:opacity-25 rounded-sm transition-colors"
         >
-          <ZoomIn className="h-4 w-4" />
+          <ZoomIn className="h-3.5 w-3.5" />
         </Button>
 
         {/* Zoom Out Button */}
@@ -314,9 +314,9 @@ export function ThemeCirclePack({
           title="Zoom Out One Level"
           disabled={!canZoomOut}
           onClick={handleZoomOut}
-          className="h-8 w-8 p-0 text-slate-300 hover:text-signal hover:bg-slate-800 disabled:opacity-20 rounded-md transition-colors"
+          className="h-7 w-7 p-0 text-ink-secondary hover:text-signal hover:bg-panel disabled:opacity-25 rounded-sm transition-colors"
         >
-          <ZoomOut className="h-4 w-4" />
+          <ZoomOut className="h-3.5 w-3.5" />
         </Button>
       </div>
 
@@ -327,23 +327,23 @@ export function ThemeCirclePack({
           className="w-full h-full max-h-[720px] object-contain overflow-visible"
         >
           <defs>
-            {/* Glow Filters */}
+            {/* Soft Glow Filter */}
             <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
-              <feGaussianBlur stdDeviation="8" result="blur" />
+              <feGaussianBlur stdDeviation="4" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
             <filter id="neonGlow" x="-40%" y="-40%" width="180%" height="180%">
-              <feGaussianBlur stdDeviation="12" result="blur" />
+              <feGaussianBlur stdDeviation="8" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
             <filter id="spotlightGlow" x="-30%" y="-30%" width="160%" height="160%">
-              <feGaussianBlur stdDeviation="6" result="blur" />
+              <feGaussianBlur stdDeviation="4" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
@@ -352,12 +352,12 @@ export function ThemeCirclePack({
 
             {/* Background Grid Pattern */}
             <pattern id="canvasGrid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <circle cx="20" cy="20" r="1.2" fill="#334155" opacity="0.35" />
+              <circle cx="20" cy="20" r="1" fill="var(--ink-faint)" opacity="0.18" />
             </pattern>
           </defs>
 
           {/* Canvas Background Grid */}
-          <rect width={VIEW_SIZE} height={VIEW_SIZE} fill="url(#canvasGrid)" rx="16" />
+          <rect width={VIEW_SIZE} height={VIEW_SIZE} fill="url(#canvasGrid)" rx="6" />
 
           {/* ═════════════════════════════════════════════════════════════ */}
           {/* LAYER 1: CIRCLE SHAPES & BORDERS                             */}
@@ -403,8 +403,8 @@ export function ThemeCirclePack({
               strokeWidth = isHovered ? 2 : 1.2;
             } else if (isTheme) {
               fillColor = isSelected || isHovered ? palette.leafStroke : palette.leafFill;
-              strokeColor = isSelected ? "var(--signal)" : isHovered ? "#ffffff" : palette.leafStroke;
-              strokeWidth = isSelected ? 3 : isHovered ? 2 : 1;
+              strokeColor = isSelected ? "var(--signal)" : isHovered ? "var(--ink)" : palette.leafStroke;
+              strokeWidth = isSelected ? 2.5 : isHovered ? 2 : 1;
               if (isSelected || (isSearchActive && isSearchMatch)) {
                 filterId = "url(#spotlightGlow)";
               }
@@ -458,17 +458,10 @@ export function ThemeCirclePack({
             const palette = getSectorPalette(d.sectorName);
 
             // ── TEXT VISIBILITY RULES (STRICTLY GATED TO PREVENT OVERLAP) ──
-            //
-            // 1. Sector Labels:
-            //    Visible when at Root level OR when this sector is the current focus
             const showSectorLabel = isSector && (currentFocusLevel === "root" || currentFocus.data.id === d.id) && r > 40;
 
-            // 2. Industry Labels:
-            //    ONLY visible when zoomed into a Sector OR when this industry is the focus
             const showIndustryLabel = isIndustry && (currentFocusLevel === "sector" || currentFocus.data.id === d.id) && r > 28;
 
-            // 3. Theme Labels:
-            //    Visible when zoomed into a Sector (if theme radius > 24px) OR when zoomed into an Industry
             const showThemeLabel = isTheme && (
               (currentFocusLevel === "sector" && r > 24) ||
               (currentFocusLevel === "industry" && r > 16) ||
@@ -493,16 +486,16 @@ export function ThemeCirclePack({
                       y={-13}
                       width={Math.min(220, d.name.length * 12 + 36)}
                       height={26}
-                      rx={13}
-                      fill="#0f172a"
+                      rx={4}
+                      fill="var(--panel-raised)"
                       stroke={palette.stroke}
                       strokeWidth={1.5}
-                      fillOpacity={0.96}
+                      fillOpacity={0.95}
                     />
                     <text
                       textAnchor="middle"
                       dominantBaseline="central"
-                      className="font-display font-bold text-micro uppercase tracking-wider"
+                      className="font-sans font-bold text-micro uppercase tracking-wider"
                       fill={palette.stroke}
                       style={{ fontSize: "11px", fontWeight: 700 }}
                     >
@@ -522,17 +515,17 @@ export function ThemeCirclePack({
                       y={-10}
                       width={Math.min(180, d.name.length * 9 + 28)}
                       height={20}
-                      rx={10}
-                      fill="#1e293b"
-                      stroke={palette.stroke}
+                      rx={4}
+                      fill="var(--panel)"
+                      stroke="var(--line-strong)"
                       strokeWidth={1}
-                      fillOpacity={0.92}
+                      fillOpacity={0.94}
                     />
                     <text
                       textAnchor="middle"
                       dominantBaseline="central"
-                      className="font-display font-semibold"
-                      fill="#f8fafc"
+                      className="font-sans font-semibold"
+                      fill="var(--ink)"
                       style={{ fontSize: `${Math.max(10, Math.min(12, r * 0.16))}px` }}
                     >
                       {d.name.length > 22 && r < 70 ? `${d.name.slice(0, 20)}…` : d.name}
@@ -550,11 +543,10 @@ export function ThemeCirclePack({
                       textAnchor="middle"
                       dominantBaseline={showTickers ? "alphabetic" : "central"}
                       y={showTickers ? -6 : 0}
-                      className="font-display font-semibold"
-                      fill="#ffffff"
+                      className="font-sans font-semibold"
+                      fill="var(--ink)"
                       style={{
-                        fontSize: `${Math.max(9.5, Math.min(14, r * 0.28))}px`,
-                        textShadow: "0 2px 4px rgba(0,0,0,0.8)",
+                        fontSize: `${Math.max(9.5, Math.min(13, r * 0.26))}px`,
                       }}
                     >
                       {d.name.length > 18 && r < 45 ? `${d.name.slice(0, 16)}…` : d.name}
@@ -572,8 +564,8 @@ export function ThemeCirclePack({
                                 y={-8}
                                 width={36}
                                 height={16}
-                                rx={4}
-                                fill="#0f172a"
+                                rx={3}
+                                fill="var(--panel-raised)"
                                 stroke="var(--signal)"
                                 strokeWidth={1}
                               />
@@ -600,16 +592,16 @@ export function ThemeCirclePack({
       </div>
 
       {/* ── Bottom HUD Bar: Instructions & Quick Ticker Stats ─────── */}
-      <div className="px-4 py-2.5 border-t border-slate-800 bg-[#0f172a]/90 backdrop-blur-md flex items-center justify-between text-micro text-slate-400">
+      <div className="px-4 py-2 border-t border-line bg-panel-raised/90 backdrop-blur-md flex items-center justify-between text-micro text-ink-secondary">
         <div className="flex items-center gap-2">
           <Sparkles className="h-3.5 w-3.5 text-signal" />
           <span>Click a sector bubble to drill down · Click themes to inspect tickers</span>
         </div>
         {hoveredNode && hoveredNode.data.level !== "root" && (
-          <div className="font-mono text-slate-300 truncate max-w-[320px]">
+          <div className="font-mono text-ink truncate max-w-[320px]">
             <span className="text-signal font-semibold">{hoveredNode.data.name}</span>
             {hoveredNode.data.tickers && hoveredNode.data.tickers.length > 0 && (
-              <span className="text-slate-400 ml-1.5">
+              <span className="text-ink-secondary ml-1.5 font-bold">
                 (${hoveredNode.data.tickers.map((t) => t.ticker).join(", $")})
               </span>
             )}
@@ -619,3 +611,4 @@ export function ThemeCirclePack({
     </div>
   );
 }
+
