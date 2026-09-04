@@ -3,6 +3,8 @@
 import { useSyncExternalStore } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 
+import { toRgbaColor } from "@/lib/oklchToRgba";
+
 export interface ChartColors {
   success: string;
   danger: string;
@@ -10,6 +12,7 @@ export interface ChartColors {
   info: string;
   primary: string;
   price: string;
+  signal: string;
   mutedForeground: string;
   chart1: string;
   chart2: string;
@@ -21,7 +24,8 @@ export interface ChartColors {
 
 function getVar(name: string, fallback: string): string {
   if (typeof window === "undefined") return fallback;
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+  const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return val ? toRgbaColor(val) : fallback;
 }
 
 function subscribe(callback: () => void) {
@@ -44,9 +48,10 @@ export function useChartColors(): ChartColors {
         warning: getVar("--warning", "#AF7C2B"),
         info: getVar("--info", "#0284C7"),
         primary: getVar("--primary", "#2E7D46"),
-        price: getVar("--price", "#F59E0B"),
+        price: getVar("--signal", "#2962FF"),
+        signal: getVar("--signal", "#2962FF"),
         mutedForeground: getVar("--muted-foreground", "#656C77"),
-        chart1: getVar("--chart-1", "#2E7D46"),
+        chart1: getVar("--signal", "#2962FF"),
         chart2: getVar("--chart-2", "#F59E0B"),
         canvas: getVar("--canvas", "#F7F8FA"),
         ink: getVar("--ink", "#343B47"),
@@ -60,9 +65,10 @@ export function useChartColors(): ChartColors {
         warning: "#AF7C2B",
         info: "#0284C7",
         primary: "#2E7D46",
-        price: "#F59E0B",
+        price: "#2962FF",
+        signal: "#2962FF",
         mutedForeground: "#656C77",
-        chart1: "#2E7D46",
+        chart1: "#2962FF",
         chart2: "#F59E0B",
         canvas: "#F7F8FA",
         ink: "#343B47",
