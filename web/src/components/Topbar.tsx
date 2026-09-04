@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { api, type ActivityEvent } from "@/lib/api";
 import { Button } from "./ui/button";
+import { Skeleton } from "./Skeleton";
 import { useTheme } from "./ThemeProvider";
 import { useUnreadCount } from "@/lib/hooks";
 
@@ -220,7 +221,7 @@ export function Topbar({ onMenuClick, onOpenCommandPalette, fullName, loadingUse
 
         {/* Account */}
         {loadingUser ? (
-          <div className="ml-1 h-6 w-6 animate-pulse rounded-full bg-panel-raised" />
+          <Skeleton className="ml-1 h-6 w-6 rounded-full" />
         ) : isSignedIn ? (
           <div className="ml-1 flex items-center gap-2">
             {fullName && (

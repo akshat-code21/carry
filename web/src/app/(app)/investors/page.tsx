@@ -159,7 +159,7 @@ function investorColumns(
       header: "Status",
       headerClassName: "w-24",
       render: (inv) => (
-        <Badge variant={inv.is_active ? "default" : "secondary"} className="font-mono text-caption tracking-wider">
+        <Badge variant={inv.is_active ? "default" : "secondary"} className="font-mono text-signal-foreground! tracking-wider">
           {inv.is_active ? "ACTIVE" : "INACTIVE"}
         </Badge>
       ),
@@ -215,9 +215,9 @@ function investorColumns(
         <span className="numeric text-caption text-ink-faint">
           {inv.last_synced_at
             ? new Date(inv.last_synced_at).toLocaleDateString(undefined, {
-                month: "short",
-                day: "numeric",
-              })
+              month: "short",
+              day: "numeric",
+            })
             : "never"}
         </span>
       ),

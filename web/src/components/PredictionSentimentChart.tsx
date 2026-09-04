@@ -190,7 +190,7 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
           dominantBaseline="central"
           fontSize={9}
           fontWeight={600}
-          fontFamily="var(--font-plex-mono)"
+          fontFamily="var(--font-geist-mono)"
           fill={glyphFill}
         >
           {glyph}
@@ -202,7 +202,7 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
             textAnchor="middle"
             dominantBaseline="central"
             fontSize={8}
-            fontFamily="var(--font-plex-mono)"
+            fontFamily="var(--font-geist-mono)"
             fill={inkSecondaryColor}
           >
             ✓
@@ -246,7 +246,7 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
           dominantBaseline="central"
           fontSize={9.5}
           fontWeight={600}
-          fontFamily="var(--font-plex-mono)"
+          fontFamily="var(--font-geist-mono)"
           fill={glyphFill}
         >
           {glyph}
@@ -407,7 +407,7 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
                   domain={[0.5, chartData.length + 0.5]}
                   ticks={chartData.map((d) => d.index)}
                   tickFormatter={(idx) => chartData[idx - 1]?.date || ""}
-                  tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-plex-mono)" }}
+                  tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-geist-mono)" }}
                   tickLine={false}
                   axisLine={{ stroke: lineColor }}
                   tickMargin={8}
@@ -421,7 +421,7 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
                     if (value === -1) return "-1.0";
                     return value.toString();
                   }}
-                  tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-plex-mono)" }}
+                  tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-geist-mono)" }}
                   tickLine={false}
                   axisLine={false}
                   width={42}
@@ -438,7 +438,7 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
                     value: "NEUTRAL",
                     fill: inkSecondaryColor,
                     fontSize: 9,
-                    fontFamily: "var(--font-plex-mono)",
+                    fontFamily: "var(--font-geist-mono)",
                     position: "insideBottomRight",
                   }}
                 />

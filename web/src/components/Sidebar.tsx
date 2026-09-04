@@ -62,7 +62,7 @@ export function Sidebar({ isOpen = false, onClose, isAdmin }: SidebarProps) {
         {/* Brand — a ticker plate, not an icon + word */}
         <div className="flex h-12 items-center justify-between border-b border-line px-4">
           <Link href="/" onClick={onClose} className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-signal font-display text-body font-bold tracking-tight text-black">
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-signal font-display text-body font-bold tracking-tight text-signal-foreground">
               C
             </span>
             <span className="flex flex-col leading-none">

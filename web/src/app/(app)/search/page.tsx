@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/Skeleton";
 import { PageHeader } from "@/components/PageHeader";
 import {
   Search,
@@ -112,10 +113,10 @@ function SearchAnswerCard({
       </div>
 
       {skeleton ? (
-        <div className="animate-pulse space-y-2.5">
-          <div className="h-3.5 w-full rounded bg-panel-raised" />
-          <div className="h-3.5 w-11/12 rounded bg-panel-raised" />
-          <div className="h-3.5 w-8/12 rounded bg-panel-raised" />
+        <div className="space-y-2.5">
+          <Skeleton className="h-3.5 w-full" />
+          <Skeleton className="h-3.5 w-11/12" />
+          <Skeleton className="h-3.5 w-8/12" />
         </div>
       ) : answer ? (
         <>
@@ -484,7 +485,7 @@ function SearchPageContent() {
                     type="button"
                     variant={type === t ? "default" : "ghost"}
                     size="sm"
-                    className={cn("h-7 capitalize", `${type === t ? "text-black h-7 capitalize" : " text-white h-7 capitalize"}`)}
+                    className={cn("h-7 capitalize", `${type === t ? "text-white h-7 capitalize" : " text-black h-7 capitalize"}`)}
                     onClick={() => handleTypeChange(t)}
                   >
                     {t}
@@ -564,7 +565,7 @@ function SearchPageContent() {
                                   <span className="font-mono text-title font-semibold tracking-tight text-ink">${stock.ticker}</span>
                                 </Link>
                                 {stock.is_etf && (
-                                  <Badge variant="outline" className="border-warning/30 bg-warning/10 px-1.5 py-0 text-micro text-warning">
+                                  <Badge variant="outline" className="border-info/30 bg-info/10 px-1.5 py-0 text-micro text-info">
                                     ETF
                                   </Badge>
                                 )}
@@ -1008,7 +1009,7 @@ function SearchPageContent() {
                           ${stock.ticker}
                         </Link>
                         {stock.is_etf && (
-                          <Badge variant="outline" className="border-warning/30 bg-warning/10 px-1 py-0 text-micro text-warning">
+                          <Badge variant="outline" className="border-info/30 bg-info/10 px-1 py-0 text-micro text-info">
                             ETF
                           </Badge>
                         )}

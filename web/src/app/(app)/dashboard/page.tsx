@@ -52,7 +52,7 @@ export default function DashboardPage() {
         <div className="flex flex-col min-w-0">
           <Link href={`/tickers/${etf.ticker}`} className="flex items-center gap-1.5 font-mono font-semibold text-ink hover:text-signal hover:underline">
             ${etf.ticker}
-            <Badge variant="outline" className="bg-warning/10 px-1 py-0 text-micro text-warning">
+            <Badge variant="outline" className="border-info/30 bg-info/10 px-1 py-0 text-micro text-info">
               ETF
             </Badge>
           </Link>
