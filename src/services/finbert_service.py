@@ -78,7 +78,7 @@ class FinBertService:
                 # Load ONNX session with CPU provider
                 sess_options = ort.SessionOptions()
                 sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-                sess_options.intra_op_num_threads = int(os.environ.get("FINBERT_THREADS", "4"))
+                sess_options.intra_op_num_threads = int(os.environ.get("FINBERT_THREADS", "2"))
 
                 FinBertService._shared_session = ort.InferenceSession(
                     str(model_path),

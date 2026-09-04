@@ -72,11 +72,10 @@ class RedditCollector(BaseCollector):
         }
         base_url = "https://oauth.reddit.com"
 
-        items: list[RawItem] = []
         now = datetime.now(UTC)
         cutoff = now - timedelta(days=period_days)
 
-        for sub in SUBREDDITS:
+        async def _fetch_subreddit(sub: str) -> list[RawItem]:
             url_path = f"/r/{sub}/search.json" if not token else f"/r/{sub}/search"
             url = f"{base_url}{url_path}"
             params = {
@@ -86,10 +85,11 @@ class RedditCollector(BaseCollector):
                 "limit": 50,
                 "t": "month",
             }
+            sub_items: list[RawItem] = []
             try:
                 resp = await self._client.get(url, headers=headers, params=params)
                 if resp.status_code != 200:
-                    continue
+                    return sub_items
                 data = resp.json()
                 children = data.get("data", {}).get("children", [])
                 for child in children:
@@ -109,7 +109,7 @@ class RedditCollector(BaseCollector):
                     permalink = post.get("permalink", "")
                     score = int(post.get("score", 0)) + int(post.get("num_comments", 0))
 
-                    items.append(
+                    sub_items.append(
                         RawItem(
                             id=f"reddit:{post_id}",
                             symbol=symbol,
@@ -126,6 +126,11 @@ class RedditCollector(BaseCollector):
                     )
             except Exception as exc:
                 log.warning("Failed fetching Reddit sub %s for %s: %s", sub, symbol, exc)
+            return sub_items
+
+        # Fetch all subreddits concurrently instead of sequentially
+        results = await asyncio.gather(*[_fetch_subreddit(sub) for sub in SUBREDDITS])
+        items: list[RawItem] = [item for sub_items in results for item in sub_items]
 
         if items:
             return items

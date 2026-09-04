@@ -330,10 +330,16 @@ class CollectionService:
                     return src, latest, "cached", None
 
                 try:
-                    snapshot = await self._sentiment_provider.get_ticker_snapshot(
-                        symbol, src, collection_period_days
+                    snapshot = await asyncio.wait_for(
+                        self._sentiment_provider.get_ticker_snapshot(
+                            symbol, src, collection_period_days
+                        ),
+                        timeout=15.0,
                     )
                     return src, snapshot, "collected", None
+                except TimeoutError:
+                    st_val = "stale_provider_timeout" if latest else "unavailable"
+                    return src, latest, st_val, f"{src.value} collection timed out (15s)"
                 except ProviderError as exc:
                     st_val = "stale_provider_unavailable" if latest else "unavailable"
                     return src, latest, st_val, str(exc)
@@ -367,8 +373,11 @@ class CollectionService:
             is_fresh = newest and utcnow() - _as_utc(newest) <= timedelta(hours=24)
             if not is_fresh:
                 try:
-                    bars = await self._price_provider.get_daily_bars(symbol, max(period_days, 30))
-                except Exception:
+                    bars = await asyncio.wait_for(
+                        self._price_provider.get_daily_bars(symbol, max(period_days, 30)),
+                        timeout=10.0,
+                    )
+                except (Exception, TimeoutError):
                     bars = []
                 fetched_at = utcnow()
                 bars_by_date = {bar.date: bar for bar in bars}

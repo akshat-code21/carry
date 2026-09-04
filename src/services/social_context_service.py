@@ -25,8 +25,11 @@ from src.services.market_chatter.collection_service import CollectionService
 logger = logging.getLogger(__name__)
 
 # Bounded wait per ticker so pages don't hang indefinitely on slow collection runs.
-FETCH_TIMEOUT_SECONDS_DETAIL = 25.0
-FETCH_TIMEOUT_SECONDS_CARD = 10.0
+# Inner per-source timeout (15s) in CollectionService.collect() handles individual
+# source hangs; these outer timeouts cover the full ticker_response path
+# (collect + prices + DB queries).
+FETCH_TIMEOUT_SECONDS_DETAIL = 20.0
+FETCH_TIMEOUT_SECONDS_CARD = 12.0
 # TickerFlow only accepts 7 or 30 day periods.
 PERIOD_DAYS_CARD = 7
 PERIOD_DAYS_DETAIL = 30
