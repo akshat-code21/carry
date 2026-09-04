@@ -39,6 +39,19 @@ CHART_SOURCE = SourceName.REDDIT
 MAX_CONCURRENT_FETCHES = 4
 
 
+def _suppress_background_exc(task: asyncio.Task) -> None:
+    """Done-callback that marks a background task's exception as retrieved.
+
+    Without this, asyncio logs 'Task exception was never retrieved' warnings
+    for shielded tasks that continue running after an outer timeout.
+    """
+    if not task.cancelled():
+        try:
+            task.exception()
+        except Exception:  # noqa: BLE001
+            pass
+
+
 def snapshot_from_response(response: MCTickerResponse) -> SocialTickerSnapshot:
     """Condense a full MCTickerResponse into the compact search-card shape."""
     mentions_values = [s.mentions for s in response.sources if s.mentions is not None]
@@ -89,7 +102,13 @@ class SocialContextService:
         period_days: int = PERIOD_DAYS_DETAIL,
         timeout: float | None = None,
     ) -> MCTickerResponse | None:
-        """Fetch the full TickerFlow response for a symbol, or None on failure."""
+        """Fetch the full TickerFlow response for a symbol, or None on failure.
+
+        Uses ``asyncio.shield`` so that if the outer timeout fires, the
+        underlying collection task keeps running in the background and
+        populates the cache.  The *next* request for the same ticker will
+        therefore hit warm cache and return instantly.
+        """
         service = self._service()
         if service is None:
             logger.debug("social_context: TickerFlow service not initialised")
@@ -104,20 +123,24 @@ class SocialContextService:
                 else FETCH_TIMEOUT_SECONDS_CARD
             )
         )
+        # Create a task so we can shield it from cancellation on timeout.
+        task = asyncio.create_task(service.ticker_response(normalized, CHART_SOURCE, period_days))
         try:
-            return await asyncio.wait_for(
-                service.ticker_response(normalized, CHART_SOURCE, period_days),
-                timeout=effective_timeout,
-            )
+            # shield() prevents wait_for from cancelling the underlying task.
+            return await asyncio.wait_for(asyncio.shield(task), timeout=effective_timeout)
         except TimeoutError:
             logger.warning(
-                "social_context: fetch timed out for %s (after %.1fs)",
+                "social_context: fetch timed out for %s (after %.1fs), "
+                "collection continues in background",
                 normalized,
                 effective_timeout,
             )
+            # Suppress unhandled-exception warnings from the background task.
+            task.add_done_callback(_suppress_background_exc)
             return None
         except Exception as exc:  # noqa: BLE001 - unsupported/unknown tickers are expected
             logger.debug("social_context: no social data for %s: %s", normalized, exc)
+            task.cancel()
             return None
 
     async def get_snapshot(self, symbol: str) -> SocialTickerSnapshot | None:

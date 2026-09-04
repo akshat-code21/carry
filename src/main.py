@@ -84,6 +84,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         settings.adanos_plan,
     )
 
+    # Pre-load FinBERT ONNX model so the first social-context request
+    # doesn't pay the ~4s cold-start penalty.
+    try:
+        from src.services.finbert_service import FinBertService
+
+        _finbert = FinBertService()
+        _finbert._ensure_loaded()
+        log.info("FinBERT model pre-loaded at startup")
+    except Exception:  # noqa: BLE001
+        log.warning("FinBERT pre-load failed (will lazy-load on first use)")
+
     yield
 
     # ── TickerFlow teardown ──────────────────────────────────────────────
