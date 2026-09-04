@@ -375,10 +375,13 @@ export function SocialSentimentPanel({
               metricLabel={metricLabel}
               height={320}
             />
-            <p className="mt-2 text-center font-mono text-micro text-ink-faint">
-              {metricLabel} from {hasYoutube ? "YOUTUBE, REDDIT, X & NEWS" : social.chart_source.toUpperCase()} · B/S markers mark
-              bullish/bearish consensus days
-            </p>
+            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-t border-line/40 pt-2 font-mono text-micro text-ink-faint">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-signal" />
+                {metricLabel} from {hasYoutube ? "YouTube, Reddit, X & News" : social.chart_source.toUpperCase()}
+              </span>
+              <span>B / S markers mark consensus days</span>
+            </div>
           </div>
         )}
 

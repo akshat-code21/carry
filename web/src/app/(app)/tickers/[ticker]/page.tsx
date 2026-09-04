@@ -68,7 +68,7 @@ export default function TickerPage() {
   if (!data) {
     return (
       <div className="p-8">
-        <ErrorState title="Ticker Not Found" message={`No market intelligence found for $${ticker}`} />
+        <ErrorState title="Ticker Not Found" message={`No market intelligence found for ${ticker.toUpperCase()}`} />
       </div>
     );
   }
@@ -237,7 +237,7 @@ export default function TickerPage() {
       {/* Real Stock Price Chart with Bullish/Bearish Signal Markers */}
       {priceChartData.length > 0 && (
         <Card>
-          <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <CardTitle>Price Chart with Bullish/Bearish Signals</CardTitle>
               <CardDescription>
@@ -245,8 +245,8 @@ export default function TickerPage() {
                 days it was mentioned that way in a video
               </CardDescription>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-1">
-              <div className="mr-2 flex gap-1">
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              <div className="flex flex-wrap items-center gap-1">
                 {PRICE_SERIES_OPTIONS.map((opt) => (
                   <Button
                     key={opt.type}
@@ -258,16 +258,18 @@ export default function TickerPage() {
                   </Button>
                 ))}
               </div>
-              {PRICE_RANGE_OPTIONS.map((opt) => (
-                <Button
-                  key={opt.label}
-                  size="sm"
-                  variant={priceRangeDays === opt.days ? "default" : "outline"}
-                  onClick={() => setPriceRangeDays(opt.days)}
-                >
-                  {opt.label}
-                </Button>
-              ))}
+              <div className="flex flex-wrap items-center gap-1">
+                {PRICE_RANGE_OPTIONS.map((opt) => (
+                  <Button
+                    key={opt.label}
+                    size="sm"
+                    variant={priceRangeDays === opt.days ? "default" : "outline"}
+                    onClick={() => setPriceRangeDays(opt.days)}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
