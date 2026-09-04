@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     # No trailing slash. Empty = skip WebSub subscribe (poll fallback only).
     public_base_url: str = ""
 
-    # YouTube WebSub (PubSubHubbub) — free Google hub
+    # YouTube WebSub (PubSubHubbub) - free Google hub
     websub_hub_url: str = "https://pubsubhubbub.appspot.com/subscribe"
     websub_secret: str = ""
     websub_lease_seconds: int = 864000  # 10 days (hub may clamp)

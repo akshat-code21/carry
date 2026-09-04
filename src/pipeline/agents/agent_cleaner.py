@@ -1,4 +1,4 @@
-"""Agent 3 Node — Cleaning, cashtag extraction, and MinHash near-deduplication."""
+"""Agent 3 Node - Cleaning, cashtag extraction, and MinHash near-deduplication."""
 
 from __future__ import annotations
 
@@ -6,7 +6,13 @@ import logging
 import re
 from typing import Any
 
-from datasketch import MinHash, MinHashLSH
+try:
+    from datasketch import MinHash, MinHashLSH
+    HAS_DATASKETCH = True
+except ImportError:
+    HAS_DATASKETCH = False
+    MinHash = Any  # type: ignore
+    MinHashLSH = Any  # type: ignore
 
 from src.schemas.agent_pipeline import CleanedItem, PipelineGraphState
 from src.schemas.market_chatter import SourceName
@@ -29,7 +35,9 @@ def _extract_cashtags(text: str) -> list[str]:
     return sorted({m.upper() for m in matches})
 
 
-def _build_minhash(text: str) -> MinHash:
+def _build_minhash(text: str) -> Any:
+    if not HAS_DATASKETCH:
+        return set(text.lower().split())
     m = MinHash(num_perm=128)
     tokens = set(text.lower().split())
     for token in tokens:
@@ -44,7 +52,8 @@ def agent_cleaner_node(state: PipelineGraphState) -> dict[str, Any]:
     errors = list(state.get("errors", []))
 
     cleaned_records: list[dict[str, Any]] = []
-    lsh = MinHashLSH(threshold=0.85, num_perm=128)
+    lsh = MinHashLSH(threshold=0.85, num_perm=128) if HAS_DATASKETCH else None
+    seen_token_sets: list[set[str]] = []
 
     for idx, item in enumerate(validated_items):
         raw_text = str(item.get("text", ""))
@@ -53,18 +62,31 @@ def agent_cleaner_node(state: PipelineGraphState) -> dict[str, Any]:
             continue
 
         cashtags = _extract_cashtags(raw_text)
-        minhash = _build_minhash(cleaned_text)
+        tokens_or_minhash = _build_minhash(cleaned_text)
 
-        # Query LSH for near duplicates
-        duplicates = lsh.query(minhash)
-        if duplicates:
-            continue  # Near-duplicate detected, skip
-
-        item_id = str(item.get("id", f"item_{idx}"))
-        try:
-            lsh.insert(item_id, minhash)
-        except ValueError:
-            pass
+        if HAS_DATASKETCH and lsh is not None:
+            duplicates = lsh.query(tokens_or_minhash)
+            if duplicates:
+                continue
+            item_id = str(item.get("id", f"item_{idx}"))
+            try:
+                lsh.insert(item_id, tokens_or_minhash)
+            except ValueError:
+                pass
+        else:
+            # Jaccard set similarity fallback
+            tok_set = tokens_or_minhash if isinstance(tokens_or_minhash, set) else set(cleaned_text.lower().split())
+            is_duplicate = False
+            for prev_set in seen_token_sets:
+                intersection = len(tok_set & prev_set)
+                union = len(tok_set | prev_set)
+                if union > 0 and (intersection / union) >= 0.85:
+                    is_duplicate = True
+                    break
+            if is_duplicate:
+                continue
+            seen_token_sets.append(tok_set)
+            item_id = str(item.get("id", f"item_{idx}"))
 
         source_val = item.get("source", SourceName.REDDIT)
         if isinstance(source_val, str):

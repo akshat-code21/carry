@@ -27,7 +27,7 @@ function formatNumber(num: number | null | undefined): string {
 }
 
 function formatCurrency(val: number | null | undefined): string {
-  if (val == null || val === 0) return "—";
+  if (val == null || val === 0) return "-";
   if (val >= 1_000_000_000) return `$${(val / 1_000_000_000).toFixed(2)}B`;
   if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(2)}M`;
   if (val >= 1_000) return `$${(val / 1_000).toFixed(1)}K`;
@@ -265,7 +265,7 @@ export default function ConsensusPage() {
                   {mostPopular.company_name || mostPopular.ticker_symbol}
                 </div>
                 {mostPopular.ticker_symbol && (
-                  <div className="text-micro font-mono text-signal font-bold">${mostPopular.ticker_symbol}</div>
+                  <div className="text-micro font-mono text-signal font-bold">{mostPopular.ticker_symbol}</div>
                 )}
                 <div className="mt-2 text-small text-ink-secondary">
                   Held by <span className="font-bold text-ink font-mono">{mostPopular.total_funds_holding}</span> funds
@@ -311,20 +311,19 @@ export default function ConsensusPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.01 }}
                     onClick={() => setSelectedHolding(h)}
-                    className={`hover:bg-panel/50 transition-colors cursor-pointer group ${
-                      isSelected ? "bg-signal/10 hover:bg-signal/15" : ""
-                    }`}
+                    className={`hover:bg-panel/50 transition-colors cursor-pointer group ${isSelected ? "bg-signal/10 hover:bg-signal/15" : ""
+                      }`}
                   >
                     <td className="px-6 py-4 font-semibold text-ink truncate max-w-[260px]" title={h.company_name || ""}>
-                      {h.company_name || "—"}
+                      {h.company_name || "-"}
                     </td>
                     <td className="px-6 py-4 font-mono text-micro">
                       {h.ticker_symbol ? (
                         <span className="bg-signal/15 text-signal px-2 py-0.5 rounded font-bold border border-signal/20">
-                          ${h.ticker_symbol}
+                          {h.ticker_symbol}
                         </span>
                       ) : (
-                        <span className="text-ink-faint/50">—</span>
+                        <span className="text-ink-faint/50">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -368,7 +367,7 @@ export default function ConsensusPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right font-mono font-medium text-ink">
-                      {h.total_value_usd ? formatCurrency(h.total_value_usd) : "—"}
+                      {h.total_value_usd ? formatCurrency(h.total_value_usd) : "-"}
                     </td>
                     <td className="px-4 py-4 text-ink-faint group-hover:text-signal group-hover:translate-x-0.5 transition-all text-right">
                       <ChevronRight className="w-4 h-4 inline" />
@@ -414,7 +413,7 @@ export default function ConsensusPage() {
                   <div className="flex items-center gap-2 mt-1">
                     {selectedHolding.ticker_symbol && (
                       <span className="bg-signal/15 text-signal text-micro px-2.5 py-0.5 rounded font-mono font-bold border border-signal/25">
-                        ${selectedHolding.ticker_symbol}
+                        {selectedHolding.ticker_symbol}
                       </span>
                     )}
                     <span className="text-micro px-2.5 py-0.5 rounded-full bg-panel text-ink-secondary font-mono font-semibold border border-line">
@@ -439,7 +438,7 @@ export default function ConsensusPage() {
                       Aggregated Value
                     </span>
                     <span className="text-xl font-bold font-mono text-ink mt-1 block">
-                      {selectedHolding.total_value_usd ? formatCurrency(selectedHolding.total_value_usd) : "—"}
+                      {selectedHolding.total_value_usd ? formatCurrency(selectedHolding.total_value_usd) : "-"}
                     </span>
                   </div>
                   <div className="p-4 rounded-md bg-panel/60 border border-line">
@@ -454,7 +453,7 @@ export default function ConsensusPage() {
                         {Math.max(
                           0,
                           (selectedHolding.total_funds_holding || 0) -
-                            ((selectedHolding.funds_buying || 0) + (selectedHolding.funds_selling || 0))
+                          ((selectedHolding.funds_buying || 0) + (selectedHolding.funds_selling || 0))
                         )}{" "}
                         N
                       </span>
@@ -507,7 +506,7 @@ export default function ConsensusPage() {
                               Holding Value
                             </span>
                             <span className="font-mono font-bold text-ink">
-                              {f.value_usd ? formatCurrency(f.value_usd) : "—"}
+                              {f.value_usd ? formatCurrency(f.value_usd) : "-"}
                             </span>
                           </div>
                         </div>

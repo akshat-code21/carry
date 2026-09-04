@@ -1,6 +1,6 @@
-"""FastAPI dependency injection — provides services and DB sessions to route handlers."""
+"""FastAPI dependency injection - provides services and DB sessions to route handlers."""
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import get_settings
@@ -15,6 +15,7 @@ from src.services.query_router import QueryRouter
 from src.services.search_answer_service import SearchAnswerService
 from src.services.search_coverage_service import SearchCoverageService
 from src.services.search_service import SearchService
+from src.services.social_context_service import SocialContextService
 from src.services.theme_service import ThemeService
 
 settings = get_settings()
@@ -69,6 +70,16 @@ def get_finbert_service() -> FinBertService:
 # --- Per-request dependencies ---
 
 
+def _tickerflow_service_getter(request: Request):
+    """Lazily resolve the TickerFlow CollectionService from app.state."""
+    return getattr(request.app.state, "tickerflow_service", None)
+
+
+def get_social_context_service(request: Request) -> SocialContextService:
+    """TickerFlow social-context fetcher backed by the lifespan-initialised service."""
+    return SocialContextService(lambda: _tickerflow_service_getter(request))
+
+
 def get_theme_service(db: AsyncSession = Depends(get_db)) -> ThemeService:
     return ThemeService(db)
 
@@ -81,17 +92,23 @@ def get_search_service(
 
 
 def get_search_answer_service(
+    request: Request,
     db: AsyncSession = Depends(get_db),
     embedding: EmbeddingProvider = Depends(get_embedding_provider),
+    social: SocialContextService = Depends(get_social_context_service),
 ) -> SearchAnswerService:
-    return SearchAnswerService(db, embedding, coverage_service=SearchCoverageService(db, embedding))
+    return SearchAnswerService(
+        db, embedding, coverage_service=SearchCoverageService(db, embedding), social_service=social
+    )
 
 
 def get_search_coverage_service(
+    request: Request,
     db: AsyncSession = Depends(get_db),
     embedding: EmbeddingProvider = Depends(get_embedding_provider),
+    social: SocialContextService = Depends(get_social_context_service),
 ) -> SearchCoverageService:
-    return SearchCoverageService(db, embedding)
+    return SearchCoverageService(db, embedding, social_service=social)
 
 
 def get_aggregation_service(

@@ -1,4 +1,4 @@
-"""Alert service — CRUD + rule-based scoring for HFI alerts."""
+"""Alert service - CRUD + rule-based scoring for HFI alerts."""
 
 import uuid
 

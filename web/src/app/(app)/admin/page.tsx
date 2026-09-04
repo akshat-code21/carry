@@ -59,9 +59,8 @@ function AdminDashboard() {
             <button
               key={r}
               onClick={() => setDays(r)}
-              className={`rounded px-2.5 py-1 font-mono text-micro transition-colors ${
-                days === r ? "bg-panel text-signal" : "text-ink-faint hover:text-ink"
-              }`}
+              className={`rounded px-2.5 py-1 font-mono text-micro transition-colors ${days === r ? "bg-panel text-signal" : "text-ink-faint hover:text-ink"
+                }`}
             >
               {r}d
             </button>
@@ -236,7 +235,7 @@ function InvitesSection() {
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Input
-            placeholder="Email (optional — binds the code)"
+            placeholder="Email (optional - binds the code)"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-64"
@@ -258,7 +257,7 @@ function InvitesSection() {
           <p className="mt-2 text-small text-bearish">Failed to create invite.</p>
         )}
         <p className="mt-2 font-mono text-micro text-ink-faint">
-          Invites grant regular-user access only — promote admins via Clerk
+          Invites grant regular-user access only - promote admins via Clerk
           public metadata (see docs/authentication.md).
         </p>
 
@@ -317,8 +316,8 @@ function InviteRow({
 }) {
   const status =
     invite.revoked_at ? "revoked" :
-    invite.expires_at && new Date(invite.expires_at) < new Date() ? "expired" :
-    invite.uses_count >= invite.max_uses ? "fully used" : "active";
+      invite.expires_at && new Date(invite.expires_at) < new Date() ? "expired" :
+        invite.uses_count >= invite.max_uses ? "fully used" : "active";
 
   return (
     <tr className="border-b border-line last:border-0">
@@ -334,15 +333,14 @@ function InviteRow({
           </button>
         </div>
       </td>
-      <td className="px-3 py-2 font-mono text-small text-ink-secondary">{invite.invited_email ?? "—"}</td>
+      <td className="px-3 py-2 font-mono text-small text-ink-secondary">{invite.invited_email ?? "-"}</td>
       <td className="px-3 py-2 font-mono text-small tabular-nums text-ink-secondary">
         {invite.uses_count}/{invite.max_uses}
       </td>
       <td className="px-3 py-2">
         <span
-          className={`rounded px-1.5 py-0.5 font-mono text-micro ${
-            status === "active" ? "bg-signal/10 text-signal" : "bg-warning/10 text-warning"
-          }`}
+          className={`rounded px-1.5 py-0.5 font-mono text-micro ${status === "active" ? "bg-signal/10 text-signal" : "bg-warning/10 text-warning"
+            }`}
         >
           {status}
         </span>

@@ -10,58 +10,43 @@ export function CTA() {
   const reducedMotion = useReducedMotion();
 
   return (
-    <section className="relative overflow-hidden py-24 lg:py-32">
-      <div
-        aria-hidden="true"
-        className="bg-grid absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_55%_60%_at_50%_50%,black,transparent)]"
-      />
-      <motion.div
-        aria-hidden="true"
-        className="animate-glow-pulse absolute left-1/2 top-1/2 -z-10 h-72 w-[36rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-signal/15 blur-3xl"
-      />
-
+    <section className="relative border-t border-line/70 py-24 lg:py-32">
       <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="font-display text-4xl font-bold tracking-tight text-ink sm:text-6xl">
-            Start reading the
+          <h2 className="font-display text-3xl font-bold tracking-tight text-ink sm:text-5xl">
+            Stop watching everything.
             <br />
-            <span className="text-gradient">market&apos;s mood.</span>
+            Start reading what matters.
           </h2>
-          <p className="mx-auto mt-6 max-w-xl text-body leading-relaxed text-ink-secondary sm:text-title">
-            Search millions of words of finance commentary in seconds. Free to
-            explore the tape — no credit card, no noise.
+          <p className="mx-auto mt-5 max-w-xl text-body leading-relaxed text-ink-secondary sm:text-title">
+            Point Carry at the sources you already trust. Every ticker, theme,
+            and call - extracted, searchable, and timestamped.
           </p>
         </Reveal>
 
         <motion.div
-          initial={reducedMotion ? false : { opacity: 0, y: 16, scale: 0.98 }}
-          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          initial={reducedMotion ? false : { opacity: 0, y: 16 }}
+          whileInView={reducedMotion ? undefined : { opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-60px" }}
           transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-          className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
+          className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
         >
           <Link href="/sign-up">
-            <Button
-              size="lg"
-              className="btn-glow h-12 gap-2 px-7 text-body"
-            >
-              Open Carry
+            <Button size="lg" className="h-11 gap-2 px-7 text-body">
+              Get started
               <ArrowRight className="size-4" />
             </Button>
           </Link>
-          <Link href="/sign-in">
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-12 gap-2 px-7 text-body bg-panel/50"
-            >
-              Sign in
-            </Button>
+          <Link
+            href="/sign-in"
+            className="text-body font-medium text-ink-secondary transition-colors hover:text-ink"
+          >
+            Sign in
           </Link>
         </motion.div>
 
         <Reveal delay={0.25}>
-          <p className="mt-6 font-mono text-micro uppercase tracking-[0.14em] text-ink-faint">
+          <p className="mt-8 font-mono text-micro uppercase tracking-[0.14em] text-ink-faint">
             Research intelligence · Not investment advice
           </p>
         </Reveal>

@@ -2,14 +2,14 @@
 
 ## Problem
 
-The product works well for **Category 1** channels (individual creators like ProfGMarkets) who comment on specific stocks. It doesn't work well for **Category 2** channels (institutional — Fundstrat, Morgan Stanley, GS) who comment on sectors/industries without naming individual stocks.
+The product works well for **Category 1** channels (individual creators like ProfGMarkets) who comment on specific stocks. It doesn't work well for **Category 2** channels (institutional - Fundstrat, Morgan Stanley, GS) who comment on sectors/industries without naming individual stocks.
 
 ## Solution
 
 When a channel is classified as "institutional," we surface **ETFs as the primary recommendations** instead of (or alongside) individual stocks. ETF mappings are **hardcoded in a static JSON file** for determinism, auditability, and zero LLM cost.
 
 > [!IMPORTANT]
-> **Why hardcoded over LLM-generated ETFs?** The sector→ETF mapping is a finite, stable, well-known universe (~40-60 entries). LLMs introduce non-determinism (same input → different ETFs across calls), hallucination risk (suggesting delisted/nonexistent ETFs), and unnecessary latency/cost. A curated JSON gives you 100% consistency and auditability — critical for a financial product tracking predictions.
+> **Why hardcoded over LLM-generated ETFs?** The sector→ETF mapping is a finite, stable, well-known universe (~40-60 entries). LLMs introduce non-determinism (same input → different ETFs across calls), hallucination risk (suggesting delisted/nonexistent ETFs), and unnecessary latency/cost. A curated JSON gives you 100% consistency and auditability - critical for a financial product tracking predictions.
 
 ---
 
@@ -86,11 +86,11 @@ When a channel is classified as "institutional," we surface **ETFs as the primar
 ```
 
 > [!NOTE]
-> The above is a comprehensive starting point. You can add/edit entries at any time — it's just a JSON file. The ETFs chosen are the most liquid, most widely held ETFs for each category (SPDR, iShares, Vanguard, First Trust sector ETFs plus popular thematic ETFs).
+> The above is a comprehensive starting point. You can add/edit entries at any time - it's just a JSON file. The ETFs chosen are the most liquid, most widely held ETFs for each category (SPDR, iShares, Vanguard, First Trust sector ETFs plus popular thematic ETFs).
 
 #### [NEW] [etf_mapping_service.py](file:///Users/akshatsipany/Work/yt-chatter/src/services/etf_mapping_service.py)
 - Loads `etf_mappings.json` once at startup.
-- Provides `resolve_etfs(sector: str, industry: str | None, theme: str | None) -> list[str]` — returns the most specific ETFs available (theme > industry > sector fallback).
+- Provides `resolve_etfs(sector: str, industry: str | None, theme: str | None) -> list[str]` - returns the most specific ETFs available (theme > industry > sector fallback).
 - Pure Python, zero LLM calls, deterministic.
 
 ---
@@ -99,7 +99,7 @@ When a channel is classified as "institutional," we surface **ETFs as the primar
 
 #### [MODIFY] [search_service.py](file:///Users/akshatsipany/Work/yt-chatter/src/services/search_service.py)
 - In `search_stocks_for_query()`: after building `ticker_data`, if the request is scoped to an institutional channel (or the sector_discovery is from an institutional context), inject matching ETFs from `ETFMappingService` at the top of results with high composite scores.
-- ETFs are surfaced as first-class `StockDiscoveryResult` entries — the frontend already renders them (ETF tickers work with yfinance for price charts too).
+- ETFs are surfaced as first-class `StockDiscoveryResult` entries - the frontend already renders them (ETF tickers work with yfinance for price charts too).
 
 #### [MODIFY] [aggregation_service.py](file:///Users/akshatsipany/Work/yt-chatter/src/services/aggregation_service.py)
 - In `get_channel_top_stocks()`: if the channel is institutional, supplement/replace top stock results with ETFs resolved from the channel's most-discussed themes.
@@ -113,7 +113,7 @@ When a channel is classified as "institutional," we surface **ETFs as the primar
 ### 4. Schema Updates
 
 #### [MODIFY] [schemas/__init__.py](file:///Users/akshatsipany/Work/yt-chatter/src/schemas/__init__.py)
-- Add `is_etf: bool = False` to `StockDiscoveryResult` — allows the frontend to badge/differentiate ETFs from individual stocks.
+- Add `is_etf: bool = False` to `StockDiscoveryResult` - allows the frontend to badge/differentiate ETFs from individual stocks.
 
 ---
 
@@ -135,7 +135,7 @@ flowchart TD
 ## Open Questions
 
 > [!IMPORTANT]
-> **ETF on ticker detail page**: When a user clicks on an ETF (e.g., SMH) from search results, should the `/tickers/[ticker]` page work identically (price chart, sentiment timeline, etc.)? It should — yfinance supports ETFs — but the "predictions" section will be empty since nobody explicitly predicted "SMH". Should we show the underlying sector predictions instead? (e.g., all semiconductor predictions mapped to SMH).
+> **ETF on ticker detail page**: When a user clicks on an ETF (e.g., SMH) from search results, should the `/tickers/[ticker]` page work identically (price chart, sentiment timeline, etc.)? It should - yfinance supports ETFs - but the "predictions" section will be empty since nobody explicitly predicted "SMH". Should we show the underlying sector predictions instead? (e.g., all semiconductor predictions mapped to SMH).
 
 > [!IMPORTANT]
 > **Existing channels**: Should I write a one-time migration script to classify your already-ingested channels, or just classify them going forward?
@@ -145,8 +145,8 @@ flowchart TD
 ## Verification Plan
 
 ### Automated Tests
-- Unit test for `ETFMappingService.resolve_etfs()` — verify correct fallback chain (theme → industry → sector).
-- Unit test for channel classification prompt — mock LLM response, verify `channel_type` is set.
+- Unit test for `ETFMappingService.resolve_etfs()` - verify correct fallback chain (theme → industry → sector).
+- Unit test for channel classification prompt - mock LLM response, verify `channel_type` is set.
 - Integration test: ingest a mock "institutional" channel → process a video about "semiconductors" → verify SMH/SOXX appear in top stocks.
 
 ### Manual Verification

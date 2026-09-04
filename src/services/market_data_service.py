@@ -1,4 +1,4 @@
-"""Market data service — yfinance implementation."""
+"""Market data service - yfinance implementation."""
 
 import logging
 from datetime import date, timedelta

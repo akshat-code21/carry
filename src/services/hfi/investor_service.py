@@ -1,4 +1,4 @@
-"""Investor CRUD service — adapted from Pet-Project for yt-chatter."""
+"""Investor CRUD service - adapted from Pet-Project for yt-chatter."""
 
 import uuid
 from datetime import UTC, datetime

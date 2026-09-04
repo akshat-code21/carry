@@ -23,7 +23,7 @@ from src.schemas.hfi import (
 )
 from src.services.hfi import investor_service
 
-router = APIRouter(prefix="/api/hfi/investors", tags=["HFI — Investors"])
+router = APIRouter(prefix="/api/hfi/investors", tags=["HFI - Investors"])
 
 
 @router.get("", response_model=list[InvestorOut])

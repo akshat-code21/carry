@@ -1,1 +1,1 @@
-"""Authentication package — Clerk-backed JWT verification and user provisioning."""
+"""Authentication package - Clerk-backed JWT verification and user provisioning."""

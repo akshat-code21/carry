@@ -1,4 +1,4 @@
-"""Analytics middleware — logs every served API request with latency and user.
+"""Analytics middleware - logs every served API request with latency and user.
 
 Runs inside CORS middleware; skips health checks, docs and preflights.
 Reads ``request.state.user_id`` (set by the auth dependency) after the

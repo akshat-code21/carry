@@ -1,4 +1,4 @@
-"""ExtractedMention model — entity mentions extracted from content items."""
+"""ExtractedMention model - entity mentions extracted from content items."""
 
 import uuid
 from datetime import datetime

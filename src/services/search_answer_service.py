@@ -1,4 +1,4 @@
-"""Search answer service — synthesizes cached LLM answers from transcript segments.
+"""Search answer service - synthesizes cached LLM answers from transcript segments.
 
 Given a query and a ranked set of transcript segments, produces a concise
 summary with key points and clip citations. Answers are cached per normalized
@@ -20,15 +20,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.analytics.service import analytics
 from src.config import get_settings
 from src.models.channel import Channel
+from src.models.raw_content import RawContent
 from src.models.search_answer import SearchAnswer
 from src.models.transcript_segment import TranscriptSegment
 from src.models.video import Video
 from src.services.interfaces import EmbeddingProvider
+from src.services.query_router import QueryRouter
 from src.services.search_coverage_service import (
     SearchCoverageService,
     format_coverage_for_prompt,
 )
 from src.services.search_service import SearchService
+from src.services.social_context_service import SocialContextService
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -42,24 +45,21 @@ LLM_TIMEOUT_SECONDS = 8.0
 MAX_KEY_POINTS = 4
 ANSWER_MODEL = "gpt-5.4-nano"
 
-ANSWER_SYSTEM_PROMPT = """You synthesize answers about what financial commentators \
-said on YouTube, based on numbered transcript excerpts.
+ANSWER_SYSTEM_PROMPT = """You are a financial intelligence assistant synthesizing what financial creators, media channels, and analysts said on YouTube regarding the user's query, based on transcript excerpts.
 
 Rules:
-- Answer ONLY from the excerpts and the aggregate coverage context (if provided). \
-Never add outside knowledge.
-- The summary must directly address the user's query in 2-4 sentences.
-- Provide up to 4 key points as short standalone bullets.
-- Cite excerpts by their exact ids whenever a claim draws on them. \
-Prefer citing multiple supporting ids over one.
-- If the excerpts do not contain enough information to answer, set summary to \
-a single sentence saying the available clips don't cover it, cite nothing, \
-and leave key_points empty.
+1. Answer ONLY from the provided transcript excerpts and aggregate coverage context. Never add outside knowledge, speculate, or hallucinate.
+2. COMPULSORY CHANNEL ATTRIBUTION: Every single claim, valuation metric, price target, thesis, or sentiment point MUST explicitly state the specific YouTube channel name that said it (e.g., "According to CNBC...", "Meet Kevin argues that...", "Bloomberg reported...", "Both Graham Stephan and Plain Bagel noted..."). Never make generic unattributed statements.
+3. NO META-LANGUAGE: Do NOT refer to "the clips", "the excerpts", "one segment", "the transcripts", or "the video commentary". Synthesize the commentary directly as spoken thoughts and analyses from the respective channels.
+4. NO BRACKETED CITATIONS: Do NOT output citation numbers, brackets, or UUIDs (such as [1], [2], or [uuid]) in the summary or key points.
+5. The summary must directly answer the user's query in 2-4 cohesive sentences with explicit channel attributions.
+6. Provide up to 4 key points as short standalone bullet points. Each bullet point MUST explicitly name the channel that made the point.
+7. If the excerpts do not contain enough relevant information to answer, set summary to a single sentence stating that monitored channels have not discussed this topic, and leave key_points empty.
 
 Return ONLY valid JSON:
 {"summary": "...", "key_points": ["..."], "cited_segment_ids": ["id1", "id2"]}"""
 
-# Per-process locks keyed by query hash — concurrent identical queries share
+# Per-process locks keyed by query hash - concurrent identical queries share
 # one synthesis instead of stampeding the LLM.
 _locks: dict[str, asyncio.Lock] = {}
 
@@ -80,13 +80,42 @@ def build_user_prompt(query: str, segments: list[dict[str, Any]]) -> str:
         channel = seg.get("channel_title") or "Unknown channel"
         title = seg.get("video_title") or "Unknown video"
         text = (seg.get("text") or "")[:SEGMENT_TEXT_LIMIT]
-        lines.append(f'[{seg["id"]}] ({channel} — "{title}"): {text}')
+        lines.append(f'[{seg["id"]}] (Channel: "{channel}" - "{title}"): {text}')
     return "\n".join(lines)
 
 
-# Matches bracketed UUID citations like "[28442ada-dea1-4b3b-8859-80c026260635]"
+SOCIAL_PROMPT_POST_LIMIT = 160
+
+
+def build_social_prompt_block(snapshot_dict: dict[str, Any]) -> str:
+    """Render the TickerFlow social-sentiment context appended to the prompt."""
+    sources = snapshot_dict.get("sources") or []
+    source_lines = []
+    for src in sources:
+        sentiment = src.get("sentiment_score")
+        sentiment_str = f"{sentiment:+.2f}" if sentiment is not None else "n/a"
+        source_lines.append(
+            f"- {str(src.get('source') or 'unknown').title()}: "
+            f"mentions={src.get('mentions') or 0}, sentiment={sentiment_str}, "
+            f"bullish={src.get('bullish_pct') if src.get('bullish_pct') is not None else 'n/a'}%, "
+            f"bearish={src.get('bearish_pct') if src.get('bearish_pct') is not None else 'n/a'}%"
+        )
+    lines = [
+        "Social sentiment context (Reddit/X/News aggregate from TickerFlow, "
+        f"as of {snapshot_dict.get('as_of') or 'unknown'}):",
+        *source_lines,
+    ]
+    posts = snapshot_dict.get("sample_posts") or []
+    if posts:
+        lines.append("Representative posts:")
+        for post in posts:
+            lines.append(f'- "{post[:SOCIAL_PROMPT_POST_LIMIT]}"')
+    return "\n".join(lines)
+
+
+# Matches bracketed UUID citations like "[28442ada-dea1-4b3b-8859-80c026260635]" or numbered markers like "[1]"
 _CITATION_BRACKET_RE = re.compile(
-    r"\[\s*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*\]",
+    r"\[\s*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d+)\s*\]",
     re.IGNORECASE,
 )
 _RAW_UUID_RE = re.compile(
@@ -95,23 +124,11 @@ _RAW_UUID_RE = re.compile(
 )
 
 
-def sanitize_citation_text(text: str, cited_ids: list[str]) -> str:
-    """Replace bracketed UUID citations with numbered markers [1], [2], etc.
-
-    UUIDs present in ``cited_ids`` are mapped by their LLM order; any stray
-    bracketed UUID or bare UUID not in the list is stripped so raw ids never
-    leak to the UI. Also cleans up empty brackets / parentheses left behind.
-    """
+def sanitize_citation_text(text: str, cited_ids: list[str] | None = None) -> str:
+    """Strip bracketed citations, numbered markers [1], and stray UUIDs from the text."""
     if not text:
         return text
-    id_to_index = {cid.lower(): str(idx + 1) for idx, cid in enumerate(cited_ids)}
-
-    def _repl(m: re.Match[str]) -> str:
-        uid = m.group(1).lower()
-        idx = id_to_index.get(uid)
-        return f"[{idx}]" if idx is not None else ""
-
-    text = _CITATION_BRACKET_RE.sub(_repl, text)
+    text = _CITATION_BRACKET_RE.sub("", text)
     text = _RAW_UUID_RE.sub("", text)
     # Clean artefacts left after stripping unknown citations
     text = re.sub(r"\(\s*,\s*", "(", text)
@@ -202,10 +219,12 @@ class SearchAnswerService:
         db: AsyncSession,
         embedding_provider: EmbeddingProvider,
         coverage_service: SearchCoverageService | None = None,
+        social_service: "SocialContextService | None" = None,
     ) -> None:
         self.db = db
         self.embedding_provider = embedding_provider
         self.coverage_service = coverage_service
+        self.social_service = social_service
         self._client = None
 
     def _get_client(self):
@@ -236,6 +255,7 @@ class SearchAnswerService:
             "citations": [],
             "available": False,
             "cached": False,
+            "social_context": [],
         }
 
         qhash = hash_query(query)
@@ -251,7 +271,7 @@ class SearchAnswerService:
                     if cached_source is not None:
                         if set(cached_source) != set(segment_ids):
                             logger.info(
-                                f"search/answer: cache bust for '{query[:60]}' — "
+                                f"search/answer: cache bust for '{query[:60]}' - "
                                 f"segment set changed ({len(cached_source)} vs {len(segment_ids)})"
                             )
                             try:
@@ -267,7 +287,7 @@ class SearchAnswerService:
                             cached_payload["cached"] = True
                             return cached_payload
                     else:
-                        # Legacy entry without source ids — be conservative: if it is
+                        # Legacy entry without source ids - be conservative: if it is
                         # a fallback empty answer ("don't mention ...") but the caller now
                         # has real clips, force re-synthesis.
                         summary_l = (cached_payload.get("summary") or "").lower()
@@ -298,7 +318,7 @@ class SearchAnswerService:
                     cached_payload["cached"] = True
                     return cached_payload
 
-            # Cache miss or bust — synthesize fresh
+            # Cache miss or bust - synthesize fresh
             try:
                 segments = await self._resolve_segments(query, segment_ids, max_input)
             except Exception as exc:
@@ -306,16 +326,18 @@ class SearchAnswerService:
                 await self._safe_rollback()
                 segments = []
             if len(segments) < MIN_SEGMENTS_FOR_ANSWER:
-                # Not enough evidence — don't cache negatives, cheap to recheck
+                # Not enough evidence - don't cache negatives, cheap to recheck
                 return unavailable
 
             started = time.perf_counter()
             coverage_summary = await self._build_coverage_summary(query, segment_ids)
+            social_context, social_prompt_block = await self._build_social_context(query)
             llm_out = await self._synthesize(
                 query,
                 segments,
                 {s["id"] for s in segments},
                 coverage_summary=coverage_summary,
+                social_prompt_block=social_prompt_block,
             )
             duration_ms = (time.perf_counter() - started) * 1000.0
 
@@ -330,6 +352,7 @@ class SearchAnswerService:
                 "source_segment_ids": [s["id"] for s in segments],
                 "available": True,
                 "cached": False,
+                "social_context": [social_context] if social_context else [],
             }
             await self._write_cache(qhash, query, payload, duration_ms)
             return payload
@@ -376,7 +399,7 @@ class SearchAnswerService:
             # Preserve caller-supplied ranking order, capped at max_input
             return [by_id[sid] for sid in segment_ids if sid in by_id][:max_input]
 
-        # No ids provided — derive top fused-rank segments server-side
+        # No ids provided - derive top fused-rank segments server-side
         search_service = SearchService(self.db, self.embedding_provider)
         results = await search_service.hybrid_search(query, limit=max_input)
         return list(results.get("segments", []))[:max_input]
@@ -396,12 +419,54 @@ class SearchAnswerService:
             logger.warning(f"search/answer: coverage context unavailable: {exc}")
             return None
 
+    async def _build_social_context(
+        self,
+        query: str,
+    ) -> tuple[dict[str, Any] | None, str | None]:
+        """Best-effort TickerFlow social snapshot for the query's ticker.
+
+        Returns (serialized_snapshot, prompt_block); (None, None) when the
+        query has no ticker hint or social data is unavailable. Never raises.
+        """
+        if self.social_service is None:
+            return None, None
+        try:
+            ticker = QueryRouter._extract_ticker_heuristic(query)
+            if not ticker:
+                return None, None
+            snapshot = await self.social_service.get_snapshot(ticker)
+            if snapshot is None:
+                return None, None
+
+            snapshot_dict = snapshot.model_dump(mode="json")
+            # Attach 1-2 representative raw posts (highest engagement) if stored
+            try:
+                stmt = (
+                    select(RawContent.text)
+                    .where(RawContent.symbol == ticker)
+                    .order_by(RawContent.engagement_score.desc())
+                    .limit(2)
+                )
+                posts = (await self.db.execute(stmt)).scalars().all()
+                if posts:
+                    snapshot_dict["sample_posts"] = list(posts)
+            except Exception as exc:  # noqa: BLE001 - posts are optional garnish
+                logger.warning(f"search/answer: sample posts unavailable: {exc}")
+                await self._safe_rollback()
+
+            return snapshot_dict, build_social_prompt_block(snapshot_dict)
+        except Exception as exc:
+            logger.warning(f"search/answer: social context unavailable: {exc}")
+            await self._safe_rollback()
+            return None, None
+
     async def _synthesize(
         self,
         query: str,
         segments: list[dict[str, Any]],
         valid_ids: set[str],
         coverage_summary: str | None = None,
+        social_prompt_block: str | None = None,
     ) -> dict[str, Any] | None:
         """Call the cheap LLM under a hard timeout; returns parsed output or None."""
         user_prompt = build_user_prompt(query, segments)
@@ -411,6 +476,13 @@ class SearchAnswerService:
                 f"{coverage_summary}\n"
                 "You may reference this momentum data when relevant, "
                 "but never invent numbers beyond it."
+            )
+        if social_prompt_block:
+            user_prompt += (
+                "\n\n"
+                f"{social_prompt_block}\n"
+                "You may reference this Reddit/X/News sentiment when relevant and "
+                "attribute it to the corresponding platform; never invent numbers beyond it."
             )
         started = time.perf_counter()
         try:
@@ -469,7 +541,7 @@ class SearchAnswerService:
         """Clear a poisoned transaction so the session stays usable."""
         try:
             await self.db.rollback()
-        except Exception:  # noqa: BLE001 — rollback is best-effort
+        except Exception:  # noqa: BLE001 - rollback is best-effort
             pass
 
     async def _read_cache(self, qhash: str) -> dict[str, Any] | None:
@@ -506,7 +578,7 @@ class SearchAnswerService:
                     sanitize_citation_text(kp, cited_ids) for kp in payload["key_points"]
                 ]
                 payload["key_points"] = [kp for kp in payload["key_points"] if kp]
-        except Exception:  # noqa: BLE001 — sanitization must never break cache reads
+        except Exception:  # noqa: BLE001 - sanitization must never break cache reads
             pass
         return payload
 

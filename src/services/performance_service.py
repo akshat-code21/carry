@@ -1,4 +1,4 @@
-"""Performance service — computes returns and prediction accuracy."""
+"""Performance service - computes returns and prediction accuracy."""
 
 import logging
 import uuid as uuid_mod
@@ -46,7 +46,7 @@ class PerformanceService:
         # Fetch prices at different time horizons
         price_at_video = await self.market_data.get_price_at_date(ticker, video_date)
         if price_at_video is None:
-            logger.warning(f"No price data for {ticker} at {video_date} — skipping performance")
+            logger.warning(f"No price data for {ticker} at {video_date} - skipping performance")
             return None
 
         price_1d = await self.market_data.get_price_at_date(ticker, video_date + timedelta(days=1))

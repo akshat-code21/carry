@@ -337,7 +337,7 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              Signal tape — ${ticker}
+              Signal tape - {ticker}
             </CardTitle>
             <CardDescription>
               Sentiment trajectory, one chip per video, weighted by confidence
@@ -386,7 +386,7 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={chartData}
-                margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
+                margin={{ top: 16, right: 12, left: -14, bottom: 16 }}
               >
                 <defs>
                   <linearGradient id="bullishGradient" x1="0" y1="0" x2="0" y2="1">
@@ -411,6 +411,7 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
                   tickLine={false}
                   axisLine={{ stroke: lineColor }}
                   tickMargin={8}
+                  minTickGap={20}
                 />
 
                 <YAxis
@@ -424,7 +425,7 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
                   tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-geist-mono)" }}
                   tickLine={false}
                   axisLine={false}
-                  width={42}
+                  width={34}
                 />
 
                 <Tooltip content={<CustomTooltip />} wrapperStyle={{ outline: "none", pointerEvents: "none" }} />

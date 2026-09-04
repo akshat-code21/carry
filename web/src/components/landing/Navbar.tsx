@@ -9,9 +9,8 @@ import { Logo } from "@/components/landing/Logo";
 import { cn } from "@/lib/utils";
 
 const links = [
+  { href: "#how-it-works", label: "How it works" },
   { href: "#features", label: "Features" },
-  { href: "#why-carry", label: "Why Carry" },
-  { href: "#testimonials", label: "Customers" },
 ];
 
 export function Navbar() {
@@ -48,8 +47,8 @@ export function Navbar() {
             Sign in
           </Link>
           <Link href="/sign-up">
-            <Button className="btn-glow gap-1.5">
-              Get Started
+            <Button className="gap-1.5">
+              Get started
               <ArrowRight className="size-4" />
             </Button>
           </Link>
@@ -84,14 +83,14 @@ export function Navbar() {
             </Link>
           ))}
           <div className="mt-2 flex items-center gap-3 border-t border-line/60 pt-3">
-            <Link href="/search" className="flex-1">
+            <Link href="/sign-in" className="flex-1">
               <Button variant="outline" size="sm" className="w-full">
                 Sign in
               </Button>
             </Link>
-            <Link href="/search" className="flex-1">
-              <Button size="sm" className="btn-glow w-full gap-1.5">
-                Get Started
+            <Link href="/sign-up" className="flex-1">
+              <Button size="sm" className="w-full gap-1.5">
+                Get started
                 <ArrowRight className="size-4" />
               </Button>
             </Link>

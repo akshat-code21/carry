@@ -1,4 +1,4 @@
-"""YouTube service — channel/video metadata + transcript fetching."""
+"""YouTube service - channel/video metadata + transcript fetching."""
 
 import asyncio
 import json

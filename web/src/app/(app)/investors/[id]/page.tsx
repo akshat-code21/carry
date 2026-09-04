@@ -48,7 +48,7 @@ import {
 } from "lucide-react";
 
 function formatUsd(val: number | null | undefined): string {
-  if (val == null || val === 0) return "—";
+  if (val == null || val === 0) return "-";
   if (val >= 1_000_000_000) return `$${(val / 1_000_000_000).toFixed(2)}B`;
   if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(2)}M`;
   if (val >= 1_000) return `$${(val / 1_000).toFixed(1)}K`;
@@ -56,7 +56,7 @@ function formatUsd(val: number | null | undefined): string {
 }
 
 function formatPercent(val: number | null | undefined): string {
-  if (val == null) return "—";
+  if (val == null) return "-";
   return `${Number(val).toFixed(2)}%`;
 }
 
@@ -196,8 +196,8 @@ export default function InvestorDetailPage() {
       if (!holdingsMap[key]) {
         holdingsMap[key] = {
           key,
-          company_name: pc.company_name || "—",
-          ticker_symbol: pc.ticker_symbol || "—",
+          company_name: pc.company_name || "-",
+          ticker_symbol: pc.ticker_symbol || "-",
           changesByPeriod: {},
           latestValue: 0,
           latestPercent: 0,
@@ -413,22 +413,20 @@ export default function InvestorDetailPage() {
                 <div className="flex items-center rounded-lg border border-line bg-surface p-0.5">
                   <button
                     onClick={() => setHoldingsView("breakdown")}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 text-micro font-medium rounded-md transition-colors ${
-                      holdingsView === "breakdown"
+                    className={`flex items-center gap-1.5 px-2.5 py-1 text-micro font-medium rounded-md transition-colors ${holdingsView === "breakdown"
                         ? "bg-panel text-ink"
                         : "text-ink-secondary hover:text-ink"
-                    }`}
+                      }`}
                   >
                     <LayoutList className="h-3.5 w-3.5" />
                     Quarterly
                   </button>
                   <button
                     onClick={() => setHoldingsView("matrix")}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 text-micro font-medium rounded-md transition-colors ${
-                      holdingsView === "matrix"
+                    className={`flex items-center gap-1.5 px-2.5 py-1 text-micro font-medium rounded-md transition-colors ${holdingsView === "matrix"
                         ? "bg-panel text-ink"
                         : "text-ink-secondary hover:text-ink"
-                    }`}
+                      }`}
                   >
                     <Grid3X3 className="h-3.5 w-3.5" />
                     Matrix View
@@ -445,11 +443,10 @@ export default function InvestorDetailPage() {
                 </span>
                 <button
                   onClick={() => setSelectedQuarter("all")}
-                  className={`px-2.5 py-1 rounded-md text-micro font-mono font-medium transition-colors shrink-0 ${
-                    selectedQuarter === "all"
+                  className={`px-2.5 py-1 rounded-md text-micro font-mono font-medium transition-colors shrink-0 ${selectedQuarter === "all"
                       ? "bg-signal text-black font-semibold"
                       : "bg-surface border border-line text-ink-secondary hover:text-ink hover:border-line-hover"
-                  }`}
+                    }`}
                 >
                   All ({periods.length})
                 </button>
@@ -460,11 +457,10 @@ export default function InvestorDetailPage() {
                     <button
                       key={p}
                       onClick={() => setSelectedQuarter(p)}
-                      className={`px-2.5 py-1 rounded-md text-micro font-mono font-medium transition-colors shrink-0 flex items-center gap-1.5 ${
-                        selectedQuarter === p
+                      className={`px-2.5 py-1 rounded-md text-micro font-mono font-medium transition-colors shrink-0 flex items-center gap-1.5 ${selectedQuarter === p
                           ? "bg-signal text-black font-semibold"
                           : "bg-surface border border-line text-ink-secondary hover:text-ink hover:border-line-hover"
-                      }`}
+                        }`}
                     >
                       <span>{p}</span>
                       {isLatest && <span className="text-[9px] font-sans px-1 rounded bg-black/20 text-black font-bold">Latest</span>}
@@ -543,12 +539,12 @@ export default function InvestorDetailPage() {
                             {h.company_name}
                           </td>
                           <td className="py-2.5 px-3 font-mono font-semibold text-signal sticky left-[220px] z-10 bg-canvas group-hover:bg-panel/70 transition-colors min-w-[90px] max-w-[90px] w-[90px] border-r border-line">
-                            {h.ticker_symbol && h.ticker_symbol !== "—" ? (
+                            {h.ticker_symbol && h.ticker_symbol !== "-" ? (
                               <Link href={`/tickers/${h.ticker_symbol}`} className="hover:underline">
-                                ${h.ticker_symbol}
+                                {h.ticker_symbol}
                               </Link>
                             ) : (
-                              "—"
+                              "-"
                             )}
                           </td>
                           {periods.map((period) => {
@@ -556,10 +552,10 @@ export default function InvestorDetailPage() {
                             if (!pc) {
                               return (
                                 <Fragment key={`${h.key}-${period}`}>
-                                  <td className="py-2.5 px-3 text-right text-ink-faint/40">—</td>
-                                  <td className="py-2.5 px-3 text-right text-ink-faint/40">—</td>
-                                  <td className="py-2.5 px-3 text-right text-ink-faint/40">—</td>
-                                  <td className="py-2.5 px-3 text-center text-ink-faint/40 border-r border-line">—</td>
+                                  <td className="py-2.5 px-3 text-right text-ink-faint/40">-</td>
+                                  <td className="py-2.5 px-3 text-right text-ink-faint/40">-</td>
+                                  <td className="py-2.5 px-3 text-right text-ink-faint/40">-</td>
+                                  <td className="py-2.5 px-3 text-center text-ink-faint/40 border-r border-line">-</td>
                                 </Fragment>
                               );
                             }
@@ -648,19 +644,19 @@ export default function InvestorDetailPage() {
                                 return (
                                   <tr key={pc.id} className="hover:bg-panel/50 transition-colors">
                                     <td className="px-4 py-2.5 font-medium text-ink">
-                                      {pc.company_name ?? "—"}
+                                      {pc.company_name ?? "-"}
                                     </td>
                                     <td className="px-4 py-2.5 font-mono font-semibold text-signal">
                                       {pc.ticker_symbol ? (
                                         <Link href={`/tickers/${pc.ticker_symbol}`} className="hover:underline">
-                                          ${pc.ticker_symbol}
+                                          {pc.ticker_symbol}
                                         </Link>
                                       ) : (
-                                        "—"
+                                        "-"
                                       )}
                                     </td>
                                     <td className="px-4 py-2.5 text-right font-mono text-ink-secondary">
-                                      {pc.shares_current > 0 ? pc.shares_current.toLocaleString() : "—"}
+                                      {pc.shares_current > 0 ? pc.shares_current.toLocaleString() : "-"}
                                     </td>
                                     <td className="px-4 py-2.5 text-right font-mono text-ink-secondary">
                                       {formatUsd(pc.value_usd)}
@@ -738,15 +734,14 @@ export default function InvestorDetailPage() {
                     </div>
                     <Badge
                       variant="outline"
-                      className={`text-micro capitalize ${
-                        item.processing_status === "completed"
+                      className={`text-micro capitalize ${item.processing_status === "completed"
                           ? "border-green-500/30 text-green-400 bg-green-500/10"
                           : item.processing_status === "processing"
-                          ? "border-signal/30 text-signal bg-signal/10 animate-pulse"
-                          : item.processing_status === "failed"
-                          ? "border-bearish/30 text-bearish bg-bearish/10"
-                          : "border-line text-ink-faint"
-                      }`}
+                            ? "border-signal/30 text-signal bg-signal/10 animate-pulse"
+                            : item.processing_status === "failed"
+                              ? "border-bearish/30 text-bearish bg-bearish/10"
+                              : "border-line text-ink-faint"
+                        }`}
                     >
                       {item.processing_status}
                     </Badge>
@@ -843,13 +838,12 @@ export default function InvestorDetailPage() {
                         <p className="font-semibold text-small text-ink">{alert.title}</p>
                         <Badge
                           variant="outline"
-                          className={`text-micro uppercase ${
-                            alert.severity === "critical"
+                          className={`text-micro uppercase ${alert.severity === "critical"
                               ? "bg-bearish/10 text-bearish border-bearish/30"
                               : alert.severity === "high"
-                              ? "bg-warning/10 text-warning border-warning/30"
-                              : "bg-signal/10 text-signal border-signal/30"
-                          }`}
+                                ? "bg-warning/10 text-warning border-warning/30"
+                                : "bg-signal/10 text-signal border-signal/30"
+                            }`}
                         >
                           {alert.severity}
                         </Badge>
@@ -887,18 +881,16 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-2 text-small font-medium border-b-2 transition-colors whitespace-nowrap ${
-        active
+      className={`flex items-center gap-2 px-3 py-2 text-small font-medium border-b-2 transition-colors whitespace-nowrap ${active
           ? "border-signal text-signal"
           : "border-transparent text-ink-secondary hover:text-ink hover:border-line"
-      }`}
+        }`}
     >
       {label}
       {badge && (
         <span
-          className={`rounded-full px-1.5 py-0.2 text-micro font-mono ${
-            active ? "bg-signal/20 text-signal" : "bg-panel text-ink-faint"
-          }`}
+          className={`rounded-full px-1.5 py-0.2 text-micro font-mono ${active ? "bg-signal/20 text-signal" : "bg-panel text-ink-faint"
+            }`}
         >
           {badge}
         </span>

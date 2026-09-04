@@ -1,4 +1,4 @@
-"""TickerCache model — cached CUSIP/company-name → ticker symbol resolution."""
+"""TickerCache model - cached CUSIP/company-name → ticker symbol resolution."""
 
 import uuid
 from datetime import datetime

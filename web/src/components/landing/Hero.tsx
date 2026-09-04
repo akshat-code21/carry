@@ -2,18 +2,8 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
-import {
-  ArrowRight,
-  PlayCircle,
-  Search,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Quote,
-  Radio,
-} from "lucide-react";
+import { ArrowRight, Search, Sparkles, Tv, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -29,160 +19,235 @@ const item: Variants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.65, ease: EASE } },
 };
 
-interface PreviewRow {
-  ticker: string;
-  theme: string;
+/* ── Sample data mirroring the real Search Engine page ───────────────── */
+
+const sampleSummary = {
+  text: "NVIDIA remains the dominant AI infrastructure play. Analysts and YouTube creators highlight strong data-center revenue driven by H100/H200 demand, with consensus pointing to continued growth through 2026. Key concerns include valuation multiples and potential competition from custom ASICs.",
+  keyPoints: [
+    "Data-center revenue up 154% YoY, driven by hyperscaler AI capex",
+    "H200 and Blackwell ramp expected to sustain growth through mid-2026",
+    "Valuation concern: trading at ~35x forward earnings, above 5-year average",
+    "Custom ASIC competition from Google TPU and Amazon Trainium noted as risk",
+  ],
+  social: { symbol: "NVDA", mentions: 1284, sentiment: 0.42, bullishPct: 72 },
+};
+
+interface SampleResult {
+  channel: string;
+  title: string;
+  date: string;
+  hits: number;
   snippet: string;
+  timestamp: string;
   sentiment: "bullish" | "bearish" | "neutral";
-  score: number;
 }
 
-const previewRows: PreviewRow[] = [
+const sampleResults: SampleResult[] = [
   {
-    ticker: "$NVDA",
-    theme: "Semiconductors",
-    snippet: "\u201c…compute demand is still growing faster than supply…\u201d",
+    channel: "Meet Kevin",
+    title: "NVIDIA Just Changed Everything — Here's What Nobody Sees Coming",
+    date: "Aug 28, 2026",
+    hits: 6,
+    snippet: "The Blackwell architecture is going to be a massive upgrade cycle. Every single hyperscaler is lining up for these chips...",
+    timestamp: "12:34",
     sentiment: "bullish",
-    score: 92,
   },
   {
-    ticker: "$TLT",
-    theme: "Rates / Bonds",
-    snippet: "\u201c…the Fed starts easing in September, this tape rips…\u201d",
-    sentiment: "bullish",
-    score: 78,
-  },
-  {
-    ticker: "$XBI",
-    theme: "Biotech",
-    snippet: "\u201c…rate-sensitive names finally catch a bid…\u201d",
+    channel: "Joseph Carlson",
+    title: "Is NVIDIA Still a Buy After the Earnings Beat?",
+    date: "Aug 26, 2026",
+    hits: 4,
+    snippet: "Data center revenue came in at $26.3 billion, which is just staggering. But at 35x forward, you have to ask yourself...",
+    timestamp: "8:15",
     sentiment: "neutral",
-    score: 54,
+  },
+  {
+    channel: "Tom Nash",
+    title: "The AI Trade Is NOT Over — NVDA, MSFT, GOOGL Deep Dive",
+    date: "Aug 22, 2026",
+    hits: 3,
+    snippet: "Custom ASICs are not replacing NVIDIA. They're complementary. Google's TPU handles specific workloads but CUDA's ecosystem moat is enormous...",
+    timestamp: "22:07",
+    sentiment: "bullish",
   },
 ];
 
-const sentimentMeta = {
-  bullish: { Icon: TrendingUp, className: "text-bullish", bg: "bg-bullish/10 border-bullish/25" },
-  bearish: { Icon: TrendingDown, className: "text-bearish", bg: "bg-bearish/10 border-bearish/25" },
-  neutral: { Icon: Minus, className: "text-ink-faint", bg: "bg-panel-raised border-line-strong" },
+const sentimentColors = {
+  bullish: "text-bullish",
+  bearish: "text-bearish",
+  neutral: "text-ink-secondary",
 } as const;
 
-function HeroPreview() {
+function DataPreview() {
   const reducedMotion = useReducedMotion();
 
   return (
     <motion.div
-      initial={reducedMotion ? false : { opacity: 0, y: 48, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.8, delay: 0.55, ease: EASE }}
-      className="relative mx-auto mt-16 w-full max-w-3xl lg:mt-20"
+      initial={reducedMotion ? false : { opacity: 0, y: 40 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.75, delay: 0.5, ease: EASE }}
+      className="relative mx-auto mt-14 w-full max-w-4xl lg:mt-16"
     >
-      <motion.div
-        animate={reducedMotion ? undefined : { y: [0, -10, 0] }}
-        transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-        className="relative overflow-hidden rounded-2xl border border-line-strong bg-panel/80 shadow-[0_40px_120px_-40px_color-mix(in_oklch,var(--ink)_60%,transparent)] backdrop-blur-xl"
+      {/* Single focal shimmer */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 overflow-hidden rounded-lg"
       >
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-signal/70 to-transparent" />
+        <div
+          className={
+            "animate-scan absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-transparent via-signal/[0.05] to-transparent" +
+            (reducedMotion ? " hidden" : "")
+          }
+        />
+      </div>
 
-        <div className="flex h-11 items-center gap-3 border-b border-line px-4">
-          <div className="flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full bg-bearish/50" />
-            <span className="size-2.5 rounded-full bg-warning/50" />
-            <span className="size-2.5 rounded-full bg-bullish/50" />
-          </div>
-          <div className="mx-auto flex h-6 w-full max-w-sm items-center gap-2 rounded-md border border-line bg-canvas px-2.5 text-caption text-ink-faint">
-            <Search className="size-3" />
-            <span>“rate cuts” · semantic</span>
-            <kbd className="ml-auto rounded border border-line bg-panel-raised px-1 font-mono text-micro">
-              ⌘K
-            </kbd>
+      <div className="relative overflow-hidden rounded-lg border border-line-strong bg-panel shadow-lg">
+        {/* ── Window chrome ──────────────────────────────────────────── */}
+        <div className="flex h-10 items-center justify-between border-b border-line px-4">
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1.5" aria-hidden="true">
+              <span className="size-2.5 rounded-full bg-bearish/60" />
+              <span className="size-2.5 rounded-full bg-warning/60" />
+              <span className="size-2.5 rounded-full bg-bullish/60" />
+            </div>
+            <p className="ml-2 font-mono text-micro font-semibold uppercase tracking-[0.12em] text-ink-faint">
+              Search Engine
+            </p>
           </div>
           <div className="flex items-center gap-1.5 font-mono text-micro text-ink-faint">
-            <Radio className="size-3 text-signal" />
-            live
+            <span className="size-1.5 rounded-full bg-signal" aria-hidden="true" />
+            sample data
           </div>
         </div>
 
-        <div className="grid gap-px bg-line/70 sm:grid-cols-[1fr_240px]">
-          <div className="flex flex-col gap-2.5 bg-panel p-4">
-            <p className="font-mono text-micro uppercase tracking-[0.12em] text-ink-faint">
-              Top matches · 3 of 1,284
-            </p>
-            {previewRows.map((row) => {
-              const meta = sentimentMeta[row.sentiment];
-              return (
-                <div
-                  key={row.ticker}
-                  className="group flex flex-col gap-2 rounded-lg border border-line bg-canvas/60 p-3 transition-colors hover:border-signal/40 hover:bg-panel-raised"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-body font-semibold text-ink">
-                        {row.ticker}
-                      </span>
-                      <span className="font-mono text-micro text-ink-faint">
-                        {row.theme}
-                      </span>
-                    </div>
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-micro font-semibold ${meta.bg} ${meta.className}`}
-                    >
-                      <meta.Icon className="size-3" />
-                      {row.score}% · {row.sentiment}
-                    </span>
-                  </div>
-                  <p className="line-clamp-1 text-body italic text-ink-secondary">
-                    <Quote className="mr-1 inline size-3 text-ink-faint" />
-                    {row.snippet}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="hidden flex-col justify-between gap-4 border-l border-line bg-panel p-4 sm:flex">
-            <div>
-              <p className="font-mono text-micro uppercase tracking-[0.12em] text-ink-faint">
-                Market sentiment
-              </p>
-              <p className="mt-2 font-display text-display-xl font-bold tracking-tight text-bullish">
-                71<span className="text-title text-ink-faint">%</span>
-              </p>
-              <p className="mt-1 text-caption text-ink-secondary">
-                bullish across 4 platforms
-              </p>
-              <div className="mt-4 flex h-20 items-end gap-1.5">
-                {[34, 52, 40, 66, 48, 74, 58, 88, 62, 96].map((h, i) => (
-                  <motion.span
-                    key={i}
-                    initial={reducedMotion ? false : { scaleY: 0 }}
-                    animate={{ scaleY: 1 }}
-                    transition={{ duration: 0.6, delay: 0.9 + i * 0.05, ease: EASE }}
-                    style={{ height: `${h}%` }}
-                    className="w-full origin-bottom rounded-sm bg-signal/60"
-                  />
-                ))}
+        {/* ── Search bar + type toggles ──────────────────────────────── */}
+        <div className="border-b border-line bg-canvas/40 px-4 py-3">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-ink-faint" />
+              <div className="flex h-9 items-center rounded-md border border-line bg-panel pl-9 pr-3 text-small text-ink">
+                NVIDIA AI outlook 2026
               </div>
             </div>
-
-            <div className="rounded-lg border border-bullish/20 bg-bullish/10 p-3">
-              <p className="font-mono text-micro uppercase tracking-[0.12em] text-bullish">
-                Prediction · verified
-              </p>
-              <p className="mt-1.5 text-caption leading-snug text-ink-secondary">
-                “SOXX +6% by Q3” — logged Apr 2, resolved true in 89 days.
-              </p>
+            <div className="flex h-9 items-center rounded-md bg-signal px-4 font-mono text-small font-semibold text-canvas">
+              Search
+            </div>
+          </div>
+          <div className="mt-2.5 flex items-center gap-2">
+            <span className="font-mono text-micro font-semibold uppercase tracking-[0.14em] text-ink-faint">
+              Search type
+            </span>
+            <div className="flex gap-0.5 rounded-md border border-line bg-panel p-0.5">
+              {(["keyword", "semantic", "hybrid"] as const).map((t) => (
+                <span
+                  key={t}
+                  className={`rounded-md px-2.5 py-1 font-mono text-micro font-medium capitalize ${t === "hybrid"
+                    ? "bg-signal text-canvas"
+                    : "text-ink-faint"
+                    }`}
+                >
+                  {t}
+                </span>
+              ))}
             </div>
           </div>
         </div>
-      </motion.div>
 
-      <motion.div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 rounded-2xl bg-signal/10 blur-2xl"
-        animate={reducedMotion ? undefined : { opacity: [0.5, 0.9, 0.5] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-      />
+        {/* ── AI Summary card ────────────────────────────────────────── */}
+        <div className="border-b border-line px-4 py-4">
+          <div className="rounded-lg border border-signal/30 bg-panel p-4">
+            <div className="mb-2.5 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-signal" />
+              <span className="font-mono text-micro font-semibold uppercase tracking-[0.14em] text-signal">
+                Summary
+              </span>
+            </div>
+            <p className="text-small leading-relaxed text-ink">
+              {sampleSummary.text}
+            </p>
+            <ul className="mt-3 flex flex-col gap-1.5">
+              {sampleSummary.keyPoints.map((point, i) => (
+                <li
+                  key={i}
+                  className="flex items-start gap-2 text-small text-ink-secondary"
+                >
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-signal" />
+                  {point}
+                </li>
+              ))}
+            </ul>
+            {/* Social strip */}
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-line/60 pt-2.5">
+              <span className="font-mono text-micro font-semibold uppercase tracking-[0.14em] text-ink-faint">
+                Social
+              </span>
+              <span className="font-mono text-micro font-semibold text-ink">
+                {sampleSummary.social.symbol}
+              </span>
+              <span className="font-mono text-micro text-ink-secondary">
+                {sampleSummary.social.mentions.toLocaleString()} mentions
+              </span>
+              <span className="font-mono text-micro font-semibold text-bullish">
+                +{sampleSummary.social.sentiment.toFixed(2)}
+              </span>
+              <span className="font-mono text-micro text-bullish/70">
+                {sampleSummary.social.bullishPct}% bull
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Grouped video results ──────────────────────────────────── */}
+        <div className="divide-y divide-line/70">
+          {sampleResults.map((result) => (
+            <div key={result.title} className="px-4 py-3 transition-colors hover:bg-panel-raised">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Tv className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
+                    <span className="font-mono text-micro font-semibold text-ink-faint">
+                      {result.channel}
+                    </span>
+                    <span className="font-mono text-micro text-ink-faint">
+                      · {result.date}
+                    </span>
+                    <span className={`ml-auto font-mono text-micro font-semibold ${sentimentColors[result.sentiment]}`}>
+                      {result.sentiment === "bullish" ? "▲ Bullish" : result.sentiment === "bearish" ? "▼ Bearish" : "— Neutral"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-small font-medium leading-snug text-ink line-clamp-1">
+                    {result.title}
+                  </p>
+                  <div className="mt-1.5 border-l-2 border-line-strong py-0.5 pl-3">
+                    <p className="text-small italic text-ink-secondary line-clamp-2">
+                      &quot;{result.snippet}&quot;
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center gap-3">
+                <span className="inline-flex items-center gap-1 rounded border border-line bg-panel-raised px-1.5 py-0.5 font-mono text-micro text-ink-faint">
+                  {result.hits} clips matched
+                </span>
+                <span className="font-mono text-micro text-ink-faint">
+                  @ {result.timestamp}
+                </span>
+                <ChevronDown className="ml-auto h-3.5 w-3.5 text-ink-faint" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Footer bar ─────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between border-t border-line px-4 py-2.5">
+          <p className="font-mono text-micro text-ink-faint">
+            3 of 47 videos · 13 clips
+          </p>
+          {/* <p className="font-mono text-micro text-ink-faint">
+            not investment advice
+          </p> */}
+        </div>
+      </div>
     </motion.div>
   );
 }
@@ -191,106 +256,56 @@ export function Hero() {
   const reducedMotion = useReducedMotion();
 
   return (
-    <section className="relative overflow-hidden">
+    <section className="relative overflow-hidden pt-32 pb-20 lg:pt-40 lg:pb-24">
       <div
         aria-hidden="true"
         className="bg-grid absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)]"
       />
-      <div
-        aria-hidden="true"
-        className="animate-glow-pulse absolute -top-32 left-1/2 -z-10 h-96 w-[42rem] -translate-x-1/2 rounded-full bg-signal/15 blur-3xl"
-      />
-      <div
-        aria-hidden="true"
-        className="animate-glow-pulse absolute -left-32 top-1/3 -z-10 h-80 w-80 rounded-full bg-info/10 blur-3xl"
-        style={{ animationDelay: "1.5s" }}
-      />
 
-      <div className="mx-auto max-w-7xl px-4 pb-24 pt-32 sm:px-6 sm:pt-36 lg:px-8 lg:pb-32 lg:pt-40">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
           variants={container}
           initial={reducedMotion ? false : "hidden"}
           animate="show"
           className="mx-auto max-w-3xl text-center"
         >
-          {/* <motion.div variants={item}>
-            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-panel/70 px-3.5 py-1.5 font-mono text-micro font-medium uppercase tracking-[0.14em] text-ink-secondary backdrop-blur">
-              <span className="relative flex size-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-signal opacity-60" />
-                <span className="relative inline-flex size-2 rounded-full bg-signal" />
-              </span>
-              Live · 340+ channels · 4 platforms
-            </span>
-          </motion.div> */}
-
           <motion.h1
             variants={item}
-            className="mt-8 font-display text-5xl font-bold leading-[1.02] tracking-tight text-ink sm:text-6xl lg:text-7xl"
+            className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-ink sm:text-5xl lg:text-6xl"
           >
-            Hear what the
-            <br />
-            <span className="text-gradient">market is saying.</span>
+            Market chatter, distilled into{" "}
+            <span className="text-gradient">tickers, themes, and sentiment.</span>
           </motion.h1>
 
           <motion.p
             variants={item}
-            className="mx-auto mt-6 max-w-xl text-body leading-relaxed text-ink-secondary sm:text-title sm:leading-relaxed"
+            className="mx-auto mt-6 max-w-2xl text-title leading-relaxed text-ink-secondary"
           >
-            Carry ingests thousands of hours of finance commentary from YouTube,
-            Reddit, X, and news — then extracts the tickers, predictions, and
-            sentiment that actually matter, timestamped to the second.
+            Carry aggregates YouTube, Reddit, X, and the news, plus quarterly
+            13F filings, then extracts every ticker, theme, and
+            bullish-or-bearish call into one searchable dashboard.
           </motion.p>
 
-          <motion.div
-            variants={item}
-            className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
-          >
-            <Link href="/search">
-              <Button size="lg" className="cursor-pointer btn-glow h-11 gap-2 px-6 text-body">
-                Try it Out
+          <motion.div variants={item} className="mt-10 flex justify-center">
+            <Link href="/sign-up">
+              <Button size="lg" className="h-11 gap-2 px-7 text-body">
+                Get started
                 <ArrowRight className="size-4" />
               </Button>
             </Link>
-            {/* <Link href="#why-carry">
-              <Button
-                size="lg"
-                variant="ghost"
-                className="h-11 gap-2 px-6 text-body text-ink-secondary hover:text-ink"
-              >
-                <PlayCircle className="size-4 text-signal" />
-                See how it works
-              </Button>
-            </Link> */}
           </motion.div>
 
-          <motion.div
+          {/* Sources - what the pipeline actually ingests */}
+          <motion.p
             variants={item}
-            className="mt-10 flex items-center justify-center gap-4"
+            className="mt-8 font-mono text-micro uppercase tracking-[0.14em] text-ink-faint"
           >
-            {/* <div className="flex -space-x-2">
-              {["MC", "DR", "SL"].map((initials, i) => (
-                <Avatar key={initials} size="sm" className="ring-2 ring-canvas">
-                  <AvatarFallback
-                    className={`text-micro font-semibold ${i === 0
-                        ? "bg-signal/20 text-signal"
-                        : i === 1
-                          ? "bg-info/20 text-info"
-                          : "bg-bullish/20 text-bullish"
-                      }`}
-                  >
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-              ))}
-            </div> */}
-            {/* <p className="text-caption text-ink-faint">
-              Trusted by research analysts, portfolio managers, and finance
-              content teams
-            </p> */}
-          </motion.div>
+            YouTube · Reddit · X · News · SEC 13F filings
+          </motion.p>
         </motion.div>
 
-        <HeroPreview />
+        {/* Real product output, directly under the hero - the primary trust-builder */}
+        <DataPreview />
       </div>
     </section>
   );

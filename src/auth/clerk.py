@@ -60,7 +60,7 @@ def _reason_name(state: RequestState) -> str:
 
 
 def _log_rejected_token_kid(token: str) -> None:
-    """Log the unverified JWT header kid — it encodes the Clerk instance that
+    """Log the unverified JWT header kid - it encodes the Clerk instance that
     signed the token (kid == 'ins_<instance_id>'), which instantly reveals
     frontend/backend instance mismatches."""
     try:
@@ -68,13 +68,13 @@ def _log_rejected_token_kid(token: str) -> None:
 
         header = pyjwt.get_unverified_header(token)
         logger.warning(
-            "Rejected token header: kid=%s alg=%s — kid must start with this "
+            "Rejected token header: kid=%s alg=%s - kid must start with this "
             "instance's id (see 'jwk_kid_mismatch' => token from a different "
             "Clerk instance; restart frontend + clear cookies)",
             header.get("kid"),
             header.get("alg"),
         )
-    except Exception:  # noqa: BLE001 — diagnostics must never raise
+    except Exception:  # noqa: BLE001 - diagnostics must never raise
         pass
 
 
@@ -82,7 +82,7 @@ async def get_clerk_user_profile(clerk_user_id: str) -> dict | None:
     """Fetch a user's profile from the Clerk Backend API.
 
     Returns {email, full_name, image_url, public_metadata} or None on failure.
-    Used because default Clerk session tokens carry no profile claims —
+    Used because default Clerk session tokens carry no profile claims -
     only ``sub``. One HTTP round-trip; callers must throttle.
     """
     try:
@@ -122,7 +122,7 @@ def verify_session_token(request: Request) -> dict:
 
     Verification strategy: if ``CLERK_JWT_KEY`` (static PEM) is configured we
     try it first (networkless), but on signature failure we automatically
-    fall back to JWKS — Clerk rotates signing keys whenever the session
+    fall back to JWKS - Clerk rotates signing keys whenever the session
     token template changes, which would otherwise brick static-PEM setups.
 
     Note: ``state.reason`` may hold either ``AuthErrorReason`` or
@@ -155,7 +155,7 @@ def verify_session_token(request: Request) -> dict:
         if not state.is_signed_in and _reason_name(state) == "TOKEN_INVALID_SIGNATURE":
             logger.warning(
                 "CLERK_JWT_KEY failed to verify a session token (stale key after "
-                "Clerk rotation?). Falling back to JWKS — consider removing "
+                "Clerk rotation?). Falling back to JWKS - consider removing "
                 "CLERK_JWT_KEY from .env so JWKS is used directly."
             )
             state = None  # retry via JWKS below

@@ -1,4 +1,4 @@
-"""Embedder node — stores chunk embeddings in PGVector."""
+"""Embedder node - stores chunk embeddings in PGVector."""
 
 import structlog
 

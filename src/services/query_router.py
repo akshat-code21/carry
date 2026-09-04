@@ -1,4 +1,4 @@
-"""Query router — classifies user search queries into intents for smart routing.
+"""Query router - classifies user search queries into intents for smart routing.
 
 Uses a lightweight LLM call to determine whether a query is:
 - entity_lookup:    Asking about a specific company/event (use segment search)
@@ -29,13 +29,13 @@ within a sector, theme, or industry. Examples: "Semiconductors to watch?", "Best
 "Which ETF for clean energy?", "Top financial sector funds"
 - "ticker_narrative": The user is asking about the narrative, outlook, predictions, analysis, \
 or forward-looking view on a SPECIFIC stock, ETF, or company. They want aggregated intelligence \
-— predictions, sentiment, themes — not raw transcript clips. Examples: "What was the narrative on \
+- predictions, sentiment, themes - not raw transcript clips. Examples: "What was the narrative on \
 Microsoft stocks for the upcoming time?", "Outlook on Nvidia?", \
 "What are people saying about Tesla?", "Apple stock analysis", "MSFT predictions", \
 "Google stock narrative", "What's the bull case for Amazon?", "SMH outlook", \
 "What's the narrative on QQQ?"
 - "entity_lookup": The user is asking about a SPECIFIC event, news item, or person's comments \
-— they want the actual transcript clips. Examples: "What is the narrative on Anthropic's IPO?", \
+- they want the actual transcript clips. Examples: "What is the narrative on Anthropic's IPO?", \
 "Nvidia earnings call analysis", "What did Cathie Wood say about Tesla?", \
 "DeepSeek launch discussion"
 - "sentiment_check": The user is asking about the bullish/bearish sentiment on a specific ticker \
@@ -81,7 +81,7 @@ class QueryIntent:
     #                  | factual_search | ticker_narrative
     sector_hint: str | None = None
     ticker_hint: str | None = None
-    # stocks | etfs — which instrument class discovery results should return
+    # stocks | etfs - which instrument class discovery results should return
     instrument_type: str = "stocks"
 
 
@@ -142,7 +142,7 @@ class QueryRouter:
             data = json.loads(content)
 
             instrument_type = QueryRouter._normalize_instrument_type(data.get("instrument_type"))
-            # Prefer deterministic keyword signal when present — more reliable than LLM.
+            # Prefer deterministic keyword signal when present - more reliable than LLM.
             heuristic_instrument = QueryRouter.detect_instrument_type(query)
             if heuristic_instrument:
                 instrument_type = heuristic_instrument
@@ -224,7 +224,7 @@ class QueryRouter:
         if has_stock and not has_etf:
             return "stocks"
         if has_etf and has_stock:
-            # "stocks and etfs" / mixed — prefer explicit ETF wording order:
+            # "stocks and etfs" / mixed - prefer explicit ETF wording order:
             # if 'etf' appears before 'stock', treat as etfs, else stocks.
             etf_pos = min(
                 (q.find(sig) for sig in etf_signals if sig in q),
@@ -356,7 +356,7 @@ class QueryRouter:
                     instrument_type=instrument_type,
                 )
 
-        # Sentiment check heuristic — e.g. "What is the sentiment on NVDA?", "Is TSLA bullish?"
+        # Sentiment check heuristic - e.g. "What is the sentiment on NVDA?", "Is TSLA bullish?"
         sentiment_signals = [
             "sentiment",
             "bullish",
@@ -375,7 +375,7 @@ class QueryRouter:
                     instrument_type=instrument_type,
                 )
 
-        # Ticker narrative heuristic — e.g. "Outlook on Nvidia?",
+        # Ticker narrative heuristic - e.g. "Outlook on Nvidia?",
         # "What are people saying about Tesla?"
         narrative_signals = [
             "narrative",

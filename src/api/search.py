@@ -13,6 +13,7 @@ from src.api.deps import (
     get_search_answer_service,
     get_search_coverage_service,
     get_search_service,
+    get_social_context_service,
 )
 from src.database import get_db
 from src.models.channel import Channel
@@ -30,6 +31,7 @@ from src.services.query_router import QueryRouter
 from src.services.search_answer_service import SearchAnswerService
 from src.services.search_coverage_service import SearchCoverageService
 from src.services.search_service import SearchService
+from src.services.social_context_service import SocialContextService
 
 router = APIRouter(prefix="/api", tags=["Search"])
 
@@ -48,6 +50,7 @@ async def search(
     ),
     search_service: SearchService = Depends(get_search_service),
     query_router: QueryRouter = Depends(get_query_router),
+    social_service: SocialContextService = Depends(get_social_context_service),
     db: AsyncSession = Depends(get_db),
 ) -> SearchResponse:
     """Smart search with query intent classification.
@@ -86,10 +89,21 @@ async def search(
         stocks = [StockDiscoveryResult(**s) for s in stock_results]
 
     elif intent.intent in ("ticker_narrative", "sentiment_check") and intent.ticker_hint:
-        # Direct ticker narrative / sentiment check — bypass text search,
+        # Direct ticker narrative / sentiment check - bypass text search,
         # go straight to structured data
         stock_results = await search_service.search_ticker_narrative(intent.ticker_hint)
         stocks = [StockDiscoveryResult(**s) for s in stock_results]
+
+    # Step 2.5: Enrich stock results with TickerFlow social sentiment (Reddit/X/News).
+    # On-demand collection is bounded by per-ticker timeouts; tickers without
+    # social data simply keep social=None.
+    if stocks:
+        social_snapshots = await social_service.get_snapshots([s.ticker for s in stocks])
+        if social_snapshots:
+            stocks = [
+                stock.model_copy(update={"social": social_snapshots.get(stock.ticker.upper())})
+                for stock in stocks
+            ]
 
     # Step 3: Run hybrid search for segments + predictions
     # For ticker queries, also search using the company name / ticker for better segment recall
@@ -208,7 +222,7 @@ async def search_answer(
     """Synthesized answer for a search query with clip citations.
 
     Cached per normalized query for 24h. Returns available=False when there
-    is insufficient evidence or synthesis fails — clients hide the card.
+    is insufficient evidence or synthesis fails - clients hide the card.
     """
     ids = [s.strip() for s in segment_ids.split(",") if s.strip()] if segment_ids else None
     result = await answer_service.get_or_create(q, ids, max_input=limit)

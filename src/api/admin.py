@@ -1,4 +1,4 @@
-"""Admin endpoints — invite management and platform-wide usage metrics."""
+"""Admin endpoints - invite management and platform-wide usage metrics."""
 
 import logging
 from datetime import UTC, datetime, timedelta

@@ -1,4 +1,4 @@
-# Search Engine — Scenario ↔ Output Matrix
+# Search Engine - Scenario ↔ Output Matrix
 
 > Debug / reference for `GET /api/search`, `/api/search/answer`, `/api/search/coverage`.
 > Last verified against `src/services/query_router.py`, `src/api/search.py`, `src/services/search_service.py`, `src/services/search_answer_service.py`, `src/services/search_coverage_service.py`, `web/src/app/(app)/search/page.tsx`, `web/src/lib/hooks.ts`.
@@ -30,11 +30,11 @@ query ──► QueryRouter.classify() ──► intent ──► SearchService
 
 | Layer | Key | TTL | Bust |
 |---|---|---|---|
-| `QueryRouter` | in-memory `heuristic_classify()` (no cache) else LLM `gpt-5.4-nano` (`max_completion_tokens=100`) | none — `T:0.0` | heuristic bypass |
-| `SearchService.hybrid_search` | no cache — live `tsvector` + `pgvector` + RRF(`k=60`) + `max_per_video=4` | 0 | — |
+| `QueryRouter` | in-memory `heuristic_classify()` (no cache) else LLM `gpt-5.4-nano` (`max_completion_tokens=100`) | none - `T:0.0` | heuristic bypass |
+| `SearchService.hybrid_search` | no cache - live `tsvector` + `pgvector` + RRF(`k=60`) + `max_per_video=4` | 0 | - |
 | `SearchAnswerService` | `sha256(normalize(query))` + `source_segment_ids` set (added Aug 24) | 24h `CACHE_TTL` | set-mismatch or legacy fallback `don't mention` |
-| `SearchCoverageService` | `hash(query)+window_days` | 6h | — |
-| Frontend `useSearch` | `["search",q,type,sort,limit]` `keepPreviousData` | — | `q|type|sort` key reset `page.tsx:346` |
+| `SearchCoverageService` | `hash(query)+window_days` | 6h | - |
+| Frontend `useSearch` | `["search",q,type,sort,limit]` `keepPreviousData` | - | `q|type|sort` key reset `page.tsx:346` |
 | Frontend `useSearchAnswer` | `["searchAnswer",q, joinedIds]` `staleTime 10m` | 10m | gated on `!isPlaceholderData && !isFetching` |
 
 > **Known race (fixed Aug 24):** `keepPreviousData` kept NVDA `groups` while MSFT query fetching → `answerSegmentIds` were NVDA ids + `q=MSFT` → poisoned answer `The provided clips don't mention MSFT…` cached under MSFT hash. Fixed by `page.tsx:440` gating + `search_answer_service.py:249` set-mismatch bust. Purge stale: `DELETE FROM search_answers WHERE query_text ILIKE '%MSFT%'`.
@@ -50,29 +50,29 @@ query ──► QueryRouter.classify() ──► intent ──► SearchService
 | `sector_discovery` | `best/top + semiconductor/ai/tech/energy/defense/biotech… + stocks/etfs/picks/plays` or bare sector `semiconductors` | `Best AI stocks?`, `Nuclear stocks?`, `Top energy plays`, `Which ETF for clean energy?` | `semiconductor`, `ai`, `clean energy` | `null` | `stocks` unless query has `etf/sector fund/index fund` → `etfs`, also `Channel.channel_type` overrides (`institutional→etfs`, `individual→stocks`) |
 | `ticker_narrative` | `narrative|outlook|what are people saying|stock analysis|bull case for` + ticker name (`Nvidia→NVDA`) | `Outlook on Nvidia?`, `Apple stock analysis`, `SMH outlook` | `null` | `NVDA,TSLA,AAPL,MSFT,AMZN,GOOGL,META,AMD,INTC,PLTR,NFLX,SMH,QQQ…` or any `[A-Z]{2,5}` | `stocks` (or `etfs` if ticker is ETF) |
 | `sentiment_check` | `sentiment|bullish|bearish|bull case|bear case|overbought|oversold` + ticker | `What is the sentiment on NVDA?`, `Is TSLA bullish?`, `is NVDA overbought?` | `null` | same map | `stocks` |
-| `entity_lookup` | *(no heuristic — LLM only)* | `What did Cathie Wood say about Tesla?`, `Nvidia earnings call`, `Anthropic's IPO?` | `null` | `NVDA…` if identifiable | `stocks` |
+| `entity_lookup` | *(no heuristic - LLM only)* | `What did Cathie Wood say about Tesla?`, `Nvidia earnings call`, `Anthropic's IPO?` | `null` | `NVDA…` if identifiable | `stocks` |
 | `factual_search` | fallback | `inflation discussion`, `Fed rate decision`, `when was Bitcoin discussed?` | `null` | `null` unless `ticker` param | `stocks` |
 
-**Ticker extraction** `_extract_ticker_heuristic()` `query_router.py:430` — `nvidia→NVDA`, `tesla→TSLA`, else first `[A-Z]{2,5}` not in `WHAT|WHEN|...|SENTIMENT`.
+**Ticker extraction** `_extract_ticker_heuristic()` `query_router.py:430` - `nvidia→NVDA`, `tesla→TSLA`, else first `[A-Z]{2,5}` not in `WHAT|WHEN|...|SENTIMENT`.
 
 **Debug:** `uv run python -c "from src.services.query_router import QueryRouter; print(QueryRouter._heuristic_classify('What is the sentiment on NVDA?'))"` → `sentiment_check/NVDA`. Logs `Query '...' classified as: ...` `query_router.py:156`. Failure → `WARNING fallback to factual_search` `query_router.py:164` (previously broken by `max_tokens` → `max_completion_tokens` fix).
 
 ---
 
-## 3. Output Matrix — `GET /api/search`
+## 3. Output Matrix - `GET /api/search`
 
 `src/api/search.py:37` `SearchResponse` `schemas/__init__.py:280`.
 
 | # | Scenario (example query) | Classified intent → handler | `stocks` (Top Stocks / Stocks Mentioned) | `groups` / `segments` (Related Segments) | `predictions` | `query_intent` / `instrument_type` | UI visible |
 |---|---|---|---|---|---|---|---|
-| **A1** | `Best semiconductor stocks?` `Best AI stocks?` `Top energy plays` | `sector_discovery` → `search_stocks_for_query(sector_hint)` `search_service.py:884` | **Yes** `10` items `StockDiscoveryResult` `composite_score` `theme_relevance` `mention_count` `avg_sentiment` `bullish_pct` `themes` `sample_predictions` `is_etf=false` — uses `ThemeHierarchy` + `ThemeTickerMapping` + `SpeakerTickerAggregation` + `Prediction` | Yes `groups` from `hybrid_search` (keyword+semantic) | keyword `predictions` (ranked, dedup) may be empty | `sector_discovery` / `stocks` (or `etfs` if `ETF` wording or institutional channel) | `Top Stocks (1…10)` grid `page.tsx:546` + `Related Segments` + `AI-Powered Discovery` badge |
+| **A1** | `Best semiconductor stocks?` `Best AI stocks?` `Top energy plays` | `sector_discovery` → `search_stocks_for_query(sector_hint)` `search_service.py:884` | **Yes** `10` items `StockDiscoveryResult` `composite_score` `theme_relevance` `mention_count` `avg_sentiment` `bullish_pct` `themes` `sample_predictions` `is_etf=false` - uses `ThemeHierarchy` + `ThemeTickerMapping` + `SpeakerTickerAggregation` + `Prediction` | Yes `groups` from `hybrid_search` (keyword+semantic) | keyword `predictions` (ranked, dedup) may be empty | `sector_discovery` / `stocks` (or `etfs` if `ETF` wording or institutional channel) | `Top Stocks (1…10)` grid `page.tsx:546` + `Related Segments` + `AI-Powered Discovery` badge |
 | **A2** | `Best semiconductor ETFs?` `Which ETF for clean energy?` `Top ETFs to buy` | `sector_discovery` + `instrument_type=etfs` → `_build_etf_discovery_results()` `search_service.py:773` | **Yes** ETF list `is_etf=true` `mention_count=0` `themes` = matched themes, `composite_score=1.0 - i*0.02` | Same as A1 | Same | `sector_discovery` / `etfs` | `Top ETFs` header `page.tsx:523` |
-| **B1** | `Outlook on Nvidia?` `What are people saying about Tesla?` `nvidia outlook` | `ticker_narrative` → `search_ticker_narrative(ticker)` `search_service.py:480` | **Yes** single-element `[{ticker, composite_score, mention_count, avg_sentiment, bullish_pct, bearish_pct, themes: [236…], is_etf}]` — `mention_count` from `speaker_ticker_aggregation` (e.g. `NVDA 29`, `MSFT 20`, `BRK.B 40`), `avg_sentiment -1..+1`, `bullish_pct` from `Prediction.direction` only (often `0` when `predictions.ticker IS NULL` — known data quirk: 374/378 predictions have `ticker=NULL`) | Yes `hybrid_search(query, ticker=ticker_hint)` — `limit 20` groups `hit_count` truthful `keyword_match_counts` + `best_rank` RRF | Same (filtered by `ticker` param) | `ticker_narrative` / `stocks` | `Top Stocks (1)` card `#1 $NVDA Neutral 40 mentions 0 predictions` + `Related Segments` + `SUMMARY` (if ≥3 segments) |
-| **B2** | `What is the sentiment on NVDA?` `Is TSLA bullish?` `is NVDA overbought?` | `sentiment_check` → **same as B1** (fixed `search.py:88` `in (ticker_narrative,sentiment_check)`) | **Yes** same single-element (note `avg_sentiment` → `Neutral|Bullish|Bearish` threshold `>0.2` / `<-0.2` `page.tsx:565`) — previously **empty** (`No explicit stocks`) due to `max_tokens` bug + missing handler | Yes | Yes | `sentiment_check` / `stocks` | Same as B1; rail badge `Bullish|Bearish|Neutral` `page.tsx:977` + `% bull` if `>0` |
-| **C1** | `What did Cathie Wood say about Tesla?` `Anthropic's IPO in 2027` `Nvidia earnings call` | `entity_lookup` (LLM) — *no* `stocks` | **No** `stocks=[]` | **Yes** `groups` (fused RRF) — best for clip retrieval | Yes dedup | `entity_lookup` / `stocks` | No Top Stocks grid; `Related Segments` only + `SUMMARY` (llm may cite) |
+| **B1** | `Outlook on Nvidia?` `What are people saying about Tesla?` `nvidia outlook` | `ticker_narrative` → `search_ticker_narrative(ticker)` `search_service.py:480` | **Yes** single-element `[{ticker, composite_score, mention_count, avg_sentiment, bullish_pct, bearish_pct, themes: [236…], is_etf}]` - `mention_count` from `speaker_ticker_aggregation` (e.g. `NVDA 29`, `MSFT 20`, `BRK.B 40`), `avg_sentiment -1..+1`, `bullish_pct` from `Prediction.direction` only (often `0` when `predictions.ticker IS NULL` - known data quirk: 374/378 predictions have `ticker=NULL`) | Yes `hybrid_search(query, ticker=ticker_hint)` - `limit 20` groups `hit_count` truthful `keyword_match_counts` + `best_rank` RRF | Same (filtered by `ticker` param) | `ticker_narrative` / `stocks` | `Top Stocks (1)` card `#1 $NVDA Neutral 40 mentions 0 predictions` + `Related Segments` + `SUMMARY` (if ≥3 segments) |
+| **B2** | `What is the sentiment on NVDA?` `Is TSLA bullish?` `is NVDA overbought?` | `sentiment_check` → **same as B1** (fixed `search.py:88` `in (ticker_narrative,sentiment_check)`) | **Yes** same single-element (note `avg_sentiment` → `Neutral|Bullish|Bearish` threshold `>0.2` / `<-0.2` `page.tsx:565`) - previously **empty** (`No explicit stocks`) due to `max_tokens` bug + missing handler | Yes | Yes | `sentiment_check` / `stocks` | Same as B1; rail badge `Bullish|Bearish|Neutral` `page.tsx:977` + `% bull` if `>0` |
+| **C1** | `What did Cathie Wood say about Tesla?` `Anthropic's IPO in 2027` `Nvidia earnings call` | `entity_lookup` (LLM) - *no* `stocks` | **No** `stocks=[]` | **Yes** `groups` (fused RRF) - best for clip retrieval | Yes dedup | `entity_lookup` / `stocks` | No Top Stocks grid; `Related Segments` only + `SUMMARY` (llm may cite) |
 | **C2** | `inflation discussion` `Fed rate decision` `AI bubble comparison` | `factual_search` (LLM or fallback) | **No** | **Yes** `groups` | Yes | `factual_search` / `stocks` | Same as C1 |
 | **D** | `sdfqweqwe qweqwe` (nonsense) or no video match | `factual_search` | `[]` | `[]` / `has_more=false` | `[]` `total=0` `zero_results=true` analytics | `factual_search` | `No transcript segments found` `page.tsx:903` + `Try a broader keyword…` |
-| **E** | `BRK.B` (dot ticker) `What is sentiment on BRK.B?` | `sentiment_check` → `NVDA`-like but theme overflow case | **Yes** `BRK.B 40 mentions` (screenshot) with `236 themes` → UI bug was truncation (`Billionaire / capital gains tax and revenu`) fixed `page.tsx:619` `h-auto !whitespace-normal break-words max-w-full` | Yes | — | `sentiment_check` | Card wraps badges with tooltip `title`, no mid-word cut |
+| **E** | `BRK.B` (dot ticker) `What is sentiment on BRK.B?` | `sentiment_check` → `NVDA`-like but theme overflow case | **Yes** `BRK.B 40 mentions` (screenshot) with `236 themes` → UI bug was truncation (`Billionaire / capital gains tax and revenu`) fixed `page.tsx:619` `h-auto !whitespace-normal break-words max-w-full` | Yes | - | `sentiment_check` | Card wraps badges with tooltip `title`, no mid-word cut |
 
 **Sorting / filtering** (post-retrieval, client- or server-side):
 
@@ -80,7 +80,7 @@ query ──► QueryRouter.classify() ──► intent ──► SearchService
 |---|---|---|
 | `type=keyword|semantic|hybrid` `search.py:41` | `hybrid` → both retrievers pool `100`, RRF; `keyword`/`semantic` single list | `Search type` toggle `page.tsx:469` |
 | `sort=relevance|recent` | `hybrid_search: sort` → `_apply_group_sort` `search_service.py:297` (`recent` sorts `groups` by `published_at desc`) | `Sort Relevance|Newest` `page.tsx:623` |
-| `PERIOD All|7d|30d|90d` | not sent to backend — frontend filters `visibleGroups` `page.tsx:413` by `published_at >= cutoff` | `Period` buttons `page.tsx:645` |
+| `PERIOD All|7d|30d|90d` | not sent to backend - frontend filters `visibleGroups` `page.tsx:413` by `published_at >= cutoff` | `Period` buttons `page.tsx:645` |
 | `Channel` facet | `channel_id` param → `Video.channel_id` filter in `_keyword_search_segments`, `_semantic_search_segments`, `_keyword_match_counts` | `Channel` select `page.tsx:665` |
 | `limit` / `Load more` | `limit` (default 20) → `pool_size min(limit*4,100)`; `has_more` ` _compute_has_more` `search_service.py:303` | `resultLimit` `+20` `page.tsx:913` hidden while filters active |
 
@@ -92,7 +92,7 @@ query ──► QueryRouter.classify() ──► intent ──► SearchService
 
 | Input | Behavior | Success Output | Fallback Output | UI |
 |---|---|---|---|---|
-| `q` + `segment_ids` (12 ids from `groups.flatMap`) `search.py:199` / `hooks.ts:162` `["searchAnswer",q,joined]` `staleTime 10m` | `get_or_create()` `search_answer_service.py:221` 1) lock `hash_query(q)` 2) `_read_cache` (24h TTL) + **source_segment_ids set-mismatch bust** `service:249` + sanitization 3) `_resolve_segments(ids)` else `hybrid_search` 4) if `<3` segments → `available:false` 5) `_synthesize` (8s timeout `gpt-5.4-nano` `response_format json_object` `T0.2`) 6) `parse_llm_response()` + `sanitize_citation_text()` (`[uuid]`→`[1]`) `service:98` 7) `map_citations()` + cache `source_segment_ids` | `{query, summary:"Excerpts suggest… ([1],[2])", key_points:["Near-term… ([1])"×4], citations:[{segment_id,video_id,start_sec,text(240),video_title,channel_title,youtube_video_id}]` order = LLM order, `available:true, cached:false|true}` | `available:false` (no citations) when `<3` segments, LLM timeout, `None` parse, or genuinely no info. **Special fallback**: summary=`The provided clips don't mention MSFT specifically…` + `key_points:[]` + `citations:[]` `available:true` (not cached as negative `unavailable`? Actually `unavailable` is `available:false` only for `<3`; fallback with 1-sentence is still `available:true` but empty citations) | `SearchAnswerCard` `page.tsx:91` — `SUMMARY` `summary` + bullets + `[1][2]…` buttons `onCitationClick` → modal. `cached` badge `page.tsx:105` (`cached` chip). Sanitization `page.tsx:62` also runs client-side for legacy cache. Gated `showAnswerSkeleton` only when `results` fresh (`!isPlaceholderData|||!isFetching`) — fixes NVDA→MSFT poison. |
+| `q` + `segment_ids` (12 ids from `groups.flatMap`) `search.py:199` / `hooks.ts:162` `["searchAnswer",q,joined]` `staleTime 10m` | `get_or_create()` `search_answer_service.py:221` 1) lock `hash_query(q)` 2) `_read_cache` (24h TTL) + **source_segment_ids set-mismatch bust** `service:249` + sanitization 3) `_resolve_segments(ids)` else `hybrid_search` 4) if `<3` segments → `available:false` 5) `_synthesize` (8s timeout `gpt-5.4-nano` `response_format json_object` `T0.2`) 6) `parse_llm_response()` + `sanitize_citation_text()` (`[uuid]`→`[1]`) `service:98` 7) `map_citations()` + cache `source_segment_ids` | `{query, summary:"Excerpts suggest… ([1],[2])", key_points:["Near-term… ([1])"×4], citations:[{segment_id,video_id,start_sec,text(240),video_title,channel_title,youtube_video_id}]` order = LLM order, `available:true, cached:false|true}` | `available:false` (no citations) when `<3` segments, LLM timeout, `None` parse, or genuinely no info. **Special fallback**: summary=`The provided clips don't mention MSFT specifically…` + `key_points:[]` + `citations:[]` `available:true` (not cached as negative `unavailable`? Actually `unavailable` is `available:false` only for `<3`; fallback with 1-sentence is still `available:true` but empty citations) | `SearchAnswerCard` `page.tsx:91` - `SUMMARY` `summary` + bullets + `[1][2]…` buttons `onCitationClick` → modal. `cached` badge `page.tsx:105` (`cached` chip). Sanitization `page.tsx:62` also runs client-side for legacy cache. Gated `showAnswerSkeleton` only when `results` fresh (`!isPlaceholderData|||!isFetching`) - fixes NVDA→MSFT poison. |
 
 **Sanitization:** `_CITATION_BRACKET_RE` `^\[uuid\]` → `[index]` else `""`, `_RAW_UUID_RE` strip, `()`, `[]`, `, )`, double-space cleanup. Applied in `parse_llm_response` and `_read_cache` + frontend `sanitizeCitations()`. Test: `NVDA` summary `([28442ada-…],[42be41ce-…])` → `([1],[2])`.
 
@@ -114,7 +114,7 @@ query ──► QueryRouter.classify() ──► intent ──► SearchService
 ## 5. Predicates Cheat-Sheet (copy-paste for curl)
 
 ```bash
-# 1) Raw search — sector discovery (expects stocks)
+# 1) Raw search - sector discovery (expects stocks)
 curl -s "http://localhost:8000/api/search?q=Best%20AI%20stocks%3F&type=hybrid&limit=10" -H "Authorization: Bearer $TOKEN" | jq '{intent: .query_intent, stocks: [.stocks[]|.ticker], groups: (.groups|length)}'
 
 # 2) Ticker narrative / sentiment (expects single stock with sentiment)
@@ -197,4 +197,4 @@ tests/test_search_answer.py, test_search_grouping.py, test_search_coverage.py, t
 
 ---
 
-*Generated Aug 24 2026 for feature branch `feature/ph_2`. Keep this file as living debug doc — add new intents / edge cases here before touching `query_router` or `search_answer_service`.*
+*Generated Aug 24 2026 for feature branch `feature/ph_2`. Keep this file as living debug doc - add new intents / edge cases here before touching `query_router` or `search_answer_service`.*

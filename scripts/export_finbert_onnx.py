@@ -21,6 +21,80 @@ MODEL_NAME = "ProsusAI/finbert"
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "data" / "models" / "finbert"
 
 
+def _patch_transformers_for_onnx_export():
+    """Patch transformers masking utility for ONNX TorchScript tracing compatibility.
+
+    In transformers >= 5.6, sdpa_mask assumes any torch.Tensor q_length is a 1D tensor
+    of cache_positions, which raises IndexError on 0-dim scalar tensors produced by JIT tracing.
+    """
+    import torch
+    import transformers.masking_utils
+
+    orig_sdpa = transformers.masking_utils.sdpa_mask
+
+    def patched_sdpa_mask(
+        batch_size,
+        q_length,
+        kv_length,
+        q_offset=0,
+        kv_offset=0,
+        mask_function=None,
+        attention_mask=None,
+        allow_is_causal_skip=False,
+        allow_is_bidirectional_skip=False,
+        local_size=None,
+        dtype=torch.bool,
+        device="cpu",
+        config=None,
+        use_vmap=False,
+        **kwargs,
+    ):
+        if isinstance(q_length, torch.Tensor) and q_length.ndim > 0:
+            q_length, q_offset = q_length.shape[0], q_length[0].to(device)
+
+        padding_mask = transformers.masking_utils.prepare_padding_mask(
+            attention_mask, kv_length, kv_offset
+        )
+
+        if allow_is_causal_skip and transformers.masking_utils._ignore_causal_mask_sdpa(
+            padding_mask, q_length, kv_length, kv_offset, local_size
+        ):
+            return None
+        if allow_is_bidirectional_skip and transformers.masking_utils._ignore_bidirectional_mask_sdpa(
+            padding_mask, kv_length, local_size
+        ):
+            return None
+
+        if padding_mask is not None:
+            mask_function = transformers.masking_utils.and_masks(
+                mask_function,
+                transformers.masking_utils.padding_mask_function(padding_mask),
+            )
+
+        batch_arange = torch.arange(batch_size, device=device)
+        head_arange = torch.arange(1, device=device)
+        q_arange = torch.arange(q_length, device=device) + q_offset
+        kv_arange = torch.arange(kv_length, device=device) + kv_offset
+
+        if not use_vmap:
+            attention_mask = mask_function(
+                *transformers.masking_utils._non_vmap_expansion_sdpa(
+                    batch_arange, head_arange, q_arange, kv_arange
+                )
+            )
+            attention_mask = attention_mask.expand(batch_size, -1, q_length, kv_length)
+        else:
+            attention_mask = transformers.masking_utils._vmap_expansion_sdpa(
+                mask_function
+            )(batch_arange, head_arange, q_arange, kv_arange)
+
+        return attention_mask
+
+    transformers.masking_utils.sdpa_mask = patched_sdpa_mask
+    if hasattr(transformers.masking_utils, "ALL_MASK_ATTENTION_FUNCTIONS"):
+        transformers.masking_utils.ALL_MASK_ATTENTION_FUNCTIONS["sdpa"] = patched_sdpa_mask
+
+
 def export():
     """Download ProsusAI/finbert and export to ONNX."""
     try:
@@ -36,6 +110,8 @@ def export():
         raise SystemExit(
             "torch is required for export only. Install with: pip install torch"
         )
+
+    _patch_transformers_for_onnx_export()
 
     print(f"Downloading {MODEL_NAME}...")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)

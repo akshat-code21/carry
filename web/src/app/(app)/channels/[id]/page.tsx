@@ -184,7 +184,7 @@ export default function ChannelPage() {
                 <div key={s.ticker} className="flex items-center justify-between border-b border-line pb-2 last:border-0 last:pb-0">
                   <div className="flex flex-col">
                     <Link href={`/tickers/${s.ticker}`} className="font-mono font-semibold text-ink hover:text-signal hover:underline">
-                      ${s.ticker}
+                      {s.ticker}
                     </Link>
                     <span className="font-mono text-micro text-ink-secondary">
                       Score: {(s.weighted_relevance * 100).toFixed(0)}

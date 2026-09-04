@@ -1,12 +1,12 @@
-# Data Collection Agent plan — gateway-first Phase 1
+# Data Collection Agent plan - gateway-first Phase 1
 
 ## Architecture decision
 
 Replace per-platform collectors with two gateway integrations:
 
-1. **Adanos Social Gateway** — the primary social/news source for Reddit, X, and financial news, using one API key and a consistent ticker-oriented API. Its Professional tier exposes raw mention rows and permits commercial use; Reddit/X update hourly and news refreshes every 10 minutes. [Adanos API](https://adanos.org/), [raw social data and commercial tier](https://adanos.org/x-stock-sentiment), [news coverage](https://adanos.org/stock-news-sentiment)
+1. **Adanos Social Gateway** - the primary social/news source for Reddit, X, and financial news, using one API key and a consistent ticker-oriented API. Its Professional tier exposes raw mention rows and permits commercial use; Reddit/X update hourly and news refreshes every 10 minutes. [Adanos API](https://adanos.org/), [raw social data and commercial tier](https://adanos.org/x-stock-sentiment), [news coverage](https://adanos.org/stock-news-sentiment)
 
-2. **OpenBB Market Gateway**, configured with the `openbb-fmp` provider — the single internal interface for ticker resolution, US-equity price bars, and market metadata. OpenBB is valuable as a self-hosted abstraction layer, but it is not a hosted data supplier and does not currently include a maintained Reddit/X/StockTwits provider. [OpenBB provider model](https://docs.openbb.co/odp/python/extensions/providers)
+2. **OpenBB Market Gateway**, configured with the `openbb-fmp` provider - the single internal interface for ticker resolution, US-equity price bars, and market metadata. OpenBB is valuable as a self-hosted abstraction layer, but it is not a hosted data supplier and does not currently include a maintained Reddit/X/StockTwits provider. [OpenBB provider model](https://docs.openbb.co/odp/python/extensions/providers)
 
 Do not use MCP in the collection path. OpenBB MCP exposes a FastAPI/OpenBB server as agent tools; it is useful later for interactive research, not for scheduled, durable ingestion. [OpenBB MCP](https://docs.openbb.co/odp/python/extensions/interface/openbb-mcp)
 
@@ -24,7 +24,7 @@ Do not use MCP in the collection path. OpenBB MCP exposes a FastAPI/OpenBB serve
 
 ## Implementation phases
 
-### Phase 1 — Gateway proof of capability
+### Phase 1 - Gateway proof of capability
 
 - Run a ten-ticker evaluation against Adanos and OpenBB/FMP using their official SDKs/generated clients and REST APIs; do not write Reddit, X, StockTwits, or news-specific request code.
 - Confirm the Adanos Professional contract covers commercial storage, display, and permitted reuse of raw mention snippets before production use.
@@ -32,7 +32,7 @@ Do not use MCP in the collection path. OpenBB MCP exposes a FastAPI/OpenBB serve
 - Confirm OpenBB/FMP returns hourly price bars for all S&P 100 tickers and handles market closures correctly.
 - Record gateway latency, quota use, retention limits, raw-field completeness, and source freshness. Promote only if the gateway can support the selected ticker set and user-request rate.
 
-### Phase 2 — Collection-agent implementation
+### Phase 2 - Collection-agent implementation
 
 - Add a small `SocialGateway` client for Adanos and a `MarketDataGateway` client for OpenBB. These are the only upstream integrations in the agent.
 - Define canonical models:
@@ -43,7 +43,7 @@ Do not use MCP in the collection path. OpenBB MCP exposes a FastAPI/OpenBB serve
 - Coalesce identical ticker requests: reuse a result newer than 15 minutes; otherwise run one collection job and let concurrent users join it.
 - Require market price data plus at least two of the three social/news domains to produce a fresh score. Otherwise return prior data only when labeled stale/degraded.
 
-### Phase 3 — SwaggyStocks-style validation chart
+### Phase 3 - SwaggyStocks-style validation chart
 
 - Use **hourly**, not 15-minute, mention buckets because the social gateway’s Reddit and X feeds refresh hourly.
 - Build `MentionBucket` records by source and UTC hour from canonical raw items; join them with hourly close-price bars.
@@ -51,7 +51,7 @@ Do not use MCP in the collection path. OpenBB MCP exposes a FastAPI/OpenBB serve
 - Support a 24-hour view for the live score. Do not interpolate price during market closures; retain social mentions and mark price as unavailable outside trading sessions.
 - Add top source items with links back to their originals where permitted by the gateway’s terms.
 
-### Phase 4 — Reliability, observability, and handoff
+### Phase 4 - Reliability, observability, and handoff
 
 - Track gateway request latency, errors, quota remaining, cached-response rate, social-domain freshness, raw-item count, duplicate rate, and price-bar gaps.
 - Test gateway response normalization, missing optional fields, quota exhaustion, stale cache behavior, date-window boundaries, duplicate delivery, and chart alignment.

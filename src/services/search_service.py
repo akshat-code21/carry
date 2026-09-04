@@ -1,4 +1,4 @@
-"""Search service — hybrid keyword + semantic search via PostgreSQL."""
+"""Search service - hybrid keyword + semantic search via PostgreSQL."""
 
 import logging
 import uuid as uuid_mod
@@ -24,7 +24,7 @@ class SearchService:
     and pgvector semantic search.
     """
 
-    # Reciprocal Rank Fusion constant — higher values dampen the influence of
+    # Reciprocal Rank Fusion constant - higher values dampen the influence of
     # top ranks. 60 is the standard default (Cormack et al., 2009).
     RRF_K = 60
 
@@ -60,7 +60,7 @@ class SearchService:
                 hybrid mode always retrieves from rank 0 because grouping makes
                 pre-group offsets meaningless)
             max_per_video: Max segments any single video may contribute
-            sort: Group ordering — "relevance" (fused rank) or "recent"
+            sort: Group ordering - "relevance" (fused rank) or "recent"
                 (published_at descending)
 
         Returns:
@@ -154,7 +154,7 @@ class SearchService:
                 logger.warning(f"Error loading video metadata for search: {exc}")
                 try:
                     await self.db.rollback()
-                except Exception:  # noqa: BLE001 — rollback is best-effort
+                except Exception:  # noqa: BLE001 - rollback is best-effort
                     pass
 
         # Attach video & channel titles directly to segments and predictions
@@ -337,7 +337,7 @@ class SearchService:
             logger.warning(f"Keyword match counting failed, falling back to pool counts: {exc}")
             try:
                 await self.db.rollback()
-            except Exception:  # noqa: BLE001 — rollback is best-effort
+            except Exception:  # noqa: BLE001 - rollback is best-effort
                 pass
             return {}
 
@@ -604,7 +604,7 @@ class SearchService:
 
         related_theme_names = self.etf_service.get_themes_for_etf(etf_ticker)
         if not related_theme_names:
-            # No mapping found — return a minimal result
+            # No mapping found - return a minimal result
             return [
                 {
                     "ticker": etf_ticker,

@@ -66,11 +66,11 @@ async def main(dry_run: bool) -> None:
             if profile is None:
                 if dry_run:
                     print(
-                        f"  [dry-run] would DELETE {u.email} ({u.clerk_user_id}) — gone from Clerk"
+                        f"  [dry-run] would DELETE {u.email} ({u.clerk_user_id}) - gone from Clerk"
                     )
                 else:
                     await db.delete(u)
-                    print(f"  ✓ deleted {u.email} ({u.clerk_user_id}) — gone from Clerk")
+                    print(f"  ✓ deleted {u.email} ({u.clerk_user_id}) - gone from Clerk")
                 deleted += 1
                 continue
 

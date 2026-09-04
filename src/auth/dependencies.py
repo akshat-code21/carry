@@ -1,4 +1,4 @@
-"""FastAPI dependencies — current user extraction, activation and admin gates."""
+"""FastAPI dependencies - current user extraction, activation and admin gates."""
 
 import logging
 import time
@@ -65,7 +65,7 @@ async def get_current_authenticated_user(
 ) -> User:
     """Authenticate via Clerk session token and JIT-provision the app user row.
 
-    Does not enforce active status — allows pending users to check their profile
+    Does not enforce active status - allows pending users to check their profile
     and redeem invites.
     - 401 when no valid session token is presented.
     - 403 ``account_deactivated`` for disabled accounts.
@@ -85,7 +85,7 @@ async def get_current_authenticated_user(
     user = await get_user_by_clerk_id(db, clerk_user_id)
 
     if user is None:
-        # Identity not seen before — but it may be an existing person signing
+        # Identity not seen before - but it may be an existing person signing
         # in with a new method (e.g. pre-provisioned password creds + Google).
         # Clerk guarantees verified emails are unique per instance, so matching
         # on the verified email is safe. Default session tokens carry no email
@@ -110,14 +110,14 @@ async def get_current_authenticated_user(
         if profile is None:
             profile = await get_clerk_user_profile(clerk_user_id)
             if profile is None:
-                # Transient Clerk API failure — the token signature already
+                # Transient Clerk API failure - the token signature already
                 # proves this user exists in our instance, so retry-able 503
                 # beats persisting a placeholder row.
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail={
                         "code": "clerk_unavailable",
-                        "message": "Could not load your profile — please retry.",
+                        "message": "Could not load your profile - please retry.",
                     },
                 )
         email = email or profile.get("email") or f"{clerk_user_id}@unknown.invalid"
@@ -152,7 +152,7 @@ async def get_current_authenticated_user(
     # ({"role": "admin"}) or the ADMIN_CLERK_USER_IDS env var. Source of truth, in order:
     # 1. Configured ADMIN_CLERK_USER_IDS env var
     # 2. Customised session token claim (if configured)
-    # 3. Clerk Backend API profile — re-synced at most once a minute per user
+    # 3. Clerk Backend API profile - re-synced at most once a minute per user
     is_configured_admin = clerk_user_id in settings.admin_clerk_user_id_set
     claimed_role = _extract_claim(claims, "role")
     if not claimed_role and isinstance(claims.get("public_metadata"), dict):

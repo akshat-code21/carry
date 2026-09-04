@@ -1,4 +1,4 @@
-"""Agent 2 Node — Validation and Filtering."""
+"""Agent 2 Node - Validation and Filtering."""
 
 from __future__ import annotations
 

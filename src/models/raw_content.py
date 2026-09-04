@@ -1,4 +1,4 @@
-"""RawContent model — immutable raw social, news, and trader content records."""
+"""RawContent model - immutable raw social, news, and trader content records."""
 
 from __future__ import annotations
 

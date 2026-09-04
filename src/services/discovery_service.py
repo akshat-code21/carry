@@ -1,4 +1,4 @@
-"""New-video discovery — shared by WebSub push and RSS fallback poll."""
+"""New-video discovery - shared by WebSub push and RSS fallback poll."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class DiscoveryService:
     """Idempotent discovery of new channel videos.
 
-    Does not run LLM analysis — only creates Video rows, emits activity, and
+    Does not run LLM analysis - only creates Video rows, emits activity, and
     returns video IDs that should be queued for auto-ingest.
     """
 
@@ -60,7 +60,7 @@ class DiscoveryService:
         )
         if not channel:
             logger.info(
-                "Ignoring discovered video %s — unknown channel %s",
+                "Ignoring discovered video %s - unknown channel %s",
                 youtube_video_id,
                 youtube_channel_id,
             )
@@ -176,7 +176,7 @@ class DiscoveryService:
         inserted_id = result.scalar_one_or_none()
 
         if inserted_id is None:
-            # Lost race — fetch existing
+            # Lost race - fetch existing
             existing = await self.db.execute(
                 select(Video).where(Video.youtube_video_id == youtube_video_id)
             )

@@ -16,7 +16,7 @@ export default function AppLayout({
     return <InviteGate email={me?.email ?? null} />;
   }
 
-  // Transient failure (network blip / expired session) — render the shell
+  // Transient failure (network blip / expired session) - render the shell
   // anyway; Clerk's proxy redirects unauthenticated page loads to sign-in.
   if (isError && !inviteRequired && !(error instanceof Error && error.message === "Network request failed")) {
     return <AppShell>{children}</AppShell>;

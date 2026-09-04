@@ -7,7 +7,7 @@ import {
   SearchAnswerResponse,
   AnswerCitation,
   SearchCoverageResponse,
-  SearchSegment,
+  Prediction,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -18,7 +18,6 @@ import { PageHeader } from "@/components/PageHeader";
 import {
   Search,
   Loader2,
-  Play,
   ExternalLink,
   X,
   Tv,
@@ -33,7 +32,9 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
-import { useSearch, useSearchAnswer, useSearchCoverage } from "@/lib/hooks";
+import { useSearch, useSearchAnswer, useSearchCoverage, useTicker, useTickerSentiment } from "@/lib/hooks";
+import { SocialSourceBadges } from "@/components/SocialSourceBadges";
+import { SocialSentimentPanel } from "@/components/SocialSentimentPanel";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -73,18 +74,13 @@ const formatDate = (value?: string | null) => {
   });
 };
 
-// Sanitize leaked UUID citations in LLM answers (defense-in-depth for cached rows)
-const UUID_BRACKET_RE = /\[\s*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*\]/gi;
+// Sanitize leaked citations in LLM answers
+const UUID_BRACKET_RE = /\[\s*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d+)\s*\]/gi;
 const RAW_UUID_RE = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi;
 
-function sanitizeCitations(text: string, citations: AnswerCitation[]): string {
+function sanitizeCitations(text: string, ..._args: unknown[]): string {
   if (!text) return text;
-  const idToIndex = new Map<string, string>();
-  citations.forEach((c, i) => idToIndex.set(c.segment_id.toLowerCase(), String(i + 1)));
-  let out = text.replace(UUID_BRACKET_RE, (_m, uid: string) => {
-    const idx = idToIndex.get(uid.toLowerCase());
-    return idx ? `[${idx}]` : "";
-  });
+  let out = text.replace(UUID_BRACKET_RE, "");
   out = out.replace(RAW_UUID_RE, "");
   out = out.replace(/\(\s*,\s*/g, "(");
   out = out.replace(/,\s*\)/g, ")");
@@ -96,30 +92,12 @@ function sanitizeCitations(text: string, citations: AnswerCitation[]): string {
   return out.trim();
 }
 
-function SegmentQuote({ seg }: { seg: SearchSegment }) {
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="rounded-r-md border-l-2 border-signal bg-panel-raised px-4 py-3">
-        <p className="text-body italic leading-relaxed text-ink">&quot;{seg.text}&quot;</p>
-      </div>
-      <Link href={`/videos/${seg.video_id}?t=${Math.floor(seg.start_sec)}`} className="w-fit">
-        <Button variant="outline" size="sm" className="gap-1.5">
-          <Play className="h-3.5 w-3.5" />
-          Play @ {formatTime(seg.start_sec)}
-        </Button>
-      </Link>
-    </div>
-  );
-}
-
 function SearchAnswerCard({
   answer,
   skeleton,
-  onCitationClick,
 }: {
   answer?: SearchAnswerResponse;
   skeleton: boolean;
-  onCitationClick: (citation: AnswerCitation) => void;
 }) {
   return (
     <div className="rounded-lg border border-signal/30 bg-panel p-4">
@@ -163,7 +141,49 @@ function SearchAnswerCard({
             </ul>
           )}
 
-          {answer.citations.length > 0 && (
+          {/* TickerFlow social-sentiment strip (Reddit/X/News) for tickers in the query */}
+          {(answer.social_context ?? []).length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-line/60 pt-2.5">
+              <span className="label-overline text-ink-faint">Social</span>
+              {answer.social_context!.map((snap) => (
+                <div key={snap.symbol} className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-micro font-semibold text-ink">
+                    {snap.symbol}
+                  </span>
+                  <span className="font-mono text-micro text-ink-secondary">
+                    {snap.total_mentions ?? 0} mentions
+                  </span>
+                  {snap.sentiment_score != null && (
+                    <span
+                      className={cn(
+                        "font-mono text-micro font-semibold",
+                        snap.sentiment_score > 0.05
+                          ? "text-bullish"
+                          : snap.sentiment_score < -0.05
+                            ? "text-bearish"
+                            : "text-ink-secondary",
+                      )}
+                    >
+                      {snap.sentiment_score > 0 ? "+" : ""}
+                      {snap.sentiment_score.toFixed(2)}
+                    </span>
+                  )}
+                  {snap.bullish_pct != null && (
+                    <span className="font-mono text-micro text-bullish/70">
+                      {snap.bullish_pct.toFixed(0)}% bull
+                    </span>
+                  )}
+                  {snap.bearish_pct != null && (
+                    <span className="font-mono text-micro text-bearish/70">
+                      {snap.bearish_pct.toFixed(0)}% bear
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* {answer.citations.length > 0 && (
             <div className="mt-3 flex items-center gap-1.5">
               {answer.citations.map((c, i) => (
                 <button
@@ -178,10 +198,10 @@ function SearchAnswerCard({
               ))}
               <span className="ml-1 text-micro text-ink-faint">play cited clip</span>
             </div>
-          )}
+          )} */}
 
           {/* <p className="mt-3 text-micro text-ink-faint">
-            AI-generated from transcript clips — verify against the sources.
+            AI-generated from transcript clips - verify against the sources.
           </p> */}
         </>
       ) : null}
@@ -250,6 +270,28 @@ function CoverageSnapshotCard({ coverage }: { coverage: SearchCoverageResponse }
           </div>
         ))}
       </div>
+
+      {/* TickerFlow social mentions (Reddit/X/News) for the resolved ticker */}
+      {coverage.social?.available && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line/60 pt-2.5">
+          <span className="label-overline text-ink-faint">
+            Social · {coverage.social.symbol}
+          </span>
+          <span className="font-mono text-small text-ink-secondary">
+            {coverage.social.mentions} mentions
+          </span>
+          {coverage.social.bullish_pct != null && (
+            <span className="font-mono text-micro text-bullish">
+              {coverage.social.bullish_pct.toFixed(0)}% bull
+            </span>
+          )}
+          {coverage.social.bearish_pct != null && (
+            <span className="font-mono text-micro text-bearish">
+              {coverage.social.bearish_pct.toFixed(0)}% bear
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Weekly volume + WoW momentum */}
       {coverage.weekly_volume.length > 1 && (
@@ -334,6 +376,7 @@ function SearchPageContent() {
   const [resultLimit, setResultLimit] = useState(RESULT_LIMIT_STEP);
   const [dateFilter, setDateFilter] = useState<DateRangeFilter>({ key: "all", cutoffMs: null });
   const [channelFilter, setChannelFilter] = useState<string | null>(null);
+  const [showAllVideos, setShowAllVideos] = useState(false);
 
   const {
     data: results,
@@ -347,10 +390,16 @@ function SearchPageContent() {
 
   // Reset view-local state whenever the search parameters change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setResultLimit(RESULT_LIMIT_STEP);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDateFilter({ key: "all", cutoffMs: null });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setChannelFilter(null);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setExpandedGroups(new Set());
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setShowAllVideos(false);
   }, [activeQuery, activeType, activeSort]);
 
   const toggleGroup = (videoId: string) => {
@@ -366,7 +415,9 @@ function SearchPageContent() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuery(activeQuery);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setType(activeType);
   }, [activeQuery, activeType]);
 
@@ -442,7 +493,7 @@ function SearchPageContent() {
     setChannelFilter(null);
   };
 
-  // ── AI answer — synthesized from the top fused-rank segments ──────────
+  // ── AI answer - synthesized from the top fused-rank segments ──────────
   // Avoid the keepPreviousData race: while a new query is fetching, results
   // still holds the previous query's groups. Sending those stale ids with the
   // new query poisons the answer cache (MSFT query + NVDA ids → "don't mention MSFT").
@@ -462,16 +513,36 @@ function SearchPageContent() {
     !!activeQuery && !answer && answerSegmentIds.length >= 3 && answerFetching;
   const showCoverage = !!coverage && coverage.total_videos > 0;
 
-  const handleCitationClick = (citation: AnswerCitation) => {
-    setPlaybackModal({
-      videoId: citation.video_id,
-      youtubeVideoId: citation.youtube_video_id ?? undefined,
-      title: citation.video_title ?? "Video",
-      channelTitle: citation.channel_title ?? undefined,
-      startSec: citation.start_sec,
-      text: citation.text,
-    });
+  // ── Selected / resolved ticker for live Social Sentiment Panel ─────────
+  const [selectedTickerState, setSelectedTickerState] = useState<{ query: string; ticker: string | null }>({
+    query: "",
+    ticker: null,
+  });
+  const selectedTicker = selectedTickerState.query === activeQuery ? selectedTickerState.ticker : null;
+  const setSelectedTicker = (ticker: string | null) => {
+    setSelectedTickerState({ query: activeQuery, ticker });
   };
+
+  const activeTicker = useMemo(() => {
+    if (selectedTicker) return selectedTicker;
+    if (results?.stocks && results.stocks.length > 0) {
+      return results.stocks[0].ticker;
+    }
+    if (coverage?.social?.symbol) {
+      return coverage.social.symbol;
+    }
+    if (answer?.social_context && answer.social_context.length > 0) {
+      return answer.social_context[0].symbol;
+    }
+    const cleanQuery = activeQuery.trim().toUpperCase().replace(/^\$/, "");
+    if (/^[A-Z]{1,5}$/.test(cleanQuery)) {
+      return cleanQuery;
+    }
+    return null;
+  }, [selectedTicker, results?.stocks, coverage?.social?.symbol, answer?.social_context, activeQuery]);
+
+  const { data: tickerDetail } = useTicker(activeTicker ?? "");
+  const { data: sentimentTimeline = [] } = useTickerSentiment(activeTicker ?? "");
 
   return (
     <div className="flex h-full flex-col gap-6 lg:flex-row">
@@ -496,7 +567,7 @@ function SearchPageContent() {
                   onChange={(e) => setQuery(e.target.value)}
                 />
               </div>
-              <Button type="submit" disabled={isSearching}>
+              <Button type="submit" size={"lg"} disabled={isSearching} className="text-base!">
                 {isSearching && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
                 Search
               </Button>
@@ -510,8 +581,9 @@ function SearchPageContent() {
                     key={t}
                     type="button"
                     variant={type === t ? "default" : "ghost"}
-                    size="sm"
-                    className={cn("h-7 capitalize", `${type === t ? "text-white h-7 capitalize" : " text-black h-7 capitalize"}`)}
+                    size="lg"
+                    className="h-7 capitalize text-base!"
+                    // className={cn("h-7 capitalize", `${type === t ? "text-white h-7 capitalize" : " text-black h-7 capitalize"}`)}
                     onClick={() => handleTypeChange(t)}
                   >
                     {t}
@@ -522,7 +594,7 @@ function SearchPageContent() {
           </form>
         </div>
 
-        {/* AI Answer + Coverage Snapshot — lazy-loaded after segments render */}
+        {/* AI Answer + Coverage Snapshot - lazy-loaded after segments render */}
         {(showAnswerSkeleton || answer?.available || showCoverage) && (
           <div
             className={cn(
@@ -536,10 +608,9 @@ function SearchPageContent() {
               <SearchAnswerCard
                 answer={answer}
                 skeleton={showAnswerSkeleton}
-                onCitationClick={handleCitationClick}
               />
             )}
-            {showCoverage && <CoverageSnapshotCard coverage={coverage} />}
+            {/* {showCoverage && <CoverageSnapshotCard coverage={coverage} />} */}
           </div>
         )}
 
@@ -553,8 +624,8 @@ function SearchPageContent() {
             initial={reducedMotion ? false : "hidden"}
             animate="show"
           >
-            {/* Stock / ETF Discovery Cards — shown prominently for exploratory queries */}
-            {results.stocks && results.stocks.length > 0 && (
+            {/* Stock / ETF Discovery Cards - shown prominently for exploratory queries */}
+            {/* {results.stocks && results.stocks.length > 0 && (
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -565,13 +636,11 @@ function SearchPageContent() {
                         : `Top Stocks (${results.stocks.length})`}
                     </h2>
                   </div>
-                  <Badge variant="outline" className="border-signal/30 bg-signal/10 text-micro text-signal">
-                    AI-Powered Discovery
-                  </Badge>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {results.stocks.map((stock: StockDiscoveryResult, idx: number) => {
+                    const isSelected = activeTicker === stock.ticker;
                     const sentimentColor =
                       stock.avg_sentiment > 0.2 ? "text-bullish" :
                         stock.avg_sentiment < -0.2 ? "text-bearish" : "text-ink-secondary";
@@ -582,14 +651,25 @@ function SearchPageContent() {
 
                     return (
                       <motion.div key={stock.ticker} variants={itemAnim} className="min-w-0">
-                        <Card className="h-full min-w-0 overflow-hidden transition-colors hover:border-signal/40">
+                        <Card
+                          onClick={() => setSelectedTicker(stock.ticker)}
+                          className={cn(
+                            "h-full min-w-0 cursor-pointer overflow-hidden transition-all",
+                            isSelected
+                              ? "border-signal shadow-xs ring-1 ring-signal/30"
+                              : "hover:border-signal/40",
+                          )}
+                        >
                           <CardContent className="flex min-w-0 flex-col gap-3 overflow-hidden p-4">
-                            {/* Ticker + Score Row */}
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2.5">
                                 <span className="w-5 font-mono text-micro font-semibold text-ink-faint">#{idx + 1}</span>
-                                <Link href={`/tickers/${stock.ticker}`} className="transition-colors hover:text-signal">
-                                  <span className="font-mono text-title font-semibold tracking-tight text-ink">${stock.ticker}</span>
+                                <Link
+                                  href={`/tickers/${stock.ticker}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="transition-colors hover:text-signal"
+                                >
+                                  <span className="font-mono text-title font-semibold tracking-tight text-ink">{stock.ticker}</span>
                                 </Link>
                                 {stock.is_etf && (
                                   <Badge variant="outline" className="border-info/30 bg-info/10 px-1.5 py-0 text-micro text-info">
@@ -608,7 +688,6 @@ function SearchPageContent() {
                               </div>
                             </div>
 
-                            {/* Stats Row */}
                             <div className="flex items-center gap-4 font-mono text-small text-ink-secondary">
                               <div className="flex items-center gap-1">
                                 <MessageSquare className="h-3 w-3" />
@@ -618,33 +697,10 @@ function SearchPageContent() {
                                 <BarChart3 className="h-3 w-3" />
                                 <span>{stock.prediction_count} predictions</span>
                               </div>
-                              {stock.avg_confidence > 0 && (
-                                <span>{(stock.avg_confidence * 100).toFixed(0)}% conf</span>
-                              )}
                             </div>
 
-                            {/* Themes */}
-                            {stock.themes.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 min-w-0 overflow-hidden">
-                                {stock.themes.slice(0, 3).map((theme) => (
-                                  <Badge
-                                    key={theme}
-                                    variant="outline"
-                                    title={theme}
-                                    className="h-auto max-w-full min-w-0 shrink border-signal/20 bg-signal/5 px-2 py-1 text-micro leading-tight text-signal !whitespace-normal break-words"
-                                  >
-                                    <span className="block max-w-full break-words">{theme}</span>
-                                  </Badge>
-                                ))}
-                                {stock.themes.length > 3 && (
-                                  <Badge variant="outline" className="shrink-0 border-line px-2 py-0 text-micro text-ink-faint">
-                                    +{stock.themes.length - 3} more
-                                  </Badge>
-                                )}
-                              </div>
-                            )}
+                            <SocialSourceBadges social={stock.social} />
 
-                            {/* Sample Prediction */}
                             {stock.sample_predictions.length > 0 && (
                               <div className="border-l-2 border-line-strong py-0.5 pl-3">
                                 <p className="line-clamp-2 text-small italic text-ink-secondary">
@@ -659,9 +715,22 @@ function SearchPageContent() {
                   })}
                 </div>
               </div>
+            )} */}
+
+            {/* Live Social & Video Sentiment Chart with TradingView Dual-Pane Price + Chatter */}
+            {tickerDetail?.social && (
+              <div className="flex flex-col gap-2">
+                <SocialSentimentPanel
+                  social={tickerDetail.social}
+                  predictions={tickerDetail.predictions}
+                  sentimentTimeline={sentimentTimeline}
+                  youtubeMentions={tickerDetail.total_mentions}
+                  youtubeAvgSentiment={tickerDetail.avg_sentiment}
+                />
+              </div>
             )}
 
-            {/* Filter bar — only meaningful for grouped results */}
+            {/* Filter bar - only meaningful for grouped results */}
             {groups && groups.length > 0 && (
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-line bg-panel p-3">
                 {/* Sort */}
@@ -673,12 +742,9 @@ function SearchPageContent() {
                         key={s}
                         type="button"
                         variant={activeSort === s ? "default" : "ghost"}
-                        size="sm"
+                        size="lg"
                         disabled={loading}
-                        className={cn(
-                          "h-7 capitalize",
-                          activeSort === s ? "text-black" : "text-white",
-                        )}
+                        className="h-7 capitalize text-base!"
                         onClick={() => handleSortChange(s)}
                       >
                         {s === "recent" ? "Newest" : "Relevance"}
@@ -696,8 +762,8 @@ function SearchPageContent() {
                         key={r}
                         type="button"
                         variant={activeDateRange === r ? "default" : "ghost"}
-                        size="sm"
-                        className={cn("h-7", activeDateRange === r ? "text-black" : "text-white")}
+                        size="lg"
+                        className="h-7 text-base!"
                         onClick={() => handleDateRangeChange(r)}
                       >
                         {r === "all" ? "All time" : r}
@@ -757,118 +823,162 @@ function SearchPageContent() {
             </div>
 
             {groups ? (
-              /* ── Consolidated: one collapsible card per video ── */
+              /* ── Consolidated: broad side-by-side card grid (3-column layout) ── */
               visibleGroups.length > 0 ? (
-                <div className="flex flex-col gap-3">
-                  {visibleGroups.map((group) => {
-                    const isExpanded = expandedGroups.has(group.video_id);
-                    const videoTitle =
-                      group.video_title || `Video (${group.video_id.slice(0, 8)}...)`;
-                    const dateLabel = formatDate(group.published_at);
-                    const bestMatch = group.top_segments[0]?.rank ?? group.best_rank;
-                    const extraCount = group.remaining_segments.length;
+                <div className="flex flex-col gap-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
+                    {(showAllVideos ? visibleGroups : visibleGroups.slice(0, 6)).map((group) => {
+                      const isExpanded = expandedGroups.has(group.video_id);
+                      const videoTitle =
+                        group.video_title || `Video (${group.video_id.slice(0, 8)}...)`;
+                      const dateLabel = formatDate(group.published_at);
+                      const bestMatch = group.top_segments[0]?.rank ?? group.best_rank;
+                      const extraCount = group.remaining_segments.length;
+                      const thumbUrl =
+                        group.thumbnail_url ||
+                        (group.youtube_video_id
+                          ? `https://img.youtube.com/vi/${group.youtube_video_id}/hqdefault.jpg`
+                          : null);
 
-                    return (
-                      <motion.div key={group.video_id} variants={itemAnim}>
-                        <Card className="transition-colors hover:border-line-strong">
-                          <CardHeader className="pb-3">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex min-w-0 flex-1 items-start gap-3">
-                                {group.thumbnail_url && (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={group.thumbnail_url}
-                                    alt=""
-                                    className="hidden h-14 w-24 shrink-0 rounded-md border border-line object-cover sm:block"
-                                  />
-                                )}
-                                <div className="flex min-w-0 flex-col gap-1.5">
-                                  {group.channel_title && (
-                                    <div className="flex items-center gap-1.5 text-small text-ink-secondary">
-                                      <Tv className="h-3.5 w-3.5 shrink-0 text-signal" />
-                                      <span className="font-medium">{group.channel_title}</span>
-                                      {dateLabel && (
-                                        <>
-                                          <span className="text-ink-faint">·</span>
-                                          <span className="text-ink-faint">{dateLabel}</span>
-                                        </>
-                                      )}
-                                    </div>
-                                  )}
-                                  <Link
-                                    href={`/videos/${group.video_id}`}
-                                    className="group min-w-0"
-                                  >
-                                    <CardTitle className="truncate leading-snug text-title font-semibold transition-colors group-hover:text-signal">
-                                      {videoTitle}
-                                    </CardTitle>
-                                  </Link>
+                      return (
+                        <motion.div key={group.video_id} variants={itemAnim} className="flex flex-col h-full">
+                          <Card className="flex flex-col h-full overflow-hidden transition-all duration-200 hover:border-signal/40 hover:shadow-xl bg-panel group">
+                            {/* Card Thumbnail Area with Overlaid Badges */}
+                            <div className="relative aspect-video w-full overflow-hidden bg-panel-raised border-b border-line">
+                              {thumbUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={thumbUrl}
+                                  alt=""
+                                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center bg-panel-raised text-ink-faint">
+                                  <Tv className="h-8 w-8 opacity-40" />
                                 </div>
+                              )}
+
+                              {/* Gradient Vignette for Legibility */}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/60 pointer-events-none" />
+
+                              {/* Top Floating Channel & Date */}
+                              <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
+                                {group.channel_title && (
+                                  <div className="flex items-center gap-1.5 rounded-md bg-black/80 backdrop-blur-md px-2.5 py-1 text-small font-medium text-white border border-white/10 truncate max-w-[65%]">
+                                    <Tv className="h-3.5 w-3.5 shrink-0 text-signal" />
+                                    <span className="truncate">{group.channel_title}</span>
+                                  </div>
+                                )}
+                                {dateLabel && (
+                                  <div className="rounded-md bg-black/80 backdrop-blur-md px-2.5 py-1 text-micro font-mono text-slate-300 border border-white/10 shrink-0">
+                                    {dateLabel}
+                                  </div>
+                                )}
                               </div>
-                              <div className="flex shrink-0 items-center gap-2">
+
+                              {/* Bottom Floating Match & Mentions Badges */}
+                              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
                                 <Badge
                                   variant="outline"
-                                  className="border-signal/30 bg-signal/10 font-mono text-micro text-signal"
+                                  className="border-signal/40 bg-black/80 backdrop-blur-md font-mono text-micro px-2.5 py-0.5 text-signal"
                                 >
                                   {group.hit_count} mention{group.hit_count === 1 ? "" : "s"}
                                 </Badge>
                                 <Badge
                                   variant="outline"
-                                  className="border-bullish/30 bg-bullish/10 font-mono text-micro text-bullish"
+                                  className="border-bullish/40 bg-black/80 backdrop-blur-md font-mono text-micro px-2.5 py-0.5 text-bullish"
                                 >
                                   {(bestMatch * 100).toFixed(0)}% match
                                 </Badge>
                               </div>
                             </div>
-                          </CardHeader>
-                          <CardContent className="flex flex-col gap-3">
-                            {group.top_segments.map((seg) => (
-                              <SegmentQuote key={seg.id} seg={seg} />
-                            ))}
 
-                            {extraCount > 0 && (
-                              <>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="self-start gap-1.5 text-ink-secondary hover:text-ink"
-                                  onClick={() => toggleGroup(group.video_id)}
-                                >
-                                  {isExpanded ? (
-                                    <ChevronUp className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronDown className="h-4 w-4" />
+                            {/* Card Header: Title */}
+                            <CardHeader className="p-5 pb-2">
+                              <Link href={`/videos/${group.video_id}`} className="group/title">
+                                <CardTitle className="line-clamp-2 text-title font-semibold text-ink leading-snug group-hover/title:text-signal transition-colors">
+                                  {videoTitle}
+                                </CardTitle>
+                              </Link>
+                            </CardHeader>
+
+                            {/* Card Content: Primary Excerpt & Extra Clips Accordion */}
+                            <CardContent className="p-5 pt-1 flex-1 flex flex-col justify-between gap-3.5">
+                              {group.top_segments.length > 0 && (
+                                <div className="rounded-r-md border-l-2 border-signal bg-panel-raised/70 p-3 text-body italic text-ink-secondary leading-relaxed line-clamp-3">
+                                  &quot;{group.top_segments[0].text}&quot;
+                                </div>
+                              )}
+
+                              {extraCount > 0 && (
+                                <div className="pt-1 mt-auto">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full justify-between h-8 px-3 text-small text-ink-secondary hover:text-ink hover:bg-panel-raised"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleGroup(group.video_id);
+                                    }}
+                                  >
+                                    <span className="font-mono">
+                                      {isExpanded
+                                        ? "Hide extra clips"
+                                        : `+${extraCount} more clip${extraCount === 1 ? "" : "s"} in this video`}
+                                    </span>
+                                    {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                  </Button>
+
+                                  {isExpanded && (
+                                    <div className="mt-2 divide-y divide-line rounded-md border border-line bg-panel-raised/40 max-h-44 overflow-y-auto">
+                                      {group.remaining_segments.map((seg) => (
+                                        <Link
+                                          key={seg.id}
+                                          href={`/videos/${seg.video_id}?t=${Math.floor(seg.start_sec)}`}
+                                          className="flex items-start gap-2.5 p-2.5 text-small transition-colors hover:bg-panel"
+                                        >
+                                          <span className="shrink-0 font-mono font-semibold text-signal">
+                                            {formatTime(seg.start_sec)}
+                                          </span>
+                                          <span className="line-clamp-2 text-ink-secondary">
+                                            {seg.text}
+                                          </span>
+                                        </Link>
+                                      ))}
+                                    </div>
                                   )}
-                                  {isExpanded
-                                    ? "Show less"
-                                    : `+${extraCount} more clip${extraCount === 1 ? "" : "s"} in this video`}
-                                </Button>
-                                {isExpanded && (
-                                  <div className="divide-y divide-line rounded-md border border-line bg-panel-raised/40">
-                                    {group.remaining_segments.map((seg) => (
-                                      <Link
-                                        key={seg.id}
-                                        href={`/videos/${seg.video_id}?t=${Math.floor(seg.start_sec)}`}
-                                        className="flex items-start gap-3 px-3 py-2.5 transition-colors hover:bg-panel"
-                                      >
-                                        <span className="shrink-0 pt-px font-mono text-micro font-semibold text-signal">
-                                          {formatTime(seg.start_sec)}
-                                        </span>
-                                        <span className="line-clamp-2 text-small text-ink-secondary">
-                                          {seg.text}
-                                        </span>
-                                      </Link>
-                                    ))}
-                                  </div>
-                                )}
-                              </>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    );
-                  })}
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+
+                  {visibleGroups.length > 6 && (
+                    <div className="flex justify-center pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAllVideos(!showAllVideos)}
+                        className="font-mono text-small gap-1.5 hover:border-signal/40 hover:text-signal"
+                      >
+                        {showAllVideos ? (
+                          <>
+                            <ChevronUp className="h-3.5 w-3.5" />
+                            Show Top 6 Videos
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-3.5 w-3.5" />
+                            Show All {visibleGroups.length} Videos
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="rounded-lg border border-dashed border-line px-6 py-10 text-center">
@@ -882,8 +992,8 @@ function SearchPageContent() {
                 </div>
               )
             ) : (
-              /* ── Fallback: flat segment list (legacy response shape) ── */
-              <div className="grid gap-3">
+              /* ── Fallback: flat segment grid (legacy response shape) ── */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {results.segments?.map((seg) => {
                   const video = results.videos?.[seg.video_id];
                   const channel =
@@ -894,47 +1004,32 @@ function SearchPageContent() {
                   const channelTitle = seg.channel_title || channel?.title;
 
                   return (
-                    <motion.div key={seg.id} variants={itemAnim}>
-                      <Card className="transition-colors hover:border-line-strong">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex flex-1 flex-col gap-1.5">
-                              {channelTitle && (
-                                <div className="flex items-center gap-1.5 text-small text-ink-secondary">
-                                  <Tv className="h-3.5 w-3.5 text-signal" />
-                                  <span className="font-medium">{channelTitle}</span>
-                                </div>
-                              )}
-                              <Link href={`/videos/${seg.video_id}?t=${Math.floor(seg.start_sec)}`} className="group">
-                                <CardTitle className="leading-snug text-title font-semibold transition-colors group-hover:text-signal">
-                                  {videoTitle}
-                                </CardTitle>
-                              </Link>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-2">
-                              <Badge variant="outline" className="border-bullish/30 bg-bullish/10 font-mono text-micro text-bullish">
-                                {(seg.rank * 100).toFixed(1)}% match
-                              </Badge>
-                              <Badge variant="outline" className="font-mono text-micro capitalize text-ink-secondary">
-                                {seg.search_type}
-                              </Badge>
-                            </div>
+                    <motion.div key={seg.id} variants={itemAnim} className="flex flex-col h-full">
+                      <Card className="flex flex-col h-full overflow-hidden transition-all duration-200 hover:border-signal/40 bg-panel group">
+                        <CardHeader className="p-4 pb-2">
+                          <div className="flex flex-col gap-1.5">
+                            {channelTitle && (
+                              <div className="flex items-center gap-1.5 text-micro font-medium text-ink-secondary">
+                                <Tv className="h-3 w-3 text-signal shrink-0" />
+                                <span className="truncate">{channelTitle}</span>
+                              </div>
+                            )}
+                            <Link href={`/videos/${seg.video_id}?t=${Math.floor(seg.start_sec)}`} className="group/title">
+                              <CardTitle className="line-clamp-2 text-title font-semibold text-ink leading-snug group-hover/title:text-signal transition-colors">
+                                {videoTitle}
+                              </CardTitle>
+                            </Link>
                           </div>
                         </CardHeader>
-                        <CardContent className="flex flex-col gap-3">
-                          {/* Evidence block quote */}
-                          <div className="rounded-r-md border-l-2 border-signal bg-panel-raised px-4 py-3">
-                            <p className="text-body italic leading-relaxed text-ink">
-                              &quot;{seg.text}&quot;
-                            </p>
+                        <CardContent className="p-4 pt-1 flex-1 flex flex-col justify-between gap-3">
+                          <div className="rounded-r-md border-l-2 border-signal bg-panel-raised/60 p-2.5 text-small italic text-ink-secondary leading-relaxed line-clamp-3">
+                            &quot;{seg.text}&quot;
                           </div>
-                          <div className="flex items-center gap-3">
-                            <Link href={`/videos/${seg.video_id}?t=${Math.floor(seg.start_sec)}`}>
-                              <Button variant="outline" size="sm" className="gap-1.5">
-                                <Play className="h-3.5 w-3.5" />
-                                Play @ {formatTime(seg.start_sec)}
-                              </Button>
-                            </Link>
+                          <div className="flex items-center justify-between pt-1 font-mono text-micro text-ink-faint border-t border-line">
+                            <span className="text-signal font-semibold">{formatTime(seg.start_sec)}</span>
+                            <Badge variant="outline" className="border-bullish/30 bg-bullish/10 text-bullish text-[10px]">
+                              {(seg.rank * 100).toFixed(0)}% match
+                            </Badge>
                           </div>
                         </CardContent>
                       </Card>
@@ -953,7 +1048,7 @@ function SearchPageContent() {
               </div>
             )}
 
-            {/* Load more — fetches a larger result set; hidden while filters narrow the view */}
+            {/* Load more - fetches a larger result set; hidden while filters narrow the view */}
             {groups && results.has_more && !hasActiveFilters && (
               <Button
                 variant="outline"
@@ -970,7 +1065,7 @@ function SearchPageContent() {
       </div>
 
       {/* Right Rail - Dynamic Top Stocks / ETFs */}
-      {railOpen ? (
+      {/* {railOpen ? (
         <Card className="h-fit w-full shrink-0 lg:w-72 lg:sticky lg:top-4">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
@@ -996,7 +1091,6 @@ function SearchPageContent() {
             </div>
           </CardHeader>
           <CardContent>
-            {/* Show discovered stocks/ETFs if sector_discovery, else show predictions */}
             {results && results.stocks && results.stocks.length > 0 ? (
               <div className="flex flex-col gap-3">
                 {results.stocks.slice(0, 8).map((stock: StockDiscoveryResult, i: number) => (
@@ -1004,7 +1098,7 @@ function SearchPageContent() {
                     <div className="flex max-w-[160px] flex-col gap-0.5">
                       <div className="flex items-center gap-1.5">
                         <Link href={`/tickers/${stock.ticker}`} className="font-mono text-small font-semibold text-ink hover:text-signal hover:underline">
-                          ${stock.ticker}
+                          {stock.ticker}
                         </Link>
                         {stock.is_etf && (
                           <Badge variant="outline" className="border-info/30 bg-info/10 px-1 py-0 text-micro text-info">
@@ -1013,7 +1107,7 @@ function SearchPageContent() {
                         )}
                       </div>
                       <span className="line-clamp-1 text-small text-ink-secondary">
-                        {stock.themes.slice(0, 2).join(", ") || "—"}
+                        {stock.themes.slice(0, 2).join(", ") || "-"}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -1031,12 +1125,12 @@ function SearchPageContent() {
             ) : results && results.predictions?.length > 0 ? (
               <div className="flex flex-col gap-3">
                 {results.predictions
-                  .filter((p: any) => p.ticker)
-                  .map((p: any, i: number) => (
+                  .filter((p: Prediction) => p.ticker)
+                  .map((p: Prediction, i: number) => (
                     <div key={i} className="flex items-center justify-between border-b border-line pb-2.5 last:border-0 last:pb-0">
                       <div className="flex max-w-[160px] flex-col gap-0.5">
                         <Link href={`/tickers/${p.ticker}`} className="font-mono text-small font-semibold text-ink hover:text-signal hover:underline">
-                          ${p.ticker}
+                          {p.ticker}
                         </Link>
                         <span className="line-clamp-1 text-small text-ink-secondary">
                           {p.prediction_text}
@@ -1069,7 +1163,7 @@ function SearchPageContent() {
           <PanelRightOpen className="h-4 w-4" />
           Discover
         </Button>
-      )}
+      )} */}
 
       {/* Timestamp Playback Modal */}
       {playbackModal && (

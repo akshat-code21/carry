@@ -34,7 +34,7 @@ flowchart TD
 
 ## Detailed Agent Node Mechanics
 
-### 1. Agent 2 — Validation Node ([`agent_validation.py`](file:///Users/akshatsipany/Work/yt-chatter/src/pipeline/agents/agent_validation.py))
+### 1. Agent 2 - Validation Node ([`agent_validation.py`](file:///Users/akshatsipany/Work/yt-chatter/src/pipeline/agents/agent_validation.py))
 
 - **File**: `src/pipeline/agents/agent_validation.py`
 - **Function**: `agent_validation_node(state: PipelineGraphState)`
@@ -46,7 +46,7 @@ flowchart TD
 
 ---
 
-### 2. Agent 3 — Cleaner & MinHash Deduplication Node ([`agent_cleaner.py`](file:///Users/akshatsipany/Work/yt-chatter/src/pipeline/agents/agent_cleaner.py))
+### 2. Agent 3 - Cleaner & MinHash Deduplication Node ([`agent_cleaner.py`](file:///Users/akshatsipany/Work/yt-chatter/src/pipeline/agents/agent_cleaner.py))
 
 - **File**: `src/pipeline/agents/agent_cleaner.py`
 - **Function**: `agent_cleaner_node(state: PipelineGraphState)`
@@ -58,7 +58,7 @@ flowchart TD
 
 ---
 
-### 3. Agent 4 — FinBERT ONNX Inference Node ([`agent_finbert.py`](file:///Users/akshatsipany/Work/yt-chatter/src/pipeline/agents/agent_finbert.py))
+### 3. Agent 4 - FinBERT ONNX Inference Node ([`agent_finbert.py`](file:///Users/akshatsipany/Work/yt-chatter/src/pipeline/agents/agent_finbert.py))
 
 - **File**: `src/pipeline/agents/agent_finbert.py`
 - **Function**: `agent_finbert_node(state: PipelineGraphState)`
@@ -70,7 +70,7 @@ flowchart TD
 
 ---
 
-### 4. Agent 5 — Structured LLM Narrative Node ([`agent_llm.py`](file:///Users/akshatsipany/Work/yt-chatter/src/pipeline/agents/agent_llm.py))
+### 4. Agent 5 - Structured LLM Narrative Node ([`agent_llm.py`](file:///Users/akshatsipany/Work/yt-chatter/src/pipeline/agents/agent_llm.py))
 
 - **File**: `src/pipeline/agents/agent_llm.py`
 - **Function**: `agent_llm_node(state: PipelineGraphState)`
@@ -81,7 +81,7 @@ flowchart TD
 
 ---
 
-### 5. Agent 8 & 9 — Scoring & Aggregation Node ([`agent_scoring.py`](file:///Users/akshatsipany/Work/yt-chatter/src/pipeline/agents/agent_scoring.py))
+### 5. Agent 8 & 9 - Scoring & Aggregation Node ([`agent_scoring.py`](file:///Users/akshatsipany/Work/yt-chatter/src/pipeline/agents/agent_scoring.py))
 
 - **File**: `src/pipeline/agents/agent_scoring.py`
 - **Function**: `agent_scoring_node(state: PipelineGraphState)`

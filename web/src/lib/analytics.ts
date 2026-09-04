@@ -22,7 +22,7 @@ export function track(type: string, data: Record<string, unknown> = {}): void {
 
 const lastFired = new Map<string, number>();
 
-/** Tracks route changes as page views — mount once inside the app shell. */
+/** Tracks route changes as page views - mount once inside the app shell. */
 export function usePageViewTracking(): void {
   const pathname = usePathname();
   useEffect(() => {

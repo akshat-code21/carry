@@ -105,7 +105,7 @@ function VideoPageContent() {
                   <div className="flex items-center justify-between">
                     {p.ticker ? (
                       <Link href={`/tickers/${p.ticker}`} className="font-mono font-semibold text-ink hover:text-signal hover:underline">
-                        ${p.ticker}
+                        {p.ticker}
                       </Link>
                     ) : (
                       <span className="text-small font-semibold text-ink">Macro/Thematic</span>

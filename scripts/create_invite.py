@@ -6,7 +6,7 @@ Usage:
         [--email someone@example.com] [--max-uses 1] [--expires-in-days 30]
 
 Then share the printed code (or signup URL) with the invited person.
-Note: invites never grant admin — promote admins via Clerk public metadata.
+Note: invites never grant admin - promote admins via Clerk public metadata.
 """
 
 import argparse

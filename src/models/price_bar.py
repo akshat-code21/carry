@@ -1,4 +1,4 @@
-"""PriceBarRecord model — cached daily price bars."""
+"""PriceBarRecord model - cached daily price bars."""
 
 from datetime import date, datetime
 

@@ -137,7 +137,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                 >
                   <div className="flex items-center gap-2.5">
                     <TrendingUp className="h-4 w-4 shrink-0 text-signal" />
-                    <span className="font-mono font-semibold">${t.ticker}</span>
+                    <span className="font-mono font-semibold">{t.ticker}</span>
                     {t.is_etf && (
                       <Badge variant="outline" className="border-info/30 bg-info/10 px-1 py-0 text-micro text-info">
                         ETF

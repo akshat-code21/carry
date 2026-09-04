@@ -1,4 +1,4 @@
-"""HFI Analytics endpoints — Consensus & Compare views."""
+"""HFI Analytics endpoints - Consensus & Compare views."""
 
 import uuid
 from collections import defaultdict
@@ -22,7 +22,7 @@ from src.schemas.hfi import (
     PortfolioChangeOut,
 )
 
-router = APIRouter(prefix="/api/hfi/analytics", tags=["HFI — Analytics"])
+router = APIRouter(prefix="/api/hfi/analytics", tags=["HFI - Analytics"])
 
 
 @router.get("/consensus", response_model=ConsensusResponse)
@@ -32,7 +32,7 @@ async def get_consensus(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Cross-investor consensus — aggregated 13F portfolio holdings across all active funds."""
+    """Cross-investor consensus - aggregated 13F portfolio holdings across all active funds."""
     target_period = filing_period or period
 
     # 1. Fetch available distinct filing periods

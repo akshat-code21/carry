@@ -5,12 +5,12 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * yt·tape — instrument token layer
+ * yt·tape - instrument token layer
  * Every color and font below traces to the Pass 1 plan: a deep desaturated
  * navy "desk" ink, one chartreuse signal accent, and deliberate market
  * semantics (bullish/bearish/neutral) chosen to hold at small sizes on both
  * the dark and light surface. Component code must NOT introduce palette
- * classes or raw hex values — everything resolves through these tokens.
+ * classes or raw hex values - everything resolves through these tokens.
  */
 @theme inline {
   /* Surfaces & ink */
@@ -37,8 +37,7 @@
   /* Fonts */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  /* v2: app headings use Geist Sans; the landing page re-scopes to Space
-     Grotesk via the .landing wrapper (see :root/.landing below). */
+  /* v2: app and marketing headings both use Geist Sans. */
   --font-display: var(--font-app-display);
   --font-heading: var(--font-app-display);
   /* Type scale */
@@ -250,7 +249,7 @@
     @apply font-sans;
   }
 
-  /* Native color-scheme hooks — also drives Clerk's default theme
+  /* Native color-scheme hooks - also drives Clerk's default theme
      (light primary; .dark flips Clerk components to their dark palette). */
   :root {
     color-scheme: light;
@@ -263,12 +262,12 @@
 
 @layer components {
 
-  /* Overline label — the recurring section/column label treatment */
+  /* Overline label - the recurring section/column label treatment */
   .label-overline {
     @apply font-mono text-caption font-medium uppercase tracking-[0.1em] text-ink-faint;
   }
 
-  /* Numeric data — monospaced, aligned digits (prices, %, counts, scores) */
+  /* Numeric data - monospaced, aligned digits (prices, %, counts, scores) */
   .numeric {
     @apply font-mono tabular-nums tracking-tight;
   }
@@ -292,6 +291,7 @@
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
+
 
 @keyframes yt-shimmer {
   0% {
@@ -375,7 +375,7 @@
 }
 
 /* ── Landing page utilities ────────────────────────────────────────
- * Resolution through tokens only — no raw hex values.
+ * Resolution through tokens only - no raw hex values.
  */
 
 @layer components {
@@ -403,6 +403,17 @@
     color: transparent;
   }
 
+  /* Oversized brand wordmark – vertical fade into canvas */
+  .wordmark-fade {
+    background-image: linear-gradient(
+      to bottom,
+      var(--signal) 0%,
+      color-mix(in oklch, var(--signal) 40%, var(--canvas)) 55%,
+      var(--canvas) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   /* Elevating card with a soft signal glow on hover (transform handled by motion) */
   .card-glow {
     transition:

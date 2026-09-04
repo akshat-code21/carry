@@ -1,4 +1,4 @@
-"""TickerFlow API routes — social-sentiment ticker endpoints.
+"""TickerFlow API routes - social-sentiment ticker endpoints.
 
 Mounted under ``/api/v1`` to coexist with the existing yt-chatter
 ``/api/tickers`` routes without collision.

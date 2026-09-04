@@ -83,7 +83,7 @@ async def classify_existing_channels() -> None:
 
             except Exception as e:
                 logger.warning(
-                    f"  Failed to classify '{channel.title}': {e} — keeping as '{channel.channel_type}'"
+                    f"  Failed to classify '{channel.title}': {e} - keeping as '{channel.channel_type}'"
                 )
 
         await session.commit()

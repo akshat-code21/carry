@@ -1,4 +1,4 @@
-"""Thesis extractor node — sliding-window extraction with LLM."""
+"""Thesis extractor node - sliding-window extraction with LLM."""
 
 import json
 

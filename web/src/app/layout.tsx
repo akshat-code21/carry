@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
+
 import { Space_Grotesk, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { QueryProvider } from "@/components/QueryProvider";
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
-  subsets: ["latin"],
-});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,17 +15,21 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
 });
 
+
 export const metadata: Metadata = {
-  title: "Carry — Market Commentary Intelligence",
+  title: "Carry - Market Chatter, Distilled",
   description:
-    "Read the market's mood through what finance commentators say — tickers, predictions, confidence, and verified outcomes.",
+    "Carry aggregates YouTube, Reddit, X, news, and SEC 13F filings into one dashboard of tickers, themes, and bullish-or-bearish sentiment - every claim traceable to its source.",
 };
 
 /**
  * Inline script that runs before React hydration to apply the persisted theme
- * (or default to "light") — prevents flash-of-incorrect-theme.
+ * (or default to "light") - prevents flash-of-incorrect-theme.
  */
 const themeScript = `
 (function(){

@@ -1,4 +1,4 @@
-"""Aggregation service — speaker-ticker stats and top stocks computation."""
+"""Aggregation service - speaker-ticker stats and top stocks computation."""
 
 import logging
 import uuid as uuid_mod
@@ -413,7 +413,7 @@ class AggregationService:
 
         Rules (strict):
         - Only institutional channels contribute.
-        - If there are zero institutional channels, return [] — never fall back
+        - If there are zero institutional channels, return [] - never fall back
           to individual-creator videos (that previously invented ETFs from
           theme keywords like "infrastructure" → PAVE/IFRA).
         - Counts come from speaker_ticker_aggregation rows that are known ETFs,

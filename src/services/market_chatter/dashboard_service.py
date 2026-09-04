@@ -1,4 +1,4 @@
-"""DashboardService — Aggregates macro social chatter & sentiment analytics for TickerFlow."""
+"""DashboardService - Aggregates macro social chatter & sentiment analytics for TickerFlow."""
 
 from __future__ import annotations
 

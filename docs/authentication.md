@@ -30,8 +30,8 @@ Browser ──(short-lived session JWT, ~60s, auto-refreshed)──► FastAPI
 |---|---|---|
 | Publishable key (`pk_test_…`) | `web/.env.local` → `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | frontend |
 | Secret key (`sk_test_…`) | `.env` → `CLERK_SECRET_KEY` | backend |
-| JWT public key (PEM) | `.env` → `CLERK_JWT_KEY` | **optional** — enables networkless verification, but goes stale whenever Clerk rotates its signing key (e.g. after editing the session token template). The backend auto-falls back to JWKS on signature failure; if you see `CLERK_JWT_KEY failed to verify` warnings, just delete this variable. |
-| — | `.env` → `CLERK_AUTHORIZED_PARTIES` | comma-separated frontend origins; set real origins in prod (CSRF protection) |
+| JWT public key (PEM) | `.env` → `CLERK_JWT_KEY` | **optional** - enables networkless verification, but goes stale whenever Clerk rotates its signing key (e.g. after editing the session token template). The backend auto-falls back to JWKS on signature failure; if you see `CLERK_JWT_KEY failed to verify` warnings, just delete this variable. |
+| - | `.env` → `CLERK_AUTHORIZED_PARTIES` | comma-separated frontend origins; set real origins in prod (CSRF protection) |
 
 > **Gotcha:** editing *Configure → Sessions → Customize session token* rotates
 > Clerk's signing keys. A previously-pasted `CLERK_JWT_KEY` will then fail with
@@ -47,7 +47,7 @@ Browser ──(short-lived session JWT, ~60s, auto-refreshed)──► FastAPI
 
 ## 2. How access works
 
-1. User signs in/up through Clerk (`/sign-in`, `/sign-up`) — any enabled method.
+1. User signs in/up through Clerk (`/sign-in`, `/sign-up`) - any enabled method.
 2. The Next.js proxy (`web/src/proxy.ts`) protects all pages except `/`,
    `/sign-in/**`, `/sign-up/**`.
 3. Every API call attaches `Authorization: Bearer <session token>`
@@ -56,12 +56,12 @@ Browser ──(short-lived session JWT, ~60s, auto-refreshed)──► FastAPI
 4. New accounts start as **regular users** with `status=pending_invite`
    (unless listed in `ADMIN_CLERK_USER_IDS`, or the app runs in development).
    The UI shows the **invite gate** until they redeem a code.
-5. Invites grant regular-user access only — they can never promote anyone.
+5. Invites grant regular-user access only - they can never promote anyone.
    Admins are promoted manually via Clerk public metadata (see below).
 
 ### Making someone an admin (via Clerk Dashboard)
 
-Admin status is owned by Clerk and synced into the app automatically — no
+Admin status is owned by Clerk and synced into the app automatically - no
 session-token template or backend restart needed:
 
 1. Open <https://dashboard.clerk.com> → **Users** → click the person.
@@ -77,7 +77,7 @@ session-token template or backend restart needed:
 (**Configure → Sessions → Customize session token** →
 `{"role": "{{user.public_metadata.role}}"}`) puts the role directly into the
 JWT, avoiding a per-minute Backend API lookup. Note that editing the session
-token rotates Clerk's signing keys — if you use a static `CLERK_JWT_KEY`,
+token rotates Clerk's signing keys - if you use a static `CLERK_JWT_KEY`,
 delete it afterwards (the backend auto-falls back to JWKS).
 
 Bootstrap alternative (no dashboard): add the person's Clerk user id to
@@ -88,14 +88,14 @@ Bootstrap alternative (no dashboard): add the person's Clerk user id to
 
 | Log line | Meaning | Fix |
 |---|---|---|
-| `jwk_kid_mismatch` + `Rejected token header: kid=ins_XXX` | token signed by a **different Clerk instance**. The Clerk Python SDK silently falls back to the browser's `__session` cookie when no `Authorization` header is present — a cookie left over from a previously-used instance fails verification. The backend now **requires the Bearer header** (cookie fallback disabled), so this only appears for genuinely stale browser sessions. | sign out, clear the `__session` / `__client` cookies for the app origin (or use an incognito window), sign in again; ensure `web/.env.local` publishable key and backend `CLERK_SECRET_KEY` belong to the same instance |
+| `jwk_kid_mismatch` + `Rejected token header: kid=ins_XXX` | token signed by a **different Clerk instance**. The Clerk Python SDK silently falls back to the browser's `__session` cookie when no `Authorization` header is present - a cookie left over from a previously-used instance fails verification. The backend now **requires the Bearer header** (cookie fallback disabled), so this only appears for genuinely stale browser sessions. | sign out, clear the `__session` / `__client` cookies for the app origin (or use an incognito window), sign in again; ensure `web/.env.local` publishable key and backend `CLERK_SECRET_KEY` belong to the same instance |
 | `CLERK_JWT_KEY failed to verify … falling back to JWKS` | static PEM is stale after a key rotation | delete `CLERK_JWT_KEY` from `.env` and restart |
-| `Session token carries no 'role' claim; syncing via Backend API` | info only — role still syncs via public metadata every ~60s | nothing to do (add the session-token template only if you want to skip the API lookup) |
+| `Session token carries no 'role' claim; syncing via Backend API` | info only - role still syncs via public metadata every ~60s | nothing to do (add the session-token template only if you want to skip the API lookup) |
 | 503 `clerk_unavailable` | transient Clerk API failure during first-time provisioning | retry the request |
 
 **Two Clerk accounts with the same email** (e.g. one from password provisioning,
 one from a later Google sign-in) are linked to a single app account
-automatically — usage history stays continuous regardless of sign-in method.
+automatically - usage history stays continuous regardless of sign-in method.
 Optionally delete the unused one in Clerk Dashboard → Users.
 
 
@@ -115,10 +115,10 @@ Recovery/bootstrap: `make promote-admin email=you@example.com`.
 
 ### Onboarding specific users with pre-made credentials (pilot flow)
 
-For sending the MVP to a known list of people, pre-provision their accounts —
+For sending the MVP to a known list of people, pre-provision their accounts -
 they get ready credentials and skip the invite screen entirely:
 
-1. Create `users.csv` — the optional third column is a **custom password you
+1. Create `users.csv` - the optional third column is a **custom password you
    choose** (min 8 chars); leave it off to auto-generate:
    ```csv
    Akshat,akshat@example.com,MySecretPass123
@@ -132,16 +132,16 @@ they get ready credentials and skip the invite screen entirely:
 3. This **creates verified Clerk accounts** with your chosen (or generated)
    passwords, activates them app-side, and writes `credentials.csv` for you
    to send. If a Clerk user already exists, a provided password **resets**
-   it — so you can re-send updated credentials anytime.
+   it - so you can re-send updated credentials anytime.
 4. Each person can either sign in with the emailed password (**preferred**)
-   or click **Continue with Google** with the *same* email — the backend
+   or click **Continue with Google** with the *same* email - the backend
    detects the shared verified email and links both identities into one
    account automatically (`account_linked` event, no duplicate usage stats).
 5. Everyone arrives as a regular user. To make one an admin, use the
    Clerk-dashboard steps above.
 
 > Passwords are shown once at generation; Clerk stores only hashes.
-> Re-running the script is idempotent — existing Clerk users are reused and
+> Re-running the script is idempotent - existing Clerk users are reused and
 > no new password is generated.
 
 
@@ -150,17 +150,17 @@ Recovery/bootstrap: `make promote-admin email=you@example.com`.
 
 ### Going live with external users (production checklist)
 
-1. **Clerk production instance** — create one in the dashboard (dev instances
+1. **Clerk production instance** - create one in the dashboard (dev instances
    are for local testing only). `npx clerk@latest env pull --instance prod`
    or copy keys manually; update `.env` + `web/.env.local`.
-2. **Google OAuth** — Configure → SSO Connections → add Google. Dev instances
+2. **Google OAuth** - Configure → SSO Connections → add Google. Dev instances
    share Clerk's dev credentials; production requires your own Google Cloud
    OAuth client (authorized redirect URI shown by Clerk).
-3. **Email provider** — production Clerk instances require your own SMTP
+3. **Email provider** - production Clerk instances require your own SMTP
    provider (Resend/SES/Postmark) under Configure → Communication.
    Not needed for password logins, but required if anyone uses magic link
    or email verification.
-4. **Authorized parties** — set `CLERK_AUTHORIZED_PARTIES` to your real
+4. **Authorized parties** - set `CLERK_AUTHORIZED_PARTIES` to your real
    frontend origin(s), e.g. `https://carry-fin.vercel.app`.
 5. Provision pilot users per the section above, then watch adoption in
    `/admin` (DAU/WAU, searches, feature adoption).
@@ -205,15 +205,15 @@ the Clerk profile (email/name/avatar).
 
 ### Endpoints
 
-- `GET /api/usage/me?days=30` — personal dashboard data
-- `POST /api/usage/events` — client event ingest (batched)
-- `GET /api/admin/metrics/overview?days=30` — platform snapshot
-- `POST/GET/DELETE /api/admin/invites` — invite management
+- `GET /api/usage/me?days=30` - personal dashboard data
+- `POST /api/usage/events` - client event ingest (batched)
+- `GET /api/admin/metrics/overview?days=30` - platform snapshot
+- `POST/GET/DELETE /api/admin/invites` - invite management
 
 ### UI
 
-- `/usage` — personal stats, daily activity chart, top queries, recent events
-- `/admin` — invites CRUD + platform metrics (visible to admins only)
+- `/usage` - personal stats, daily activity chart, top queries, recent events
+- `/admin` - invites CRUD + platform metrics (visible to admins only)
 
 ### Maintenance (Celery Beat)
 

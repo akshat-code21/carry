@@ -78,7 +78,7 @@ async def dashboard_summary(
     with one request using concurrent queries. Expected latency: ~50ms with
     co-located DB.
     """
-    # Run all queries concurrently — same session, different coroutines
+    # Run all queries concurrently - same session, different coroutines
     video_counts_subq = (
         select(Video.channel_id, sqlfunc.count(Video.id).label("video_count"))
         .where(Video.duration_sec > 60)

@@ -268,13 +268,13 @@ Once a channel is backfilled, future uploads are discovered automatically via **
 ### Local testing with ngrok
 
 ```bash
-# terminal 1 — API + worker + beat (or: make up)
+# terminal 1 - API + worker + beat (or: make up)
 make up-db && make migrate
 make run          # :8000
 make worker       # separate terminal
 make beat         # separate terminal
 
-# terminal 2 — public HTTPS tunnel to the API
+# terminal 2 - public HTTPS tunnel to the API
 ngrok http 8000
 # copy the https URL, e.g. https://abc123.ngrok-free.app
 ```
@@ -294,7 +294,7 @@ make subscribe-websub
 
 Watch API logs for a hub **GET** verification on `/api/websub/callback`. New uploads on subscribed channels should appear under **Activity** in the UI (bell icon).
 
-**Note:** Free ngrok URLs change on restart — update `PUBLIC_BASE_URL` and run `make subscribe-websub` again.
+**Note:** Free ngrok URLs change on restart - update `PUBLIC_BASE_URL` and run `make subscribe-websub` again.
 
 ### Test “new upload” without waiting for a real publish
 
@@ -328,8 +328,8 @@ See `.env.example` for `WEBSUB_*`, `DISCOVERY_FALLBACK_POLL_HOURS`, and `TRANSCR
 ## 🔐 Authentication & Usage Analytics
 
 The API is fully authenticated (Clerk session JWTs) with an **invite-only
-signup gate**. All user activity — searches, entity views, page views,
-pipeline triggers, LLM token spend, per-request latency — is tracked in the
+signup gate**. All user activity - searches, entity views, page views,
+pipeline triggers, LLM token spend, per-request latency - is tracked in the
 app's own Postgres with daily rollups and a retention policy. Personal usage
 is visible at `/usage`; admins manage invites and platform metrics at
 `/admin`.

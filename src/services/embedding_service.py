@@ -1,4 +1,4 @@
-"""Embedding service — OpenAI API-based implementation."""
+"""Embedding service - OpenAI API-based implementation."""
 
 import logging
 
@@ -31,7 +31,7 @@ class OpenAIEmbeddingService(EmbeddingProvider):
     async def embed(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for a batch of texts.
 
-        Handles batching internally — OpenAI accepts up to 2048 texts per call,
+        Handles batching internally - OpenAI accepts up to 2048 texts per call,
         but we batch at 100 to stay safe on token limits.
         """
         client = self._get_client()

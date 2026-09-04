@@ -1,4 +1,4 @@
-"""Agent 5 Node — Structured LLM Narrative Extraction."""
+"""Agent 5 Node - Structured LLM Narrative Extraction."""
 
 from __future__ import annotations
 

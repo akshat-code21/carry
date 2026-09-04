@@ -12,7 +12,11 @@ if TYPE_CHECKING:
     from src.services.etf_mapping_service import ETFMappingService
 
 from src.analytics.service import analytics
-from src.api.deps import get_aggregation_service, get_market_data
+from src.api.deps import (
+    get_aggregation_service,
+    get_market_data,
+    get_social_context_service,
+)
 from src.database import get_db
 from src.models.performance import PerformanceRecord
 from src.models.prediction import Prediction
@@ -30,8 +34,56 @@ from src.schemas import (
 )
 from src.services.aggregation_service import AggregationService
 from src.services.interfaces import MarketDataSource
+from src.services.social_context_service import SocialContextService
 
 router = APIRouter(prefix="/api/tickers", tags=["Tickers"])
+
+# Weighting for the blended YouTube + social sentiment score (-1..1 both).
+YOUTUBE_SENTIMENT_WEIGHT = 0.6
+SOCIAL_SENTIMENT_WEIGHT = 0.4
+
+
+async def _attach_social(
+    detail: TickerDetailResponse,
+    social_service: SocialContextService | None,
+) -> TickerDetailResponse:
+    """Attach TickerFlow social-sentiment data and blended headline stats."""
+    if social_service is None:
+        return detail
+
+    social = await social_service.get_ticker(detail.ticker)
+    if social is None or not social.sources:
+        return detail.model_copy(
+            update={
+                "social": social,
+                "combined_avg_sentiment": detail.avg_sentiment,
+                "social_mentions": 0,
+            }
+        )
+
+    social_mentions_values = [s.mentions for s in social.sources if s.mentions is not None]
+    social_mentions = sum(social_mentions_values) if social_mentions_values else 0
+    social_sentiment = None
+    if social.signal and social.signal.sentiment is not None:
+        social_sentiment = social.signal.sentiment / 100.0
+
+    if detail.avg_sentiment is not None and social_sentiment is not None:
+        combined = (
+            YOUTUBE_SENTIMENT_WEIGHT * detail.avg_sentiment
+            + SOCIAL_SENTIMENT_WEIGHT * social_sentiment
+        )
+    elif social_sentiment is not None:
+        combined = social_sentiment
+    else:
+        combined = detail.avg_sentiment
+
+    return detail.model_copy(
+        update={
+            "social": social,
+            "combined_avg_sentiment": round(combined, 4) if combined is not None else None,
+            "social_mentions": social_mentions,
+        }
+    )
 
 
 @router.get("", response_model=list[TickerResponse])
@@ -98,6 +150,7 @@ async def get_top_etfs(
 async def get_ticker_detail(
     ticker: str,
     db: AsyncSession = Depends(get_db),
+    social_service: SocialContextService | None = Depends(get_social_context_service),
 ) -> TickerDetailResponse:
     """Get detailed info for a ticker: predictions, themes, performance.
 
@@ -117,7 +170,8 @@ async def get_ticker_detail(
     )
 
     if is_etf:
-        return await _get_etf_ticker_detail(ticker, db, etf_service)
+        etf_detail = await _get_etf_ticker_detail(ticker, db, etf_service)
+        return await _attach_social(etf_detail, social_service)
 
     # --- Standard stock detail (existing logic) ---
 
@@ -170,7 +224,7 @@ async def get_ticker_detail(
         )
         themes = [ThemeResponse.model_validate(t) for t in theme_result.scalars().all()]
 
-    return TickerDetailResponse(
+    detail = TickerDetailResponse(
         ticker=ticker,
         total_mentions=agg.total_mentions if agg else 0,
         explicit_mentions=agg.explicit_mentions if agg else 0,
@@ -181,6 +235,8 @@ async def get_ticker_detail(
         predictions=preds_with_perf,
         themes=themes,
     )
+    return await _attach_social(detail, social_service)
+
 
 
 async def _get_etf_ticker_detail(

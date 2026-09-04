@@ -1,6 +1,6 @@
 """YouTube WebSub (PubSubHubbub) callback endpoints.
 
-``/callback`` must stay publicly reachable — the Google hub cannot
+``/callback`` must stay publicly reachable - the Google hub cannot
 authenticate; it is secured via HMAC signature verification instead.
 """
 
@@ -33,7 +33,7 @@ async def websub_verify(
     hub_challenge: str | None = Query(None, alias="hub.challenge"),
     hub_lease_seconds: str | None = Query(None, alias="hub.lease_seconds"),
 ) -> Response:
-    """Hub verification challenge — must echo hub.challenge as plain text."""
+    """Hub verification challenge - must echo hub.challenge as plain text."""
     if hub_mode not in ("subscribe", "unsubscribe"):
         raise HTTPException(status_code=400, detail="Invalid hub.mode")
 
@@ -119,7 +119,7 @@ async def simulate_websub_push(
     if not channel:
         raise HTTPException(
             status_code=404,
-            detail="Channel not found — backfill/ingest the channel first",
+            detail="Channel not found - backfill/ingest the channel first",
         )
 
     youtube_channel_id = channel.youtube_channel_id

@@ -50,7 +50,7 @@ export function AnimatedCounter({
   }, [isInView, value, motionVal]);
 
   if (value === null || value === undefined) {
-    return <span className={className}>—</span>;
+    return <span className={className}>-</span>;
   }
 
   return (

@@ -39,6 +39,8 @@ async def test_news_collector_returns_raw_items() -> None:
     items = await collector.collect("TSLA", period_days=7)
     assert len(items) > 0
     assert any(item.symbol == "TSLA" for item in items)
+    assert len({item.id for item in items}) == len(items)  # All IDs unique
+    assert len({item.content_hash for item in items}) == len(items)  # All hashes unique
     await collector.close()
 
 
@@ -49,6 +51,8 @@ async def test_twitter_collector_returns_raw_items() -> None:
     items = await collector.collect("MSFT", period_days=7)
     assert len(items) > 0
     assert any(item.symbol == "MSFT" for item in items)
+    assert len({item.id for item in items}) == len(items)  # All IDs unique
+    assert len({item.content_hash for item in items}) == len(items)  # All hashes unique
     await collector.close()
 
 

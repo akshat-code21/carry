@@ -12,7 +12,7 @@ from src.models.hfi_report import HfiReport
 from src.models.user import User
 from src.schemas.hfi import ReportListItem, ReportOut
 
-router = APIRouter(prefix="/api/hfi/reports", tags=["HFI — Reports"])
+router = APIRouter(prefix="/api/hfi/reports", tags=["HFI - Reports"])
 
 
 @router.get("", response_model=list[ReportListItem])

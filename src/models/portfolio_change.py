@@ -1,4 +1,4 @@
-"""PortfolioChange model — tracks holding changes between 13F filing periods."""
+"""PortfolioChange model - tracks holding changes between 13F filing periods."""
 
 import uuid
 from datetime import date, datetime

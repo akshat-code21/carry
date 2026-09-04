@@ -48,7 +48,7 @@ function waitForClerkReady(timeoutMs = 8000): Promise<void> {
 }
 
 /**
- * Cached token promise — when multiple hooks (e.g. 6 dashboard queries) call
+ * Cached token promise - when multiple hooks (e.g. 6 dashboard queries) call
  * getAuthToken() concurrently, they share the same in-flight token acquisition
  * instead of each independently waiting and calling getToken().
  *

@@ -1,4 +1,4 @@
-# Data Collection Agent — Free/OSS Phase 1 Plan
+# Data Collection Agent - Free/OSS Phase 1 Plan
 
 ## Summary
 
@@ -6,17 +6,17 @@ Build Phase 1 as a local-validation product: a ticker lookup returns a prelimina
 
 Do not use Adanos, OpenBB, Airbyte, X, or StockTwits in this phase. OpenBB validates the “connect once, consume everywhere” concept, but its runtime is AGPLv3 and does not solve social-data access/licensing. [OpenBB](https://github.com/OpenBB-finance/OpenBB)
 
-## Phase 1 — Central ingestion gateway
+## Phase 1 - Central ingestion gateway
 
 - Add a Dockerized Meltano service, configured solely through versioned source profiles and environment-injected secrets.
 - Implement a small internal Collection Orchestrator that submits Meltano jobs, records job state, and emits `raw_content.available` only after a successful source run.
 - Keep all provider-specific code inside Singer taps. The API/agent layer calls only `CollectionRequest`; it must not know API URLs, cursors, authentication, or pagination.
 - Use a custom MinIO Singer target to persist immutable raw Singer records, run manifests, and connector state. Store normalized/indexed records in PostgreSQL.
 
-## Phase 2 — Local-validation sources
+## Phase 2 - Local-validation sources
 
 - **Reddit:** use the existing Singer Reddit tap with official OAuth, limited to `wallstreetbets`, `stocks`, and `investing`; ingest new posts and comments every 15 minutes. This is source-first ingestion, allowing any subsequently requested S&P 100 ticker to resolve from local data.
-- **News:** implement a custom `tap-gdelt-doc` using the legacy GDELT DOC 2.0 API. On a stale ticker request, query the company’s approved name/alias set and retain only URL, title, publication time, source domain, and result metadata—not article bodies. [GDELT DOC API](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/amp/)
+- **News:** implement a custom `tap-gdelt-doc` using the legacy GDELT DOC 2.0 API. On a stale ticker request, query the company’s approved name/alias set and retain only URL, title, publication time, source domain, and result metadata-not article bodies. [GDELT DOC API](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/amp/)
 - **Price:** implement `tap-yfinance-local` for local chart validation only. It emits hourly or daily OHLCV bars through the same gateway. yfinance itself warns that Yahoo data is for personal use, so this connector is permanently blocked from public deployment. [yfinance usage notice](https://github.com/ranaroussi/yfinance)
 - Provide deterministic fixture taps for all three sources so the full pipeline and dashboard run without credentials.
 
@@ -43,7 +43,7 @@ Do not use Adanos, OpenBB, Airbyte, X, or StockTwits in this phase. OpenBB valid
 - Test connector state resume, pagination, malformed records, duplicate replay, stale refresh, rate-limit failure, and partial-source success.
 - Test ticker collisions (`A`, `ALL`, `IT`), timezone bucketing, market-closed chart gaps, and no-data/stale-data API responses.
 - Demonstrate AAPL, NVDA, and TSLA end-to-end using both fixtures and permitted local credentials.
-- Treat `TauricResearch/TradingAgents` as an architecture reference only—not a collector dependency—because its collectors are research-time dataflows rather than durable ingestion infrastructure. [TradingAgents](https://github.com/TauricResearch/TradingAgents)
+- Treat `TauricResearch/TradingAgents` as an architecture reference only-not a collector dependency-because its collectors are research-time dataflows rather than durable ingestion infrastructure. [TradingAgents](https://github.com/TauricResearch/TradingAgents)
 - Keep X and StockTwits disabled. X’s recent-search endpoint requires a bearer token and only covers seven days; no free OSS wrapper changes those access requirements. [X recent search](https://docs.x.com/x-api/posts/search-recent-posts)
 - Before any closed/public beta, replace local-only price data and obtain written commercial permission for every enabled source. Reddit’s terms explicitly require a separate agreement for commercial or revenue-generating data use. [Reddit Data API Terms](https://redditinc.com/policies/data-api-terms)
 

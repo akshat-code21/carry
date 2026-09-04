@@ -1,4 +1,4 @@
-"""Seed script — loads theme_taxonomy.json into the database.
+"""Seed script - loads theme_taxonomy.json into the database.
 
 Run via: uv run python -m src.pipeline.seed
 """
@@ -76,7 +76,7 @@ async def seed_taxonomy() -> None:
                     await session.flush()
                     stats["themes"] += 1
 
-                    # Create equity ticker mappings only (never seed ETFs here —
+                    # Create equity ticker mappings only (never seed ETFs here -
                     # institutional ETFs live in data/etf_mappings.json).
                     from src.services.etf_mapping_service import ETFMappingService
 

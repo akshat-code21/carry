@@ -7,141 +7,50 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, ExternalLink, PlayCircle, Video, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  ReferenceDot,
-} from "recharts";
 import { PredictionSentimentChart } from "@/components/PredictionSentimentChart";
+import {
+  TradingViewPriceChart,
+  type TvChartSeriesType,
+  type TvSignalMarker,
+} from "@/components/TradingViewPriceChart";
+import { SocialSentimentPanel } from "@/components/SocialSentimentPanel";
 import { PageHeader } from "@/components/PageHeader";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ErrorState } from "@/components/ErrorState";
 import { DetailSkeleton } from "@/components/skeletons/LayoutSkeletons";
 import { useTicker, useTickerSentiment, useTickerPriceHistory } from "@/lib/hooks";
 import { useChartColors } from "@/lib/useChartColors";
+import { cn } from "@/lib/utils";
 
-function SignalMarker({
-  cx,
-  cy,
-  signal,
-  successColor,
-  dangerColor,
-  bgColor,
-}: {
-  cx?: number;
-  cy?: number;
-  signal: "B" | "S";
-  successColor: string;
-  dangerColor: string;
-  bgColor: string;
-}) {
-  if (cx == null || cy == null) return null;
-  const color = signal === "B" ? successColor : dangerColor;
-  return (
-    <g>
-      <circle cx={cx} cy={cy} r={10} fill={color} stroke={bgColor} strokeWidth={1.5} />
-      <text
-        x={cx}
-        y={cy}
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontSize={11}
-        fontWeight="bold"
-        fontFamily="var(--font-geist-mono)"
-        fill={bgColor}
-      >
-        {signal}
-      </text>
-    </g>
-  );
-}
-
-/**
- * Find the price point closest in time to a target date (within 5 days),
- * so a mention on a weekend/holiday still lands on the nearest trading day. */
-function findClosestPricePoint(targetDateStr: string, priceHistory: any[]) {
-  if (priceHistory.length === 0) return null;
-  const target = new Date(targetDateStr).getTime();
-  let best: any = null;
-  let bestDiff = Infinity;
-  for (const p of priceHistory) {
-    const diff = Math.abs(new Date(p.date).getTime() - target);
-    if (diff < bestDiff) {
-      bestDiff = diff;
-      best = p;
-    }
-  }
-  const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
-  return best && bestDiff <= FIVE_DAYS_MS ? best : null;
-}
+const PRICE_SERIES_OPTIONS: { label: string; type: TvChartSeriesType }[] = [
+  { label: "Line", type: "line" },
+  { label: "Area", type: "area" },
+  { label: "Candles", type: "candlestick" },
+];
 
 const PRICE_RANGE_OPTIONS: { label: string; days: number }[] = [
   { label: "1M", days: 30 },
   { label: "3M", days: 90 },
   { label: "6M", days: 180 },
   { label: "1Y", days: 365 },
-  { label: "All", days: 3650 },
 ];
 
-const PriceTooltip = ({ active, payload }: any) => {
-  if (!active || !payload || !payload.length) return null;
-  const data = payload[0].payload;
-  const closePrice = typeof data.close === "number" ? data.close.toFixed(2) : data.close;
-
-  return (
-    <div className="z-50 rounded-md border border-line bg-panel-raised px-3 py-2.5 text-ink shadow-md">
-      <p className="font-mono text-micro text-ink-secondary">{data.label || data.date}</p>
-      <p className="mt-1 font-mono text-small font-semibold text-ink">
-        Close Price: <span className="text-signal">${closePrice}</span>
-      </p>
-    </div>
-  );
-};
-
-const PerfTooltip = ({ active, payload }: any) => {
-  if (!active || !payload || !payload.length) return null;
-  const data = payload[0].payload;
-
-  return (
-    <div className="z-50 space-y-1 rounded-md border border-line bg-panel-raised px-3 py-2.5 text-ink shadow-md">
-      <p className="font-mono text-micro text-ink-secondary">{data.name}</p>
-      {payload.map((entry: any, i: number) => (
-        <p key={i} className="font-mono text-micro" style={{ color: entry.color }}>
-          {entry.name}: ${typeof entry.value === "number" ? entry.value.toFixed(2) : entry.value}
-        </p>
-      ))}
-    </div>
-  );
-};
-
-const MentionsTooltip = ({ active, payload }: any) => {
-  if (!active || !payload || !payload.length) return null;
-  const data = payload[0].payload;
-
-  return (
-    <div className="z-50 space-y-1 rounded-md border border-line bg-panel-raised px-3 py-2.5 text-ink shadow-md">
-      <p className="font-mono text-micro text-ink-secondary">{data.label || data.date}</p>
-      <div className="flex items-center gap-3 font-mono text-micro">
-        <span className="font-semibold text-bullish">Bullish: {data.bullish_count || 0}</span>
-        <span className="font-semibold text-bearish">Bearish: {data.bearish_count || 0}</span>
-      </div>
-    </div>
-  );
-};
+/** Nearest price bar on/before `date` (ISO), for anchoring markers. */
+function findClosestPricePoint(date: string, priceHistory: any[]) {
+  if (!priceHistory.length) return null;
+  const target = new Date(date).getTime();
+  const before = priceHistory
+    .filter((p: any) => new Date(p.date).getTime() <= target)
+    .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  return before[0] ?? priceHistory[0];
+}
 
 export default function TickerPage() {
   const params = useParams();
   const ticker = params.ticker as string;
 
   const [priceRangeDays, setPriceRangeDays] = useState(30);
+  const [priceSeriesType, setPriceSeriesType] = useState<TvChartSeriesType>("line");
 
   const { data, isLoading } = useTicker(ticker);
   const { data: sentimentTimeline = [] } = useTickerSentiment(ticker);
@@ -151,11 +60,6 @@ export default function TickerPage() {
   const successColor = chartColors.success;
   const dangerColor = chartColors.danger;
   const mutedFgColor = chartColors.mutedForeground;
-  const chart1Color = chartColors.chart1;
-  const chart2Color = chartColors.chart2;
-  const canvasColor = chartColors.canvas;
-  const lineColor = chartColors.line;
-  const inkSecondaryColor = chartColors.inkSecondary;
 
   if (isLoading) {
     return <DetailSkeleton />;
@@ -164,44 +68,109 @@ export default function TickerPage() {
   if (!data) {
     return (
       <div className="p-8">
-        <ErrorState title="Ticker Not Found" message={`No market intelligence found for $${ticker}`} />
+        <ErrorState title="Ticker Not Found" message={`No market intelligence found for ${ticker.toUpperCase()}`} />
       </div>
     );
   }
 
-  // Real price history, with a category-axis-friendly label per point.
+  // Real price history, with a UTC-stable date key for the chart.
   const priceChartData = priceHistory.map((p: any) => ({
     date: p.date,
-    label: new Date(p.date).toLocaleDateString(),
+    open: p.open,
+    high: p.high,
+    low: p.low,
     close: p.close,
   }));
 
-  // For each day with a clear bullish/bearish lean, place a B/S marker at
-  // the nearest available trading day's close price.
-  const signalMarkers = sentimentTimeline
-    .map((d: any) => {
-      let signal: "B" | "S" | null = null;
-      if (d.bullish_count > d.bearish_count) signal = "B";
-      else if (d.bearish_count > d.bullish_count) signal = "S";
-      if (!signal) return null;
+  // Aggregate daily sentiment timeline counts by matched trading day to produce
+  // exactly one net consensus marker per trading day (B if bullish > bearish, S if bearish > bullish).
+  const sentimentByTradingDay = new Map<string, { bullish: number; bearish: number }>();
 
-      const matched = findClosestPricePoint(d.date, priceHistory);
+  for (const d of sentimentTimeline) {
+    const matched = findClosestPricePoint(d.date, priceHistory);
+    if (!matched) continue;
+
+    const current = sentimentByTradingDay.get(matched.date) || { bullish: 0, bearish: 0 };
+    current.bullish += d.bullish_count || 0;
+    current.bearish += d.bearish_count || 0;
+    sentimentByTradingDay.set(matched.date, current);
+  }
+
+  const signalMarkers: TvSignalMarker[] = Array.from(sentimentByTradingDay.entries())
+    .map(([date, counts]): TvSignalMarker | null => {
+      if (counts.bullish > counts.bearish) return { date, signal: "B" };
+      if (counts.bearish > counts.bullish) return { date, signal: "S" };
+      return null; // Tied or neutral days omit the marker
+    })
+    .filter((m): m is TvSignalMarker => m !== null);
+
+  // For each video prediction, color a dot by its predicted direction at the
+  // prediction date's close price (▲ bullish / ▼ bearish / ● neutral).
+  const predictionMarkers: TvSignalMarker[] = (data.predictions ?? [])
+    .map((pred: any): TvSignalMarker | null => {
+      const perf = data.performance?.find((p: any) => p.prediction_id === pred.id);
+      if (!perf?.created_at) return null;
+      const created = new Date(perf.created_at).toISOString().slice(0, 10);
+      const matched = findClosestPricePoint(created, priceHistory);
       if (!matched) return null;
-
+      const signal: TvSignalMarker["signal"] =
+        pred.direction === "bullish" ? "B" : pred.direction === "bearish" ? "S" : "N";
       return {
-        label: new Date(matched.date).toLocaleDateString(),
-        price: matched.close,
+        date: matched.date,
         signal,
+        color:
+          pred.direction === "bullish"
+            ? successColor
+            : pred.direction === "bearish"
+              ? dangerColor
+              : mutedFgColor,
       };
     })
-    .filter((m): m is { label: string; price: number; signal: "B" | "S" } => m !== null);
+    .filter((m): m is TvSignalMarker => m !== null);
 
   // Construct performance chart data if present
-  const perfChartData = data.performance?.map((p: any) => ({
-    name: new Date(p.created_at || Date.now()).toLocaleDateString(),
-    price: p.price_at_video,
-    price_1w: p.price_1w,
-  })) || [];
+  const perfChartData = data.performance
+    ?.filter((p: any) => !!p.created_at)
+    .map((p: any) => ({
+      name: new Date(p.created_at).toLocaleDateString(),
+      price: p.price_at_video,
+      price_1w: p.price_1w,
+    })) || [];
+
+  /**
+   * Shared TradingView Lightweight-Charts renderer (v5) - replaces the Recharts
+   * price charts. B/S sentiment markers are drawn by the library’s marker plugin;
+   * the candlestick toggle switches the price series type in place.
+   */
+  const priceChartEl = (
+    <TradingViewPriceChart
+      points={priceChartData}
+      seriesType={priceSeriesType}
+      markers={signalMarkers}
+    />
+  );
+
+  /**
+   * “Price Chart & Predictions Performance” - actual close vs the close one week
+   * later (dashed), with prediction dots colored by predicted direction.
+   */
+  const priceIndexByDate = new Map(priceHistory.map((p: any, idx: number) => [p.date, idx]));
+  const perfChartEl = (
+    <TradingViewPriceChart
+      points={priceChartData}
+      seriesType="line"
+      markers={predictionMarkers}
+      secondaryLine={{
+        label: "Price 1W Later",
+        points: priceChartData.map((p: any) => {
+          const idx = priceIndexByDate.get(p.date) ?? -1;
+          const later =
+            idx >= 0 ? priceChartData[Math.min(idx + 7, priceChartData.length - 1)] : undefined;
+          return { date: p.date, value: later ? later.close : p.close };
+        }),
+      }}
+    />
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -210,14 +179,55 @@ export default function TickerPage() {
           items={[
             { label: "Dashboard", href: "/dashboard" },
             { label: "Tickers", href: "/dashboard" },
-            { label: `$${ticker.toUpperCase()}` },
+            { label: ticker.toUpperCase() },
           ]}
         />
         <PageHeader
-          title={`$${ticker.toUpperCase()}`}
+          title={ticker.toUpperCase()}
           description={`Market Intelligence & Video Predictions for ${ticker.toUpperCase()}`}
         />
+        {(data.social || data.combined_avg_sentiment != null) && (
+          <div className="flex flex-wrap items-center gap-2 font-mono text-micro text-ink-secondary">
+            {data.combined_avg_sentiment != null && (
+              <Badge
+                variant="outline"
+                className={
+                  data.combined_avg_sentiment > 0.05
+                    ? "border-bullish/40 bg-bullish/10 text-bullish"
+                    : data.combined_avg_sentiment < -0.05
+                      ? "border-bearish/40 bg-bearish/10 text-bearish"
+                      : "border-line text-ink-secondary"
+                }
+              >
+                Combined sentiment{" "}
+                {data.combined_avg_sentiment > 0 ? "+" : ""}
+                {data.combined_avg_sentiment.toFixed(2)}
+              </Badge>
+            )}
+            {data.social_mentions != null && (
+              <Badge variant="outline" className="border-line text-ink-secondary">
+                {data.social_mentions} social mentions
+              </Badge>
+            )}
+            {data.total_mentions != null && (
+              <Badge variant="outline" className="border-line text-ink-secondary">
+                {data.total_mentions} YouTube mentions
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* TickerFlow & YouTube sentiment (YouTube / Reddit / X / News) */}
+      {data.social && (
+        <SocialSentimentPanel
+          social={data.social}
+          predictions={data.predictions}
+          sentimentTimeline={sentimentTimeline}
+          youtubeMentions={data.total_mentions}
+          youtubeAvgSentiment={data.avg_sentiment}
+        />
+      )}
 
       {/* Video Level Prediction Trajectory Chart */}
       {data.predictions && data.predictions.length > 0 && (
@@ -227,7 +237,7 @@ export default function TickerPage() {
       {/* Real Stock Price Chart with Bullish/Bearish Signal Markers */}
       {priceChartData.length > 0 && (
         <Card>
-          <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <CardTitle>Price Chart with Bullish/Bearish Signals</CardTitle>
               <CardDescription>
@@ -235,47 +245,39 @@ export default function TickerPage() {
                 days it was mentioned that way in a video
               </CardDescription>
             </div>
-            <div className="flex gap-1">
-              {PRICE_RANGE_OPTIONS.map((opt) => (
-                <Button
-                  key={opt.label}
-                  size="sm"
-                  variant={priceRangeDays === opt.days ? "default" : "outline"}
-                  onClick={() => setPriceRangeDays(opt.days)}
-                >
-                  {opt.label}
-                </Button>
-              ))}
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              <div className="flex flex-wrap items-center gap-1">
+                {PRICE_SERIES_OPTIONS.map((opt) => (
+                  <Button
+                    key={opt.type}
+                    size="sm"
+                    variant={priceSeriesType === opt.type ? "default" : "outline"}
+                    onClick={() => setPriceSeriesType(opt.type)}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-1">
+                {PRICE_RANGE_OPTIONS.map((opt) => (
+                  <Button
+                    key={opt.label}
+                    size="sm"
+                    variant={priceRangeDays === opt.days ? "default" : "outline"}
+                    onClick={() => setPriceRangeDays(opt.days)}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className={`h-[420px] w-full transition-opacity duration-200 ${isFetchingPrice ? "opacity-60" : "opacity-100"}`}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={priceChartData} margin={{ top: 30, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} stroke={lineColor} vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-geist-mono)" }} tickLine={false} axisLine={{ stroke: lineColor }} />
-                  <YAxis domain={["auto", "auto"]} tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-geist-mono)" }} tickLine={false} axisLine={false} width={56} />
-                  <Tooltip content={<PriceTooltip />} wrapperStyle={{ outline: "none" }} />
-                  <Line type="monotone" dataKey="close" stroke={chart1Color} dot={false} name="Close Price" strokeWidth={2} />
-                  {signalMarkers.map((m, i) => (
-                    <ReferenceDot
-                      key={i}
-                      x={m.label}
-                      y={m.price}
-                      r={10}
-                      shape={(props: any) => (
-                        <SignalMarker
-                          {...props}
-                          signal={m.signal}
-                          successColor={successColor}
-                          dangerColor={dangerColor}
-                          bgColor={canvasColor}
-                        />
-                      )}
-                    />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
+            <div
+              className={`w-full transition-opacity duration-200 ${isFetchingPrice ? "opacity-60" : "opacity-100"
+                }`}
+            >
+              {priceChartEl}
             </div>
           </CardContent>
         </Card>
@@ -286,42 +288,17 @@ export default function TickerPage() {
         <Card>
           <CardHeader>
             <CardTitle>Price Chart & Predictions Performance</CardTitle>
-            <CardDescription>Historical stock price performance aligned with prediction timestamps</CardDescription>
+            <CardDescription>
+              Historical price performance with prediction timestamps - dots are colored by
+              predicted direction (▲ bullish / ▼ bearish / ● neutral); the dashed line
+              shows the close price one week later
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[400px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={perfChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} stroke={lineColor} vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-geist-mono)" }} tickLine={false} axisLine={{ stroke: lineColor }} />
-                  <YAxis domain={["auto", "auto"]} tick={{ fontSize: 10, fill: inkSecondaryColor, fontFamily: "var(--font-geist-mono)" }} tickLine={false} axisLine={false} width={56} />
-                  <Tooltip content={<PerfTooltip />} wrapperStyle={{ outline: "none" }} />
-                  <Legend wrapperStyle={{ fontFamily: "var(--font-geist-mono)", fontSize: 10 }} />
-                  <Line type="monotone" dataKey="price" stroke={chart1Color} name="Price at Prediction" strokeWidth={2} />
-                  <Line type="monotone" dataKey="price_1w" stroke={chart2Color} name="Price 1W Later" strokeWidth={2} />
-                  {data.predictions?.map((pred: any, i: number) => {
-                    const perf = data.performance?.find((p: any) => p.prediction_id === pred.id);
-                    if (!perf) return null;
-                    const dateStr = new Date(perf.created_at || Date.now()).toLocaleDateString();
-                    return (
-                      <ReferenceDot
-                        key={i}
-                        x={dateStr}
-                        y={perf.price_at_video}
-                        r={7}
-                        fill={pred.direction === "bullish" ? successColor : pred.direction === "bearish" ? dangerColor : mutedFgColor}
-                        stroke={canvasColor}
-                        strokeWidth={2}
-                      />
-                    );
-                  })}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            <div className="w-full">{perfChartEl}</div>
           </CardContent>
         </Card>
       )}
-
       {/* Daily Bullish vs Bearish Mentions Bar Chart */}
       {/* {sentimentTimeline.length > 0 && (
         <Card>
@@ -379,7 +356,7 @@ export default function TickerPage() {
                             ? "destructive"
                             : "secondary"
                       }
-                      className="font-mono text-micro capitalize"
+                      className={cn("font-mono text-micro text-signal-foreground! capitalize", `${dir === "bearish" ? "text-black!" : ""}`)}
                     >
                       {dir === "bullish" && <TrendingUp className="mr-1 h-3 w-3 inline" />}
                       {dir === "bearish" && <TrendingDown className="mr-1 h-3 w-3 inline" />}

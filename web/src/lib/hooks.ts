@@ -108,7 +108,7 @@ export function useDashboardData() {
   const query = useQuery({
     queryKey: ["dashboardSummary"],
     queryFn: () => api.getDashboardSummary(),
-    staleTime: 5 * 60_000, // taxonomy barely changes — keep 5 min
+    staleTime: 5 * 60_000, // taxonomy barely changes - keep 5 min
     retry: false, // don't retry on 401 (avoids 2× cold-load time)
   });
 
@@ -117,23 +117,23 @@ export function useDashboardData() {
     isError: query.isError,
     data: query.data
       ? {
-          total_videos: query.data.total_videos ?? (query.data.videos?.length || 0),
-          videos: query.data.videos || [],
-          channels: query.data.channels || [],
-          themes: [], // full themes no longer fetched; use theme_counts
-          tickers: query.data.tickers || [],
-          etfs: query.data.etfs || [],
-          theme_counts: query.data.theme_counts || { sectors: 0, industries: 0, themes: 0, narratives: 0 },
-        }
+        total_videos: query.data.total_videos ?? (query.data.videos?.length || 0),
+        videos: query.data.videos || [],
+        channels: query.data.channels || [],
+        themes: [], // full themes no longer fetched; use theme_counts
+        tickers: query.data.tickers || [],
+        etfs: query.data.etfs || [],
+        theme_counts: query.data.theme_counts || { sectors: 0, industries: 0, themes: 0, narratives: 0 },
+      }
       : {
-          total_videos: 0,
-          videos: [],
-          channels: [],
-          themes: [],
-          tickers: [],
-          etfs: [],
-          theme_counts: { sectors: 0, industries: 0, themes: 0, narratives: 0 },
-        },
+        total_videos: 0,
+        videos: [],
+        channels: [],
+        themes: [],
+        tickers: [],
+        etfs: [],
+        theme_counts: { sectors: 0, industries: 0, themes: 0, narratives: 0 },
+      },
     refetch: query.refetch,
   };
 }

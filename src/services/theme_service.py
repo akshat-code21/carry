@@ -1,4 +1,4 @@
-"""Theme service — theme taxonomy CRUD and matching."""
+"""Theme service - theme taxonomy CRUD and matching."""
 
 import logging
 import uuid as uuid_mod
@@ -75,8 +75,8 @@ class ThemeService:
             await self.db.flush()
             return new_theme
 
-        # No match found — create as a narrative-level free-text entry
-        logger.info(f"No taxonomy match for theme '{extracted.theme}' — creating narrative entry")
+        # No match found - create as a narrative-level free-text entry
+        logger.info(f"No taxonomy match for theme '{extracted.theme}' - creating narrative entry")
         new_theme = ThemeHierarchy(
             parent_id=None,
             level="narrative",
@@ -157,7 +157,7 @@ class ThemeService:
         if ETFMappingService().is_etf(clean_ticker):
             logger.info(
                 f"Rejecting ETF ticker {clean_ticker} for theme_id={theme_id} "
-                f"(source={source}) — theme mappings are equities only"
+                f"(source={source}) - theme mappings are equities only"
             )
             return None
 
@@ -191,7 +191,7 @@ class ThemeService:
         result = await self.db.execute(stmt)
         all_nodes = result.scalars().all()
 
-        # Build lookup structures in-memory — O(n)
+        # Build lookup structures in-memory - O(n)
         nodes_by_id: dict[uuid_mod.UUID, ThemeHierarchy] = {}
         children_by_parent: dict[uuid_mod.UUID | None, list[ThemeHierarchy]] = defaultdict(list)
 

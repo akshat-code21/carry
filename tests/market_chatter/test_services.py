@@ -56,6 +56,8 @@ async def test_partial_source_failure_returns_partial_result(tmp_path) -> None:
     from src.services.market_chatter.cache import JsonCache
     from src.services.market_chatter.providers import FixturePriceProvider
 
+    from tests.market_chatter.conftest import MARKET_CHATTER_TABLES
+
     settings = Settings(
         database_url=f"sqlite+aiosqlite:///{tmp_path}/partial.db",
         adanos_monthly_budget=10,
@@ -66,7 +68,9 @@ async def test_partial_source_failure_returns_partial_result(tmp_path) -> None:
     )
     engine = create_async_engine(settings.database_url, pool_pre_ping=True)
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(
+            lambda sync_conn: Base.metadata.create_all(sync_conn, tables=MARKET_CHATTER_TABLES)
+        )
     service = CollectionService(
         settings,
         async_sessionmaker(engine, expire_on_commit=False),
@@ -107,6 +111,7 @@ async def test_ensure_prices_handles_duplicate_dates(tmp_path) -> None:
     from src.config import Settings
     from src.database import Base
     from src.services.market_chatter.cache import JsonCache
+    from tests.market_chatter.conftest import MARKET_CHATTER_TABLES
 
     settings = Settings(
         database_url=f"sqlite+aiosqlite:///{tmp_path}/dup.db",
@@ -117,7 +122,9 @@ async def test_ensure_prices_handles_duplicate_dates(tmp_path) -> None:
     )
     engine = create_async_engine(settings.database_url, pool_pre_ping=True)
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(
+            lambda sync_conn: Base.metadata.create_all(sync_conn, tables=MARKET_CHATTER_TABLES)
+        )
 
     service = CollectionService(
         settings,

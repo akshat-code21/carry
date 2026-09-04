@@ -14,7 +14,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Index on theme_hierarchy.level — eliminates seq-scan of ~2,945 rows
+    # Index on theme_hierarchy.level - eliminates seq-scan of ~2,945 rows
     # when filtering by level (used by stats endpoint and hierarchy builder)
     op.create_index(
         "ix_theme_hierarchy_level",
@@ -22,7 +22,7 @@ def upgrade() -> None:
         ["level"],
     )
 
-    # Index on videos.published_at DESC — supports ORDER BY in dashboard
+    # Index on videos.published_at DESC - supports ORDER BY in dashboard
     # and list_videos queries
     op.create_index(
         "ix_videos_published_at",

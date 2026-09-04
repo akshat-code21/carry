@@ -12,7 +12,7 @@ export function QueryProvider({ children }: { children: ReactNode }) {
             staleTime: 2 * 60 * 1000, // 2 minute stale time for snappier back-nav
             refetchOnWindowFocus: false,
             retry: (failureCount, error) => {
-              // Never retry on auth failures — avoids doubling cold-load time
+              // Never retry on auth failures - avoids doubling cold-load time
               const apiErr = error as { status?: number; code?: string };
               if (apiErr?.status === 401 || apiErr?.code === "unauthorized") {
                 return false;

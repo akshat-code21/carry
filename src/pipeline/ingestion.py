@@ -53,7 +53,7 @@ class IngestionPipeline:
         self.transcript_source = transcript_source
 
     async def ingest_channel(self, youtube_channel_id: str, max_videos: int = 20) -> Channel:
-        """Ingest a YouTube channel — fetch metadata and store it.
+        """Ingest a YouTube channel - fetch metadata and store it.
 
         Returns the Channel ORM object (created or existing).
         """
@@ -95,7 +95,7 @@ class IngestionPipeline:
         """
         try:
             if not settings.openai_api_key:
-                logger.warning("No OpenAI API key — defaulting channel_type to 'individual'")
+                logger.warning("No OpenAI API key - defaulting channel_type to 'individual'")
                 return "individual"
 
             from openai import OpenAI
@@ -140,7 +140,7 @@ class IngestionPipeline:
             return "individual"
 
     async def backfill_videos(self, channel: Channel, max_videos: int = 20) -> list[Video]:
-        """Backfill videos for a channel — fetch metadata and store them.
+        """Backfill videos for a channel - fetch metadata and store them.
 
         Skips videos that already exist in the database.
         """

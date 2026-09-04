@@ -1,4 +1,4 @@
-"""YouTube WebSub (PubSubHubbub) client — free Google hub push notifications."""
+"""YouTube WebSub (PubSubHubbub) client - free Google hub push notifications."""
 
 from __future__ import annotations
 
@@ -97,7 +97,7 @@ class WebSubService:
         """
         secret = self.settings.websub_secret
         if not secret:
-            logger.warning("WEBSUB_SECRET is empty — skipping signature verification")
+            logger.warning("WEBSUB_SECRET is empty - skipping signature verification")
             return True
 
         if not signature_header:
@@ -197,7 +197,7 @@ class WebSubService:
         """Subscribe (or renew) a channel topic. Returns approximate lease expiry."""
         if not self.settings.websub_enabled:
             raise RuntimeError(
-                "PUBLIC_BASE_URL is not set — cannot subscribe to WebSub. "
+                "PUBLIC_BASE_URL is not set - cannot subscribe to WebSub. "
                 "Set it to your ngrok/public HTTPS URL."
             )
 

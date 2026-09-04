@@ -97,7 +97,7 @@ type TooltipEntry = {
   value?: number | string;
 };
 
-/* Uses the Next.js rewrite proxy — /api/v1/* → backend:8000/api/v1/* */
+/* Uses the Next.js rewrite proxy - /api/v1/* → backend:8000/api/v1/* */
 const API_BASE = `${API_BASE_URL}/v1`;
 
 const QUICK_TICKERS = ["NVDA", "TSLA", "AAPL", "MSFT"] as const;
@@ -115,7 +115,7 @@ const sourceDescriptions: Record<Source, string> = {
 };
 
 function formatNumber(value?: number | null, digits = 0) {
-  if (value === undefined || value === null) return "—";
+  if (value === undefined || value === null) return "-";
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: digits,
     minimumFractionDigits: digits,
@@ -254,7 +254,7 @@ function ChartTooltip({
               {entry.dataKey === "close" ? "$" : ""}
               {typeof entry.value === "number"
                 ? formatNumber(entry.value, entry.dataKey === "close" ? 2 : 0)
-                : "—"}
+                : "-"}
             </span>
           </div>
         ))}
@@ -706,7 +706,7 @@ export default function TickerFlowPage() {
                       activeSymbol === ticker && viewMode === "detail" && "bg-tf-signal/10 text-tf-signal",
                     )}
                   >
-                    ${ticker}
+                    {ticker}
                   </button>
                 ))}
               </div>
@@ -717,7 +717,10 @@ export default function TickerFlowPage() {
                   variant={viewMode === "overview" ? "default" : "ghost"}
                   size="lg"
                   onClick={() => setViewMode("overview")}
-                  className={"text-base!"}
+                  className={cn(
+                    "text-base! flex items-center gap-1.5 rounded px-2.5 py-1 font-medium text-tf-muted transition-colors",
+                    viewMode === "overview" && "bg-tf-panel-raised text-tf-ink shadow-sm",
+                  )}
                 >
                   <LayoutDashboard className="h-3.5 w-3.5" />
                   Overview Dashboard
@@ -726,7 +729,6 @@ export default function TickerFlowPage() {
                   type="button"
                   variant={viewMode === "detail" ? "default" : "ghost"}
                   size="lg"
-                  className={"text-base!"}
                   onClick={() => {
                     if (!activeSymbol) {
                       chooseTicker("NVDA");
@@ -734,9 +736,13 @@ export default function TickerFlowPage() {
                       setViewMode("detail");
                     }
                   }}
+                  className={cn(
+                    "text-base! flex items-center gap-1.5 rounded px-2.5 py-1 font-medium text-tf-muted transition-colors",
+                    viewMode === "detail" && "bg-tf-panel-raised text-tf-ink",
+                  )}
                 >
                   <ChartIcon className="h-3.5 w-3.5" />
-                  {activeSymbol ? `$${activeSymbol} Analysis` : "Single Ticker"}
+                  {activeSymbol ? `${activeSymbol} Analysis` : "Single Ticker"}
                 </Button>
               </div>
             </div>
@@ -810,7 +816,7 @@ export default function TickerFlowPage() {
                 <div>
                   <div className="flex items-center gap-2.5">
                     <h2 className="font-mono text-display font-medium tracking-[-0.05em] text-tf-ink">
-                      ${data.symbol}
+                      {data.symbol}
                     </h2>
                     {/* <StatusBadge status={data.data_status} /> */}
                   </div>

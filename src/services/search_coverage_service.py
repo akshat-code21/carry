@@ -1,4 +1,4 @@
-"""Search coverage service — per-topic video coverage stats with sentiment.
+"""Search coverage service - per-topic video coverage stats with sentiment.
 
 Given a query, finds every video with matching transcript content in a time
 window, classifies one representative snippet per video with FinBERT (local,
@@ -23,7 +23,12 @@ from src.models.transcript_segment import TranscriptSegment
 from src.models.video import Video
 from src.services.finbert_service import FinBertService
 from src.services.interfaces import EmbeddingProvider
+from src.services.query_router import QueryRouter
 from src.services.search_service import SearchService
+from src.services.social_context_service import (
+    SocialContextService,
+    social_coverage_stats,
+)
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -140,10 +145,12 @@ class SearchCoverageService:
         db: AsyncSession,
         embedding_provider: EmbeddingProvider,
         finbert: FinBertService | None = None,
+        social_service: "SocialContextService | None" = None,
     ) -> None:
         self.db = db
         self.embedding_provider = embedding_provider
         self.finbert = finbert or FinBertService()
+        self.social_service = social_service
         self._search_service: SearchService | None = None
 
     async def get_or_create(
@@ -210,6 +217,21 @@ class SearchCoverageService:
                 "wow_delta_pct": wow_delta_pct(volume),
                 "window_days": window_days,
             }
+
+            # TickerFlow social-sentiment stats for the resolved ticker (if any)
+            if self.social_service is not None:
+                ticker = QueryRouter._extract_ticker_heuristic(query)
+                if ticker:
+                    try:
+                        stats = await social_coverage_stats(
+                            self.db, ticker, window_days, social_service=self.social_service
+                        )
+                        if stats is not None:
+                            payload["social"] = stats.model_dump(mode="json")
+                    except Exception as exc:
+                        logger.warning(f"search/coverage: social stats unavailable: {exc}")
+                        await self._safe_rollback()
+
             await self._write_cache(key, query, payload)
             return payload
 
@@ -279,7 +301,7 @@ class SearchCoverageService:
         """Clear a poisoned transaction so the session stays usable."""
         try:
             await self.db.rollback()
-        except Exception:  # noqa: BLE001 — rollback is best-effort
+        except Exception:  # noqa: BLE001 - rollback is best-effort
             pass
 
     async def _fallback_snippets(

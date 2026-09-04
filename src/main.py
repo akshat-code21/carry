@@ -53,7 +53,7 @@ log = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Application lifespan — initialise and tear down TickerFlow services."""
+    """Application lifespan - initialise and tear down TickerFlow services."""
     # ── TickerFlow init ─────────────────────────────────────────────────
     cache = await JsonCache.connect(settings.redis_url)
     sentiment_provider = build_sentiment_provider(settings)
@@ -106,7 +106,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS middleware — allow configured origins, Vercel deployments, and local dev
+# CORS middleware - allow configured origins, Vercel deployments, and local dev
 cors_origins_list = list(settings.cors_origins)
 dev_origins = [
     "http://localhost:3000",
@@ -127,7 +127,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Usage analytics — logs every API request with latency + user attribution.
+# Usage analytics - logs every API request with latency + user attribution.
 # Added after CORS so preflight OPTIONS requests bypass it entirely.
 app.add_middleware(AnalyticsMiddleware)
 
@@ -137,7 +137,7 @@ app.add_middleware(AnalyticsMiddleware)
 # activated account (Clerk session token → app User row). Public exceptions:
 #   - / and /health (infra probes)
 #   - /docs, /redoc, /openapi.json
-#   - /api/websub/callback — secured via HMAC signature instead; the Google
+#   - /api/websub/callback - secured via HMAC signature instead; the Google
 #     hub cannot authenticate. /api/websub/simulate is admin-gated internally.
 #
 # Pipeline triggers are additionally admin-gated inside src/api/pipeline.py.

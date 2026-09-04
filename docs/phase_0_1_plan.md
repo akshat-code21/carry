@@ -1,10 +1,10 @@
-## Adanos-based implementation plan — Phases 0–1
+## Adanos-based implementation plan - Phases 0–1
 
 This replaces the earlier connector/Meltano-first data-collection plan. Adanos becomes the single social/news sentiment gateway; the application makes one vendor integration, not separate Reddit/X/news collectors.
 
 Adanos Free is for local validation only: 250 requests/month, 30-day history, no raw mentions, and no commercial use. Professional currently adds commercial use, raw mentions, 365-day history, and 2.5M monthly requests. [Adanos pricing](https://adanos.org/pricing)
 
-### Phase 0 — Foundation and Adanos gateway
+### Phase 0 - Foundation and Adanos gateway
 
 - Create the local stack: FastAPI API/worker, PostgreSQL, Redis, and Next.js dashboard in Docker Compose.
 - Add server-only configuration:
@@ -20,17 +20,17 @@ Adanos Free is for local validation only: 250 requests/month, 30-day history, no
 - Implement `AdanosProvider` as the sole external social/news integration. It owns `httpx`, auth headers, retries, timeout, response validation, and error mapping; no other application layer contacts Reddit, X, or news APIs.
 - Create a fixture provider with recorded Adanos-shaped responses, allowing development and tests without consuming quota.
 - Persist:
-  - `collection_runs` — request, status, quota consumed, errors.
-  - `source_snapshots` — immutable Adanos response JSON plus normalized fields.
-  - `ticker_daily_metrics` — source/date/buzz/mentions/sentiment/bullish/bearish values.
-  - `quota_usage` — atomic monthly counter and per-endpoint telemetry.
+  - `collection_runs` - request, status, quota consumed, errors.
+  - `source_snapshots` - immutable Adanos response JSON plus normalized fields.
+  - `ticker_daily_metrics` - source/date/buzz/mentions/sentiment/bullish/bearish values.
+  - `quota_usage` - atomic monthly counter and per-endpoint telemetry.
 - Add Redis cache and circuit breaking:
   - Free-plan effective cache TTL: 24 hours per ticker/source.
   - On cache miss, reserve quota before calling Adanos.
   - On budget exhaustion, return the latest cached record with `data_status: stale_budget_limited`.
   - On `429` or vendor failure, do not retry aggressively; preserve partial-source results.
 
-### Phase 1 — Adanos data collection and ticker experience
+### Phase 1 - Adanos data collection and ticker experience
 
 - Enable exactly three stock sources:
   - Reddit: `https://api.adanos.org/reddit/stocks/v1`
@@ -42,7 +42,7 @@ Adanos Free is for local validation only: 250 requests/month, 30-day history, no
 - For a first-time ticker request:
   1. Validate the symbol against the S&P 100 ticker master.
   2. Read local snapshots.
-  3. If absent or older than 24 hours, make at most three Adanos calls—one per enabled source.
+  3. If absent or older than 24 hours, make at most three Adanos calls-one per enabled source.
   4. Normalize and store the vendor payloads.
   5. Fetch daily price history through local-only yfinance and cache it for 24 hours.
   6. Return the cached/new aggregate snapshot and chart payload.

@@ -1,4 +1,4 @@
-"""ETF Mapping Service — resolves sectors/industries/themes to ETF tickers.
+"""ETF Mapping Service - resolves sectors/industries/themes to ETF tickers.
 
 Loads a static JSON mapping file once and provides deterministic
 ETF resolution with a theme → industry → sector fallback chain.
@@ -349,7 +349,7 @@ class ETFMappingService:
     def get_all_etf_tickers(self) -> set[str]:
         """Return the full set of known ETF tickers (mappings + extras).
 
-        Cached after load — used for is_etf classification.
+        Cached after load - used for is_etf classification.
         """
         if not ETFMappingService._loaded:
             self._load()
@@ -366,7 +366,7 @@ class ETFMappingService:
     def get_themes_for_etf(self, etf_ticker: str) -> list[str]:
         """Reverse lookup: given an ETF ticker, find which themes it maps to.
 
-        Useful for the ETF detail page — when a user views SMH, we can
+        Useful for the ETF detail page - when a user views SMH, we can
         show all semiconductor-related predictions.
         """
         etf_upper = etf_ticker.upper()

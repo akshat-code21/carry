@@ -1,5 +1,5 @@
 """
-HFI background jobs — ingestion and processing.
+HFI background jobs - ingestion and processing.
 Combined from Pet-Project's ingestion_job.py and processing_job.py.
 Uses yt-chatter's async session factory.
 """
