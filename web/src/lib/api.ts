@@ -18,6 +18,8 @@ export interface StockDiscoveryResult {
   sample_predictions: SamplePrediction[];
   last_mentioned_at?: string;
   is_etf?: boolean;
+  /** TickerFlow social-sentiment context (Reddit/X/News); absent when unavailable */
+  social?: SocialTickerSnapshot | null;
 }
 
 export interface SearchSegment {
@@ -82,6 +84,8 @@ export interface SearchAnswerResponse {
   /** False => hide the answer card entirely */
   available: boolean;
   cached?: boolean;
+  /** TickerFlow social snapshots for tickers detected in the query */
+  social_context?: SocialTickerSnapshot[];
 }
 
 export interface WeeklyVolumePoint {
@@ -99,6 +103,8 @@ export interface SearchCoverageResponse {
   /** Null when <2 weeks of data or previous week had zero videos */
   wow_delta_pct?: number | null;
   window_days: number;
+  /** TickerFlow social-sentiment stats for the resolved ticker, if any */
+  social?: SocialCoverageStats | null;
 }
 
 export interface ActivityEvent {
@@ -217,6 +223,14 @@ export interface TickerDetail {
     price_1w?: number;
     created_at?: string;
   }[];
+  /** TickerFlow social-sentiment bundle (Reddit/X/News); absent when unavailable */
+  social?: MCTickerData | null;
+  /** Blended YouTube + social sentiment (-1..1); falls back to YouTube-only */
+  combined_avg_sentiment?: number | null;
+  /** Mentions collected from TickerFlow social sources */
+  social_mentions?: number | null;
+  total_mentions?: number;
+  avg_sentiment?: number | null;
 }
 
 export interface ThemeTickerInfo {
@@ -311,6 +325,84 @@ export interface MCDashboardData {
   top_etfs: MCDashboardTickerItem[];
   bullish_leaders: MCDashboardTickerItem[];
   bearish_laggards: MCDashboardTickerItem[];
+}
+
+/* ── TickerFlow per-ticker social types ───────────────────────── */
+
+export interface MCSignalSummary {
+  label: string;
+  score: number | null;
+  sentiment: number | null;
+  attention: number | null;
+  confidence: number;
+  source_count: number;
+  disclaimer: string;
+}
+
+export interface MCSourceCard {
+  source: "reddit" | "x" | "news" | string;
+  status: string;
+  as_of: string | null;
+  sentiment_score: number | null;
+  buzz_score: number | null;
+  mentions: number | null;
+  bullish_pct: number | null;
+  bearish_pct: number | null;
+  trend: string | null;
+  coverage_count: number | null;
+  daily_mentions_available: boolean;
+  message: string | null;
+}
+
+export interface MCChartPoint {
+  date: string;
+  mentions: number | null;
+  buzz_score: number | null;
+  close: number | null;
+  signal: "buy" | "sell" | "neutral" | null;
+  signal_label: string | null;
+  confidence: number | null;
+  catalyst_theme: string | null;
+  key_quote: string | null;
+}
+
+export interface MCTickerData {
+  symbol: string;
+  company_name: string | null;
+  data_status: string;
+  as_of: string | null;
+  signal: MCSignalSummary;
+  sources: MCSourceCard[];
+  chart_source: string;
+  chart_metric: "mentions" | "buzz_score";
+  chart_period_days: number;
+  chart: MCChartPoint[];
+  quota_remaining: number | null;
+}
+
+/** Compact TickerFlow snapshot embedded in search result cards */
+export interface SocialTickerSnapshot {
+  symbol: string;
+  data_status: string | null;
+  as_of: string | null;
+  signal: MCSignalSummary | null;
+  sources: MCSourceCard[];
+  total_mentions: number | null;
+  buzz_score: number | null;
+  sentiment_score: number | null;
+  bullish_pct: number | null;
+  bearish_pct: number | null;
+}
+
+/** Aggregated TickerFlow social stats for the coverage window */
+export interface SocialCoverageStats {
+  symbol: string;
+  mentions: number;
+  bullish_pct: number | null;
+  bearish_pct: number | null;
+  sentiment_score: number | null;
+  by_source: Record<string, number>;
+  available: boolean;
 }
 
 /* ── Dashboard Summary (aggregated) ──────────────────────────── */

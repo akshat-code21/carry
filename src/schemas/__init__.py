@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from src.schemas.market_chatter import MCTickerResponse, SignalSummary, SourceCard
+
 # --- Channel schemas ---
 
 
@@ -174,6 +176,12 @@ class TickerResponse(BaseModel):
 class TickerDetailResponse(TickerResponse):
     predictions: list[PredictionWithPerformance] = []
     themes: list[ThemeResponse] = []
+    # TickerFlow social-sentiment bundle (signal, source cards, chart); None when unavailable
+    social: MCTickerResponse | None = None
+    # Blended YouTube + social sentiment (-1..1); falls back to avg_sentiment
+    combined_avg_sentiment: float | None = None
+    # Mentions collected from TickerFlow social sources (Reddit/X/News)
+    social_mentions: int | None = None
 
 
 class TickerSentimentDailyPoint(BaseModel):
@@ -244,6 +252,35 @@ class SamplePrediction(BaseModel):
     confidence: float | None = None
 
 
+class SocialTickerSnapshot(BaseModel):
+    """Compact TickerFlow social-sentiment snapshot (Reddit/X/News) used on
+    search result cards. Derived from a full MCTickerResponse without the
+    per-day chart to keep payloads small."""
+
+    symbol: str
+    data_status: str | None = None
+    as_of: datetime | None = None
+    signal: SignalSummary | None = None
+    sources: list[SourceCard] = []
+    total_mentions: int | None = None
+    buzz_score: float | None = None
+    sentiment_score: float | None = None
+    bullish_pct: float | None = None
+    bearish_pct: float | None = None
+
+
+class SocialCoverageStats(BaseModel):
+    """Aggregated TickerFlow social mentions for the coverage window."""
+
+    symbol: str
+    mentions: int = 0
+    bullish_pct: float | None = None
+    bearish_pct: float | None = None
+    sentiment_score: float | None = None
+    by_source: dict[str, int] = {}
+    available: bool = False
+
+
 class StockDiscoveryResult(BaseModel):
     """Rich stock discovery result with multi-signal scoring."""
 
@@ -260,6 +297,8 @@ class StockDiscoveryResult(BaseModel):
     sample_predictions: list[SamplePrediction] = []
     last_mentioned_at: str | None = None
     is_etf: bool = False
+    # TickerFlow social-sentiment context (Reddit/X/News); None when unavailable
+    social: SocialTickerSnapshot | None = None
 
 
 class SegmentGroup(BaseModel):
@@ -322,6 +361,8 @@ class SearchAnswerResponse(BaseModel):
     # False => client should hide the answer card entirely
     available: bool = False
     cached: bool = False
+    # TickerFlow social-sentiment snapshots for tickers detected in the query
+    social_context: list[SocialTickerSnapshot] = []
 
 
 class WeeklyVolumePoint(BaseModel):
@@ -343,6 +384,8 @@ class SearchCoverageResponse(BaseModel):
     # Null when <2 weeks of data or previous week had zero videos
     wow_delta_pct: float | None = None
     window_days: int = 14
+    # TickerFlow social-sentiment stats for the resolved ticker, if any
+    social: SocialCoverageStats | None = None
 
 
 # --- Pipeline schemas ---

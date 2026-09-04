@@ -13,6 +13,7 @@ import {
   type TvChartSeriesType,
   type TvSignalMarker,
 } from "@/components/TradingViewPriceChart";
+import { SocialSentimentPanel } from "@/components/SocialSentimentPanel";
 import { PageHeader } from "@/components/PageHeader";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ErrorState } from "@/components/ErrorState";
@@ -184,7 +185,48 @@ export default function TickerPage() {
           title={`$${ticker.toUpperCase()}`}
           description={`Market Intelligence & Video Predictions for ${ticker.toUpperCase()}`}
         />
+        {(data.social || data.combined_avg_sentiment != null) && (
+          <div className="flex flex-wrap items-center gap-2 font-mono text-micro text-ink-secondary">
+            {data.combined_avg_sentiment != null && (
+              <Badge
+                variant="outline"
+                className={
+                  data.combined_avg_sentiment > 0.05
+                    ? "border-bullish/40 bg-bullish/10 text-bullish"
+                    : data.combined_avg_sentiment < -0.05
+                      ? "border-bearish/40 bg-bearish/10 text-bearish"
+                      : "border-line text-ink-secondary"
+                }
+              >
+                Combined sentiment{" "}
+                {data.combined_avg_sentiment > 0 ? "+" : ""}
+                {data.combined_avg_sentiment.toFixed(2)}
+              </Badge>
+            )}
+            {data.social_mentions != null && (
+              <Badge variant="outline" className="border-line text-ink-secondary">
+                {data.social_mentions} social mentions
+              </Badge>
+            )}
+            {data.total_mentions != null && (
+              <Badge variant="outline" className="border-line text-ink-secondary">
+                {data.total_mentions} YouTube mentions
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* TickerFlow & YouTube sentiment (YouTube / Reddit / X / News) */}
+      {data.social && (
+        <SocialSentimentPanel
+          social={data.social}
+          predictions={data.predictions}
+          sentimentTimeline={sentimentTimeline}
+          youtubeMentions={data.total_mentions}
+          youtubeAvgSentiment={data.avg_sentiment}
+        />
+      )}
 
       {/* Video Level Prediction Trajectory Chart */}
       {data.predictions && data.predictions.length > 0 && (

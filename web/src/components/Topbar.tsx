@@ -14,12 +14,21 @@ import { eventLabel, eventBadgeClass, timeAgo } from "@/lib/activity";
 
 interface TopbarProps {
   onMenuClick?: () => void;
+  onToggleSidebar?: () => void;
+  isSidebarCollapsed?: boolean;
   onOpenCommandPalette?: () => void;
   fullName?: string | null;
   loadingUser?: boolean;
 }
 
-export function Topbar({ onMenuClick, onOpenCommandPalette, fullName, loadingUser }: TopbarProps) {
+export function Topbar({
+  onMenuClick,
+  onToggleSidebar,
+  isSidebarCollapsed,
+  onOpenCommandPalette,
+  fullName,
+  loadingUser,
+}: TopbarProps) {
   const { theme, setTheme } = useTheme();
   const { isSignedIn } = useUser();
   const { data: unreadData, refetch: refetchUnread } = useUnreadCount();

@@ -32,7 +32,9 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
-import { useSearch, useSearchAnswer, useSearchCoverage } from "@/lib/hooks";
+import { useSearch, useSearchAnswer, useSearchCoverage, useTicker, useTickerSentiment } from "@/lib/hooks";
+import { SocialSourceBadges } from "@/components/SocialSourceBadges";
+import { SocialSentimentPanel } from "@/components/SocialSentimentPanel";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -139,6 +141,48 @@ function SearchAnswerCard({
             </ul>
           )}
 
+          {/* TickerFlow social-sentiment strip (Reddit/X/News) for tickers in the query */}
+          {(answer.social_context ?? []).length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-line/60 pt-2.5">
+              <span className="label-overline text-ink-faint">Social</span>
+              {answer.social_context!.map((snap) => (
+                <div key={snap.symbol} className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-micro font-semibold text-ink">
+                    ${snap.symbol}
+                  </span>
+                  <span className="font-mono text-micro text-ink-secondary">
+                    {snap.total_mentions ?? 0} mentions
+                  </span>
+                  {snap.sentiment_score != null && (
+                    <span
+                      className={cn(
+                        "font-mono text-micro font-semibold",
+                        snap.sentiment_score > 0.05
+                          ? "text-bullish"
+                          : snap.sentiment_score < -0.05
+                            ? "text-bearish"
+                            : "text-ink-secondary",
+                      )}
+                    >
+                      {snap.sentiment_score > 0 ? "+" : ""}
+                      {snap.sentiment_score.toFixed(2)}
+                    </span>
+                  )}
+                  {snap.bullish_pct != null && (
+                    <span className="font-mono text-micro text-bullish/70">
+                      {snap.bullish_pct.toFixed(0)}% bull
+                    </span>
+                  )}
+                  {snap.bearish_pct != null && (
+                    <span className="font-mono text-micro text-bearish/70">
+                      {snap.bearish_pct.toFixed(0)}% bear
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* {answer.citations.length > 0 && (
             <div className="mt-3 flex items-center gap-1.5">
               {answer.citations.map((c, i) => (
@@ -226,6 +270,28 @@ function CoverageSnapshotCard({ coverage }: { coverage: SearchCoverageResponse }
           </div>
         ))}
       </div>
+
+      {/* TickerFlow social mentions (Reddit/X/News) for the resolved ticker */}
+      {coverage.social?.available && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line/60 pt-2.5">
+          <span className="label-overline text-ink-faint">
+            Social · ${coverage.social.symbol}
+          </span>
+          <span className="font-mono text-small text-ink-secondary">
+            {coverage.social.mentions} mentions
+          </span>
+          {coverage.social.bullish_pct != null && (
+            <span className="font-mono text-micro text-bullish">
+              {coverage.social.bullish_pct.toFixed(0)}% bull
+            </span>
+          )}
+          {coverage.social.bearish_pct != null && (
+            <span className="font-mono text-micro text-bearish">
+              {coverage.social.bearish_pct.toFixed(0)}% bear
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Weekly volume + WoW momentum */}
       {coverage.weekly_volume.length > 1 && (
@@ -447,6 +513,37 @@ function SearchPageContent() {
     !!activeQuery && !answer && answerSegmentIds.length >= 3 && answerFetching;
   const showCoverage = !!coverage && coverage.total_videos > 0;
 
+  // ── Selected / resolved ticker for live Social Sentiment Panel ─────────
+  const [selectedTickerState, setSelectedTickerState] = useState<{ query: string; ticker: string | null }>({
+    query: "",
+    ticker: null,
+  });
+  const selectedTicker = selectedTickerState.query === activeQuery ? selectedTickerState.ticker : null;
+  const setSelectedTicker = (ticker: string | null) => {
+    setSelectedTickerState({ query: activeQuery, ticker });
+  };
+
+  const activeTicker = useMemo(() => {
+    if (selectedTicker) return selectedTicker;
+    if (results?.stocks && results.stocks.length > 0) {
+      return results.stocks[0].ticker;
+    }
+    if (coverage?.social?.symbol) {
+      return coverage.social.symbol;
+    }
+    if (answer?.social_context && answer.social_context.length > 0) {
+      return answer.social_context[0].symbol;
+    }
+    const cleanQuery = activeQuery.trim().toUpperCase().replace(/^\$/, "");
+    if (/^[A-Z]{1,5}$/.test(cleanQuery)) {
+      return cleanQuery;
+    }
+    return null;
+  }, [selectedTicker, results?.stocks, coverage?.social?.symbol, answer?.social_context, activeQuery]);
+
+  const { data: tickerDetail } = useTicker(activeTicker ?? "");
+  const { data: sentimentTimeline = [] } = useTickerSentiment(activeTicker ?? "");
+
   return (
     <div className="flex h-full flex-col gap-6 lg:flex-row">
       {/* Main Search Area */}
@@ -470,7 +567,7 @@ function SearchPageContent() {
                   onChange={(e) => setQuery(e.target.value)}
                 />
               </div>
-              <Button type="submit" disabled={isSearching}>
+              <Button type="submit" size={"lg"} disabled={isSearching} className="text-base!">
                 {isSearching && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
                 Search
               </Button>
@@ -484,8 +581,8 @@ function SearchPageContent() {
                     key={t}
                     type="button"
                     variant={type === t ? "default" : "ghost"}
-                    size="sm"
-                    className={cn("h-7 capitalize", `${type === t ? "text-white h-7 capitalize" : " text-black h-7 capitalize"}`)}
+                    size="lg"
+                    className="h-7 capitalize text-base!"
                     onClick={() => handleTypeChange(t)}
                   >
                     {t}
@@ -527,7 +624,7 @@ function SearchPageContent() {
             animate="show"
           >
             {/* Stock / ETF Discovery Cards — shown prominently for exploratory queries */}
-            {results.stocks && results.stocks.length > 0 && (
+            {/* {results.stocks && results.stocks.length > 0 && (
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -538,13 +635,11 @@ function SearchPageContent() {
                         : `Top Stocks (${results.stocks.length})`}
                     </h2>
                   </div>
-                  <Badge variant="outline" className="border-signal/30 bg-signal/10 text-micro text-signal">
-                    AI-Powered Discovery
-                  </Badge>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {results.stocks.map((stock: StockDiscoveryResult, idx: number) => {
+                    const isSelected = activeTicker === stock.ticker;
                     const sentimentColor =
                       stock.avg_sentiment > 0.2 ? "text-bullish" :
                         stock.avg_sentiment < -0.2 ? "text-bearish" : "text-ink-secondary";
@@ -555,13 +650,24 @@ function SearchPageContent() {
 
                     return (
                       <motion.div key={stock.ticker} variants={itemAnim} className="min-w-0">
-                        <Card className="h-full min-w-0 overflow-hidden transition-colors hover:border-signal/40">
+                        <Card
+                          onClick={() => setSelectedTicker(stock.ticker)}
+                          className={cn(
+                            "h-full min-w-0 cursor-pointer overflow-hidden transition-all",
+                            isSelected
+                              ? "border-signal shadow-xs ring-1 ring-signal/30"
+                              : "hover:border-signal/40",
+                          )}
+                        >
                           <CardContent className="flex min-w-0 flex-col gap-3 overflow-hidden p-4">
-                            {/* Ticker + Score Row */}
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2.5">
                                 <span className="w-5 font-mono text-micro font-semibold text-ink-faint">#{idx + 1}</span>
-                                <Link href={`/tickers/${stock.ticker}`} className="transition-colors hover:text-signal">
+                                <Link
+                                  href={`/tickers/${stock.ticker}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="transition-colors hover:text-signal"
+                                >
                                   <span className="font-mono text-title font-semibold tracking-tight text-ink">${stock.ticker}</span>
                                 </Link>
                                 {stock.is_etf && (
@@ -581,7 +687,6 @@ function SearchPageContent() {
                               </div>
                             </div>
 
-                            {/* Stats Row */}
                             <div className="flex items-center gap-4 font-mono text-small text-ink-secondary">
                               <div className="flex items-center gap-1">
                                 <MessageSquare className="h-3 w-3" />
@@ -591,33 +696,10 @@ function SearchPageContent() {
                                 <BarChart3 className="h-3 w-3" />
                                 <span>{stock.prediction_count} predictions</span>
                               </div>
-                              {/* {stock.avg_confidence > 0 && (
-                                <span>{(stock.avg_confidence * 100).toFixed(0)}% conf</span>
-                              )} */}
                             </div>
 
-                            {/* Themes */}
-                            {/* {stock.themes.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 min-w-0 overflow-hidden">
-                                {stock.themes.slice(0, 3).map((theme) => (
-                                  <Badge
-                                    key={theme}
-                                    variant="outline"
-                                    title={theme}
-                                    className="h-auto max-w-full min-w-0 shrink border-signal/20 bg-signal/5 px-2 py-1 text-micro leading-tight text-signal !whitespace-normal break-words"
-                                  >
-                                    <span className="block max-w-full break-words">{theme}</span>
-                                  </Badge>
-                                ))}
-                                {stock.themes.length > 3 && (
-                                  <Badge variant="outline" className="shrink-0 border-line px-2 py-0 text-micro text-ink-faint">
-                                    +{stock.themes.length - 3} more
-                                  </Badge>
-                                )}
-                              </div>
-                            )} */}
+                            <SocialSourceBadges social={stock.social} />
 
-                            {/* Sample Prediction */}
                             {stock.sample_predictions.length > 0 && (
                               <div className="border-l-2 border-line-strong py-0.5 pl-3">
                                 <p className="line-clamp-2 text-small italic text-ink-secondary">
@@ -631,6 +713,19 @@ function SearchPageContent() {
                     );
                   })}
                 </div>
+              </div>
+            )} */}
+
+            {/* Live Social & Video Sentiment Chart with TradingView Dual-Pane Price + Chatter */}
+            {tickerDetail?.social && (
+              <div className="flex flex-col gap-2">
+                <SocialSentimentPanel
+                  social={tickerDetail.social}
+                  predictions={tickerDetail.predictions}
+                  sentimentTimeline={sentimentTimeline}
+                  youtubeMentions={tickerDetail.total_mentions}
+                  youtubeAvgSentiment={tickerDetail.avg_sentiment}
+                />
               </div>
             )}
 
@@ -646,12 +741,9 @@ function SearchPageContent() {
                         key={s}
                         type="button"
                         variant={activeSort === s ? "default" : "ghost"}
-                        size="sm"
+                        size="lg"
                         disabled={loading}
-                        className={cn(
-                          "h-7 capitalize",
-                          activeSort === s ? "text-black" : "text-white",
-                        )}
+                        className="h-7 capitalize text-base!"
                         onClick={() => handleSortChange(s)}
                       >
                         {s === "recent" ? "Newest" : "Relevance"}
@@ -669,8 +761,8 @@ function SearchPageContent() {
                         key={r}
                         type="button"
                         variant={activeDateRange === r ? "default" : "ghost"}
-                        size="sm"
-                        className={cn("h-7", activeDateRange === r ? "text-black" : "text-white")}
+                        size="lg"
+                        className="h-7 text-base!"
                         onClick={() => handleDateRangeChange(r)}
                       >
                         {r === "all" ? "All time" : r}
@@ -730,11 +822,11 @@ function SearchPageContent() {
             </div>
 
             {groups ? (
-              /* ── Consolidated: broad side-by-side card grid (2-column layout) ── */
+              /* ── Consolidated: broad side-by-side card grid (3-column layout) ── */
               visibleGroups.length > 0 ? (
                 <div className="flex flex-col gap-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
-                    {(showAllVideos ? visibleGroups : visibleGroups.slice(0, 4)).map((group) => {
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
+                    {(showAllVideos ? visibleGroups : visibleGroups.slice(0, 6)).map((group) => {
                       const isExpanded = expandedGroups.has(group.video_id);
                       const videoTitle =
                         group.video_title || `Video (${group.video_id.slice(0, 8)}...)`;
@@ -864,7 +956,7 @@ function SearchPageContent() {
                     })}
                   </div>
 
-                  {visibleGroups.length > 4 && (
+                  {visibleGroups.length > 6 && (
                     <div className="flex justify-center pt-2">
                       <Button
                         variant="outline"
@@ -875,7 +967,7 @@ function SearchPageContent() {
                         {showAllVideos ? (
                           <>
                             <ChevronUp className="h-3.5 w-3.5" />
-                            Show Top 4 Videos
+                            Show Top 6 Videos
                           </>
                         ) : (
                           <>
@@ -900,7 +992,7 @@ function SearchPageContent() {
               )
             ) : (
               /* ── Fallback: flat segment grid (legacy response shape) ── */
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {results.segments?.map((seg) => {
                   const video = results.videos?.[seg.video_id];
                   const channel =
@@ -972,7 +1064,7 @@ function SearchPageContent() {
       </div>
 
       {/* Right Rail - Dynamic Top Stocks / ETFs */}
-      {railOpen ? (
+      {/* {railOpen ? (
         <Card className="h-fit w-full shrink-0 lg:w-72 lg:sticky lg:top-4">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
@@ -998,7 +1090,6 @@ function SearchPageContent() {
             </div>
           </CardHeader>
           <CardContent>
-            {/* Show discovered stocks/ETFs if sector_discovery, else show predictions */}
             {results && results.stocks && results.stocks.length > 0 ? (
               <div className="flex flex-col gap-3">
                 {results.stocks.slice(0, 8).map((stock: StockDiscoveryResult, i: number) => (
@@ -1071,7 +1162,7 @@ function SearchPageContent() {
           <PanelRightOpen className="h-4 w-4" />
           Discover
         </Button>
-      )}
+      )} */}
 
       {/* Timestamp Playback Modal */}
       {playbackModal && (

@@ -20,15 +20,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.analytics.service import analytics
 from src.config import get_settings
 from src.models.channel import Channel
+from src.models.raw_content import RawContent
 from src.models.search_answer import SearchAnswer
 from src.models.transcript_segment import TranscriptSegment
 from src.models.video import Video
 from src.services.interfaces import EmbeddingProvider
+from src.services.query_router import QueryRouter
 from src.services.search_coverage_service import (
     SearchCoverageService,
     format_coverage_for_prompt,
 )
 from src.services.search_service import SearchService
+from src.services.social_context_service import SocialContextService
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -78,6 +81,35 @@ def build_user_prompt(query: str, segments: list[dict[str, Any]]) -> str:
         title = seg.get("video_title") or "Unknown video"
         text = (seg.get("text") or "")[:SEGMENT_TEXT_LIMIT]
         lines.append(f'[{seg["id"]}] (Channel: "{channel}" — "{title}"): {text}')
+    return "\n".join(lines)
+
+
+SOCIAL_PROMPT_POST_LIMIT = 160
+
+
+def build_social_prompt_block(snapshot_dict: dict[str, Any]) -> str:
+    """Render the TickerFlow social-sentiment context appended to the prompt."""
+    sources = snapshot_dict.get("sources") or []
+    source_lines = []
+    for src in sources:
+        sentiment = src.get("sentiment_score")
+        sentiment_str = f"{sentiment:+.2f}" if sentiment is not None else "n/a"
+        source_lines.append(
+            f"- {str(src.get('source') or 'unknown').title()}: "
+            f"mentions={src.get('mentions') or 0}, sentiment={sentiment_str}, "
+            f"bullish={src.get('bullish_pct') if src.get('bullish_pct') is not None else 'n/a'}%, "
+            f"bearish={src.get('bearish_pct') if src.get('bearish_pct') is not None else 'n/a'}%"
+        )
+    lines = [
+        "Social sentiment context (Reddit/X/News aggregate from TickerFlow, "
+        f"as of {snapshot_dict.get('as_of') or 'unknown'}):",
+        *source_lines,
+    ]
+    posts = snapshot_dict.get("sample_posts") or []
+    if posts:
+        lines.append("Representative posts:")
+        for post in posts:
+            lines.append(f'- "{post[:SOCIAL_PROMPT_POST_LIMIT]}"')
     return "\n".join(lines)
 
 
@@ -187,10 +219,12 @@ class SearchAnswerService:
         db: AsyncSession,
         embedding_provider: EmbeddingProvider,
         coverage_service: SearchCoverageService | None = None,
+        social_service: "SocialContextService | None" = None,
     ) -> None:
         self.db = db
         self.embedding_provider = embedding_provider
         self.coverage_service = coverage_service
+        self.social_service = social_service
         self._client = None
 
     def _get_client(self):
@@ -221,6 +255,7 @@ class SearchAnswerService:
             "citations": [],
             "available": False,
             "cached": False,
+            "social_context": [],
         }
 
         qhash = hash_query(query)
@@ -296,11 +331,13 @@ class SearchAnswerService:
 
             started = time.perf_counter()
             coverage_summary = await self._build_coverage_summary(query, segment_ids)
+            social_context, social_prompt_block = await self._build_social_context(query)
             llm_out = await self._synthesize(
                 query,
                 segments,
                 {s["id"] for s in segments},
                 coverage_summary=coverage_summary,
+                social_prompt_block=social_prompt_block,
             )
             duration_ms = (time.perf_counter() - started) * 1000.0
 
@@ -315,6 +352,7 @@ class SearchAnswerService:
                 "source_segment_ids": [s["id"] for s in segments],
                 "available": True,
                 "cached": False,
+                "social_context": [social_context] if social_context else [],
             }
             await self._write_cache(qhash, query, payload, duration_ms)
             return payload
@@ -381,12 +419,54 @@ class SearchAnswerService:
             logger.warning(f"search/answer: coverage context unavailable: {exc}")
             return None
 
+    async def _build_social_context(
+        self,
+        query: str,
+    ) -> tuple[dict[str, Any] | None, str | None]:
+        """Best-effort TickerFlow social snapshot for the query's ticker.
+
+        Returns (serialized_snapshot, prompt_block); (None, None) when the
+        query has no ticker hint or social data is unavailable. Never raises.
+        """
+        if self.social_service is None:
+            return None, None
+        try:
+            ticker = QueryRouter._extract_ticker_heuristic(query)
+            if not ticker:
+                return None, None
+            snapshot = await self.social_service.get_snapshot(ticker)
+            if snapshot is None:
+                return None, None
+
+            snapshot_dict = snapshot.model_dump(mode="json")
+            # Attach 1-2 representative raw posts (highest engagement) if stored
+            try:
+                stmt = (
+                    select(RawContent.text)
+                    .where(RawContent.symbol == ticker)
+                    .order_by(RawContent.engagement_score.desc())
+                    .limit(2)
+                )
+                posts = (await self.db.execute(stmt)).scalars().all()
+                if posts:
+                    snapshot_dict["sample_posts"] = list(posts)
+            except Exception as exc:  # noqa: BLE001 — posts are optional garnish
+                logger.warning(f"search/answer: sample posts unavailable: {exc}")
+                await self._safe_rollback()
+
+            return snapshot_dict, build_social_prompt_block(snapshot_dict)
+        except Exception as exc:
+            logger.warning(f"search/answer: social context unavailable: {exc}")
+            await self._safe_rollback()
+            return None, None
+
     async def _synthesize(
         self,
         query: str,
         segments: list[dict[str, Any]],
         valid_ids: set[str],
         coverage_summary: str | None = None,
+        social_prompt_block: str | None = None,
     ) -> dict[str, Any] | None:
         """Call the cheap LLM under a hard timeout; returns parsed output or None."""
         user_prompt = build_user_prompt(query, segments)
@@ -396,6 +476,13 @@ class SearchAnswerService:
                 f"{coverage_summary}\n"
                 "You may reference this momentum data when relevant, "
                 "but never invent numbers beyond it."
+            )
+        if social_prompt_block:
+            user_prompt += (
+                "\n\n"
+                f"{social_prompt_block}\n"
+                "You may reference this Reddit/X/News sentiment when relevant and "
+                "attribute it to the corresponding platform; never invent numbers beyond it."
             )
         started = time.perf_counter()
         try:

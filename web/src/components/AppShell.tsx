@@ -15,9 +15,33 @@ interface AppShellProps {
 
 export function AppShell({ children, fullName, isAdmin, loading }: AppShellProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   usePageViewTracking();
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("sidebar_collapsed");
+      if (saved !== null) {
+        setIsSidebarCollapsed(saved === "true");
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const toggleSidebarCollapse = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("sidebar_collapsed", String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
 
   // Global ⌘K / Ctrl+K listener
   useEffect(() => {
@@ -36,12 +60,16 @@ export function AppShell({ children, fullName, isAdmin, loading }: AppShellProps
       <Sidebar
         isOpen={mobileSidebarOpen}
         onClose={() => setMobileSidebarOpen(false)}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={toggleSidebarCollapse}
         isAdmin={isAdmin}
       />
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar
           onMenuClick={() => setMobileSidebarOpen(true)}
+          onToggleSidebar={toggleSidebarCollapse}
+          isSidebarCollapsed={isSidebarCollapsed}
           onOpenCommandPalette={() => setCommandPaletteOpen(true)}
           fullName={fullName}
           loadingUser={loading}

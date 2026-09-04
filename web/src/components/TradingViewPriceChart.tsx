@@ -354,8 +354,8 @@ export function TradingViewPriceChart({
     () =>
       secondaryLine
         ? secondaryLine.points
-            .filter((p) => p.value !== null && p.value !== undefined)
-            .map((p) => ({ time: toUtcTimestamp(p.date), value: p.value }))
+          .filter((p) => p.value !== null && p.value !== undefined)
+          .map((p) => ({ time: toUtcTimestamp(p.date), value: p.value }))
         : [],
     [secondaryLine]
   );
@@ -413,7 +413,14 @@ export function TradingViewPriceChart({
           labelBackgroundColor: toRgbaColor(colors.primary),
         },
       },
-      rightPriceScale: { borderColor: toRgbaColor(colors.line) },
+      rightPriceScale: {
+        borderColor: toRgbaColor(colors.line),
+        autoScale: true,
+        scaleMargins: {
+          top: 0.18,
+          bottom: 0.15,
+        },
+      },
       timeScale: { borderColor: toRgbaColor(colors.line), rightOffset: 4, barSpacing: 8 },
     });
     chartRef.current = chart;
@@ -621,63 +628,83 @@ export function TradingViewPriceChart({
         tooltip.style.display = "none";
         return;
       }
-      const price = priceSeriesRef.current
-        ? (param.seriesData.get(priceSeriesRef.current) as
-            | { close?: number; value?: number }
-            | undefined)
-        : undefined;
-      const metric = metricSeriesRef.current
+
+      const pData = param.seriesData.get(priceSeriesRef.current!) as
+        | { close?: number; value?: number; open?: number; high?: number; low?: number }
+        | undefined;
+      const mData = metricSeriesRef.current
         ? (param.seriesData.get(metricSeriesRef.current) as { value?: number } | undefined)
         : undefined;
 
-      const closeVal = price?.close ?? price?.value;
-      if (closeVal === undefined) {
-        tooltip.style.display = "none";
-        return;
-      }
+      const dateStr = fmtDate(param.time);
+      let content = `<div style="font-weight:600;margin-bottom:4px;color:${toRgbaColor(colors.ink)}">${dateStr}</div>`;
 
-      const hoveredDateStr =
-        typeof param.time === "number"
-          ? new Date(param.time * 1000).toISOString().slice(0, 10)
-          : String(param.time);
-      const matchingSignals = markers.filter((m) => m.date === hoveredDateStr);
-      let signalHtml = "";
-      if (matchingSignals.length > 0) {
-        signalHtml = matchingSignals
-          .map((m) => {
-            const isB = m.signal === "B";
-            const isS = m.signal === "S";
-            const sigColor =
-              m.color ??
-              (isB ? colors.success : isS ? colors.danger : colors.mutedForeground);
-            const label =
-              m.label ?? (isB ? "Bullish (Buy)" : isS ? "Bearish (Sell)" : "Neutral");
-            return `<div style="color:${toRgbaColor(sigColor)}; margin-top:3px; font-weight:600;">Signal: ${label}</div>`;
-          })
-          .join("");
-      }
-
-      tooltip.innerHTML = `
-        <div style="color:${colors.inkSecondary}; margin-bottom:4px;">${fmtDate(param.time)}</div>
-        <div style="color:${colors.ink}; font-weight:600;">
-          ${seriesType === "candlestick" ? "Close" : "Price"}:
-          <span style="color:${colors.signal};">$${closeVal.toFixed(2)}</span>
-        </div>
-        ${
-          metric && metric.value !== undefined
-            ? `<div style="color:${colors.primary}; margin-top:2px;">${metricLabel ?? "Metric"}: ${metric.value}</div>`
-            : ""
+      if (pData) {
+        if (seriesType === "candlestick" && pData.open != null) {
+          content += `
+            <div style="display:flex;justify-content:space-between;gap:8px;color:${toRgbaColor(colors.inkSecondary)}">
+              <span>Open:</span><span style="font-weight:600;color:${toRgbaColor(colors.ink)}">$${pData.open.toFixed(2)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:8px;color:${toRgbaColor(colors.inkSecondary)}">
+              <span>High:</span><span style="font-weight:600;color:${toRgbaColor(colors.ink)}">$${pData.high?.toFixed(2)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:8px;color:${toRgbaColor(colors.inkSecondary)}">
+              <span>Low:</span><span style="font-weight:600;color:${toRgbaColor(colors.ink)}">$${pData.low?.toFixed(2)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:8px;color:${toRgbaColor(colors.inkSecondary)}">
+              <span>Close:</span><span style="font-weight:600;color:${toRgbaColor(colors.ink)}">$${pData.close?.toFixed(2)}</span>
+            </div>`;
+        } else {
+          const val = pData.value ?? pData.close;
+          if (val != null) {
+            content += `
+              <div style="display:flex;justify-content:space-between;gap:8px;color:${toRgbaColor(colors.inkSecondary)}">
+                <span>Close:</span><span style="font-weight:600;color:${toRgbaColor(colors.ink)}">$${val.toFixed(2)}</span>
+              </div>`;
+          }
         }
-        ${signalHtml}
-      `;
+      }
+
+      if (mData?.value != null) {
+        content += `
+          <div style="display:flex;justify-content:space-between;gap:8px;color:${toRgbaColor(colors.inkSecondary)};margin-top:2px;">
+            <span>${metricLabel ?? "Metric"}:</span><span style="font-weight:600;color:${toRgbaColor(colors.primary)}">${mData.value}</span>
+          </div>`;
+      }
+
+      // Check for signal marker on this date
+      const marker = markers.find((m) => m.date === String(param.time));
+      if (marker) {
+        const sigColor =
+          marker.signal === "B"
+            ? toRgbaColor(colors.success)
+            : marker.signal === "S"
+              ? toRgbaColor(colors.danger)
+              : toRgbaColor(colors.inkSecondary);
+        const sigName =
+          marker.signal === "B" ? "Bullish (B)" : marker.signal === "S" ? "Bearish (S)" : "Neutral";
+        content += `
+          <div style="margin-top:4px;padding-top:4px;border-top:1px solid ${toRgbaColor(colors.line)};font-weight:600;color:${sigColor}">
+            ● ${marker.label ?? sigName}
+          </div>`;
+      }
+
+      tooltip.innerHTML = content;
       tooltip.style.display = "block";
 
-      const containerRect = container.getBoundingClientRect();
-      const tooltipW = tooltip.offsetWidth;
-      const x = param.point.x + 16;
-      const flip = x + tooltipW > containerRect.width - 8;
-      tooltip.style.left = `${flip ? param.point.x - tooltipW - 16 : x}px`;
-      tooltip.style.top = `${Math.max(8, param.point.y - 40)}px`;
+      const toolWidth = 160;
+      const toolHeight = 100;
+      let left = param.point.x + 16;
+      let top = param.point.y + 16;
+
+      if (left + toolWidth > container.clientWidth) {
+        left = param.point.x - toolWidth - 16;
+      }
+      if (top + toolHeight > container.clientHeight) {
+        top = param.point.y - toolHeight - 16;
+      }
+      tooltip.style.left = `${Math.max(8, left)}px`;
+      tooltip.style.top = `${Math.max(8, top)}px`;
     };
 
     chart.subscribeCrosshairMove(handler);
@@ -696,7 +723,7 @@ export function TradingViewPriceChart({
     <div className="relative w-full" style={{ height }}>
       <div ref={containerRef} className="h-full w-full" />
       {showLegend && (
-        <div className="pointer-events-none absolute left-3 top-2 z-10 flex flex-wrap gap-x-4 gap-y-1 font-mono text-micro">
+        <div className="pointer-events-none absolute left-3 top-2.5 z-20 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 rounded-md border border-line/70 bg-panel/90 px-2.5 py-1 font-mono text-micro shadow-xs backdrop-blur-sm">
           {seriesType !== "candlestick" && (
             <span className="flex items-center gap-1.5 text-ink-secondary">
               <span
@@ -743,7 +770,7 @@ export function TradingViewPriceChart({
               {hasBullish && (
                 <span className="flex items-center gap-1.5 text-ink-secondary">
                   <span
-                    className="flex h-3.5 w-3.5 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                    className="flex h-3.5 w-3.5 items-center justify-center rounded-full text-[9px] font-bold text-white shadow-2xs"
                     style={{ backgroundColor: toRgbaColor(colors.success) }}
                   >
                     B
@@ -754,7 +781,7 @@ export function TradingViewPriceChart({
               {hasBearish && (
                 <span className="flex items-center gap-1.5 text-ink-secondary">
                   <span
-                    className="flex h-3.5 w-3.5 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                    className="flex h-3.5 w-3.5 items-center justify-center rounded-full text-[9px] font-bold text-white shadow-2xs"
                     style={{ backgroundColor: toRgbaColor(colors.danger) }}
                   >
                     S
