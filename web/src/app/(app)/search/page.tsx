@@ -583,6 +583,7 @@ function SearchPageContent() {
                     variant={type === t ? "default" : "ghost"}
                     size="lg"
                     className="h-7 capitalize text-base!"
+                    // className={cn("h-7 capitalize", `${type === t ? "text-white h-7 capitalize" : " text-black h-7 capitalize"}`)}
                     onClick={() => handleTypeChange(t)}
                   >
                     {t}
