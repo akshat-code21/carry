@@ -1,4 +1,4 @@
-# Prod Latency Audit — `carry-fin.vercel.app` / `carry-api.akshat21.me`
+# Prod Latency Audit - `carry-fin.vercel.app` / `carry-api.akshat21.me`
 
 **Date:** 2026-08-27 (UTC)  
 **Environment:** `APP_ENV=production`, `NEXT_PUBLIC_API_URL=https://carry-api.akshat21.me`  
@@ -8,7 +8,7 @@
 
 ---
 
-## TL;DR — Where is the 15–20 s?
+## TL;DR - Where is the 15–20 s?
 
 **85 % backend, 15 % frontend. Single biggest cause is the backend `GET /api/themes` N+1 + 1 MB payload served cross-region on a single uvicorn worker.**
 
@@ -132,13 +132,13 @@ minute                themes  channels  videos  tickers
 2026-08-27 08:52       2       2         2       2        ← all 401 fast, no DB work, no contention
 ```
 
-404 flood: `4272× 404`, top `/fetch 42×`, `/.env 35×`, `/.aws/credentials 14×` — scanner bots, but avg 6 ms, not saturating DB (but they do consume nginx and worker connections).
+404 flood: `4272× 404`, top `/fetch 42×`, `/.env 35×`, `/.aws/credentials 14×` - scanner bots, but avg 6 ms, not saturating DB (but they do consume nginx and worker connections).
 
 ---
 
 ## 2. Backend Deep Dive
 
-### 2.1 `GET /api/themes` — Textbook N+1
+### 2.1 `GET /api/themes` - Textbook N+1
 
 `src/api/themes.py:20` → `src/services/theme_service.py:173`:
 
@@ -179,7 +179,7 @@ CREATE INDEX CONCURRENTLY ix_theme_hierarchy_level ON theme_hierarchy(level);
 
 **Fix (P0):**
 
-Option A — minimal: 2-query fetch + count endpoint
+Option A - minimal: 2-query fetch + count endpoint
 
 ```python
 # Single query for hierarchy + single query for mappings, build tree in Python
@@ -188,7 +188,7 @@ mappings = (await db.execute(select(ThemeTickerMapping))).scalars().all()  # 1, 
 # Build tree in memory O(n)
 ```
 
-Option B — recommended: dedicated lightweight stats + paginated hierarchy
+Option B - recommended: dedicated lightweight stats + paginated hierarchy
 
 ```python
 @router.get("/stats", response_model=DashboardStats)  # dashboard should call this, not full hierarchy
@@ -216,10 +216,10 @@ Estimated improvement: 133 → 2 queries, 2 s (Bengaluru) / 6.2 s (Singapore) �
 
 These are single-query endpoints (verified via `EXPLAIN` above). Why are they also slow in `api_request_logs`?
 
-- `GET /api/videos` `src/api/videos.py:27`: `SELECT * WHERE duration_sec>60 ORDER BY published_at DESC LIMIT 20` — no index on `(published_at, duration_sec)`. Seq scan 27 rows is fine now, but will degrade. Add `CREATE INDEX ix_videos_published_at_duration ON videos(published_at DESC) WHERE duration_sec>60`.
-- `GET /api/channels` `src/api/channels.py:19`: `SELECT * ORDER BY created_at DESC` — 2 rows, should be 2 ms, but `p95 30 s` in logs indicates worker queueing, not query. Fix via workers + pool.
-- `GET /api/tickers` `src/api/tickers.py:37`: `SELECT ticker, SUM(total_mentions) ... GROUP BY ticker` — HashAggregate 206 rows, 0.24 ms execution, but `p50 283 ms` from prod indicates 220 ms overhead (RTT + Clerk). Acceptable, but cross-region amplifies.
-- `GET /api/tickers/top-etfs` `src/services/aggregation_service.py:409`: 2 queries (institutional channels + `WHERE channel_id IN (...)` + in-memory merge). Fast (`p95 1.7 s`), but does `ETFMAPPINGService().is_etf()` per row in Python (file I/O `etf_mappings.json` per call, not cached across requests — should cache).
+- `GET /api/videos` `src/api/videos.py:27`: `SELECT * WHERE duration_sec>60 ORDER BY published_at DESC LIMIT 20` - no index on `(published_at, duration_sec)`. Seq scan 27 rows is fine now, but will degrade. Add `CREATE INDEX ix_videos_published_at_duration ON videos(published_at DESC) WHERE duration_sec>60`.
+- `GET /api/channels` `src/api/channels.py:19`: `SELECT * ORDER BY created_at DESC` - 2 rows, should be 2 ms, but `p95 30 s` in logs indicates worker queueing, not query. Fix via workers + pool.
+- `GET /api/tickers` `src/api/tickers.py:37`: `SELECT ticker, SUM(total_mentions) ... GROUP BY ticker` - HashAggregate 206 rows, 0.24 ms execution, but `p50 283 ms` from prod indicates 220 ms overhead (RTT + Clerk). Acceptable, but cross-region amplifies.
+- `GET /api/tickers/top-etfs` `src/services/aggregation_service.py:409`: 2 queries (institutional channels + `WHERE channel_id IN (...)` + in-memory merge). Fast (`p95 1.7 s`), but does `ETFMAPPINGService().is_etf()` per row in Python (file I/O `etf_mappings.json` per call, not cached across requests - should cache).
 
 All four are **victims of the single-worker head-of-line blocking** by the concurrent `GET /api/themes` on the same `uvicorn` process. Fixing themes + adding workers decouples them.
 
@@ -227,7 +227,7 @@ All four are **victims of the single-worker head-of-line blocking** by the concu
 
 Aiven PG in Bengaluru while GCP in Singapore adds 45 ms per round-trip. With 133 queries that is 6 s. Even with fixed 2 queries, the single `GET /api/themes` still pays 90 ms vs 10 ms if co-located. Recommend:
 
-- Option 1: Move Aiven PG to `aws-ap-southeast-1` (Singapore) — one-click migration, no code change, `DATABASE_URL` update, downtime < 5 min.
+- Option 1: Move Aiven PG to `aws-ap-southeast-1` (Singapore) - one-click migration, no code change, `DATABASE_URL` update, downtime < 5 min.
 - Option 2: Keep primary in Bengaluru, add SG read replica for dashboard (`DATABASE_URL_SYNC` → replica for `GET` routes, writes to primary). Requires `async_session_factory` routing.
 - Option 3: Use Cloud SQL in same GCP project/region as compute (lowest latency, VPC peering, private IP).
 
@@ -255,7 +255,7 @@ Frontend token acquisition also contributes: `web/src/lib/auth-client.ts:16` `wa
 ### 2.5 Low-hanging DB/ORM
 
 - `src/database.py:12` `pool_size=10, max_overflow=20` with `max_connections=20` on Aiven PG. Overflow beyond 20 is rejected server-side, causing `TimeoutError` after `pool_timeout=30`. Under load, analytics writes (`src/analytics/service.py:85` opens new `async_session_factory()` per request) compete for same pool. Set `pool_size=5, max_overflow=10` to stay under server limit, or raise Aiven plan to `max_connections=100`, or use `PgBouncer`.
-- `videos.published_at` no index — add `CREATE INDEX CONCURRENTLY ix_videos_published_at ON videos(published_at DESC)`.
+- `videos.published_at` no index - add `CREATE INDEX CONCURRENTLY ix_videos_published_at ON videos(published_at DESC)`.
 - `theme_hierarchy.parent_id` already indexed, good.
 
 ---
@@ -290,7 +290,7 @@ async function request<T>(path: RequestInit, opts?: {auth?:boolean}) {
 }
 ```
 
-`API_BASE_URL` is `"/api"` when `NEXT_PUBLIC_API_URL` empty at runtime? Actually Vercel sets `NEXT_PUBLIC_API_URL=https://carry-api.akshat21.me` (verified via `vercel env pull` 2026-08-27). `web/next.config.ts:5` `rawUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001"` so prod rewrite destination is `https://carry-api.akshat21.me/api/:path*` (correct). Local `.next/routes-manifest.json` showed `127.0.0.1:8001` because built without env — but Vercel's build has correct URL.
+`API_BASE_URL` is `"/api"` when `NEXT_PUBLIC_API_URL` empty at runtime? Actually Vercel sets `NEXT_PUBLIC_API_URL=https://carry-api.akshat21.me` (verified via `vercel env pull` 2026-08-27). `web/next.config.ts:5` `rawUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001"` so prod rewrite destination is `https://carry-api.akshat21.me/api/:path*` (correct). Local `.next/routes-manifest.json` showed `127.0.0.1:8001` because built without env - but Vercel's build has correct URL.
 
 Problems:
 
@@ -334,7 +334,7 @@ add_header Cache-Control "public, max-age=60" always;  # for /api/themes
 
 ## 5. What to Fix First (actionable PRs)
 
-### PR #1 — P0 Backend: fix `get_theme_hierarchy_tree()` (1 hour, highest ROI)
+### PR #1 - P0 Backend: fix `get_theme_hierarchy_tree()` (1 hour, highest ROI)
 
 Files: `src/services/theme_service.py:173`, `src/api/themes.py:20`, `alembic/versions/XXX_ix_theme_hierarchy_level.py`
 
@@ -345,7 +345,7 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_videos_published_at ON videos(publish
 ```
 
 ```python
-# src/services/theme_service.py — single-query version
+# src/services/theme_service.py - single-query version
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -356,10 +356,10 @@ async def get_theme_hierarchy_tree(self) -> list[dict]:
         .order_by(ThemeHierarchy.level, ThemeHierarchy.name)
     )
     all_nodes = result.scalars().all()
-    # build tree in memory — O(n), ~1 ms
+    # build tree in memory - O(n), ~1 ms
     ...
 
-# src/api/themes.py — add lightweight count, exclude narratives by default
+# src/api/themes.py - add lightweight count, exclude narratives by default
 @router.get("")
 async def list_themes(
     include_narratives: bool = Query(default=False),
@@ -378,7 +378,7 @@ Update dashboard: `web/src/lib/api.ts` add `getThemeStats(): Promise<{themes:num
 
 Add Redis cache (`src/services/theme_service.py` 5 min, bust on write).
 
-### PR #2 — P0 Frontend: single dashboard summary endpoint (2 hours)
+### PR #2 - P0 Frontend: single dashboard summary endpoint (2 hours)
 
 ```python
 # src/api/dashboard.py
@@ -406,19 +406,19 @@ async def dashboard_summary(
 
 Frontend: `web/src/lib/hooks.ts` replace `useDashboardData()` 5 hooks with `useQuery({queryKey:["dashboardSummary"], queryFn: api.getDashboardSummary})`. Renders after 1 RTT (instead of 5 fan-out + auth×6). Add `staleTime: 5*60*1000`.
 
-### PR #3 — P0 Infra: co-locate DB + add workers (1 day)
+### PR #3 - P0 Infra: co-locate DB + add workers (1 day)
 
 - Aiven console → Migrate PG to `aws-ap-southeast-1` or GCP `asia-southeast1`. Update `DATABASE_URL*` in `.env.prod` and Vercel env.
 - `Dockerfile:43` → `CMD ["uvicorn","src.main:app","--host","0.0.0.0","--port","8000","--workers","4"]` or switch to `gunicorn`.
 - `deploy/nginx.conf` add `gzip on;`.
 - Set `CLERK_JWT_KEY` in `.env.prod`.
 
-### PR #4 — P1 Polish
+### PR #4 - P1 Polish
 
 - `web/src/lib/auth-client.ts` replace `window.Clerk` polling with `useAuth()` from `@clerk/nextjs`.
 - `web/src/components/QueryProvider.tsx:9` `retry: (c, e) => e.status===401||e.code==="unauthorized" ? false : c<1`.
 - `web/src/app/(app)/dashboard/page.tsx:17` incremental render: `{videos.data && <RecentVideos videos={videos.data.slice(0,8)}/>} ` etc., instead of `if(isLoading) return <Skeleton/>`.
-- `src/analytics/middleware.py:47` sample 10 % or batch writes to avoid pool contention; fix `user_id` reading (`request.state.user_id` not `scope["state"]` — currently `user_id` is always `None` in logs, so attribution is broken).
+- `src/analytics/middleware.py:47` sample 10 % or batch writes to avoid pool contention; fix `user_id` reading (`request.state.user_id` not `scope["state"]` - currently `user_id` is always `None` in logs, so attribution is broken).
 - Add `Cache-Control` and `ETag` for taxonomy.
 
 ---
@@ -432,9 +432,9 @@ Model: dashboard p95 = `Clerk load (200 ms) + Vercel hop (35 ms) + 1× backend a
 | `GET /api/themes 200` p50 | 1500 ms | 60 ms | 15 ms |
 | `GET /api/themes 200` p95 | 40111 ms | 200 ms | 80 ms |
 | `GET /api/themes 200` max | 55917 ms | 400 ms | 150 ms |
-| `GET /api/channels 200` p50 | 1521 ms | — (aggregated) | — |
+| `GET /api/channels 200` p50 | 1521 ms | - (aggregated) | - |
 | Dashboard end-to-end (6 requests, `isLoading` = slowest) | p50 ~1.5 s, p95 40 s, max 55 s | p50 400 ms, p95 800 ms | p50 300 ms, p95 600 ms |
-| Payload `GET /api/themes` | 1.1 MB | 5 KB (`/stats`) or 300 KB tree gzip | — |
+| Payload `GET /api/themes` | 1.1 MB | 5 KB (`/stats`) or 300 KB tree gzip | - |
 | DB queries per dashboard load | 133 + 1 + 1 + 1 + 1 + 1 (auth) = 138 | 5 (aggregated) | 5, but 45 ms→5 ms RTT |
 
 Verification steps already run for this doc:
@@ -448,7 +448,7 @@ SELECT route_template, PERCENTILE_CONT(0.95) FROM api_request_logs GROUP BY rout
 
 ---
 
-## 7. Appendix — Raw Counts
+## 7. Appendix - Raw Counts
 
 ```
 Production DB (Aiven 206.189.132.98, 569 MB, max_connections 20):

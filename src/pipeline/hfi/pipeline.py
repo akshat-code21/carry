@@ -26,7 +26,7 @@ logger = structlog.get_logger()
 
 
 def _chunker_node(state: PipelineState) -> PipelineState:
-    """Inline chunking node — splits cleaned_text into LangChain Documents."""
+    """Inline chunking node - splits cleaned_text into LangChain Documents."""
     from langchain_core.documents import Document
     from langchain_text_splitters import RecursiveCharacterTextSplitter
 

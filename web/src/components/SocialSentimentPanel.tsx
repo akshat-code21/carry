@@ -40,7 +40,7 @@ function sentimentTextClass(score: number | null | undefined): string {
 }
 
 function fmtSentiment(score: number | null | undefined): string {
-  return score == null ? "—" : score > 0 ? `+${score.toFixed(2)}` : score.toFixed(2);
+  return score == null ? "-" : score > 0 ? `+${score.toFixed(2)}` : score.toFixed(2);
 }
 
 function findClosestChartDate(targetDateStr: string, chart: MCChartPoint[]): string | null {
@@ -280,13 +280,13 @@ export function SocialSentimentPanel({
         {social.signal && (
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {[
-              { label: "Signal Score", value: social.signal.score?.toFixed(0) ?? "—", icon: Gauge },
+              { label: "Signal Score", value: social.signal.score?.toFixed(0) ?? "-", icon: Gauge },
               {
                 label: "Sentiment",
                 value:
                   social.signal.sentiment != null
                     ? `${social.signal.sentiment.toFixed(0)}/100`
-                    : "—",
+                    : "-",
                 icon: Activity,
               },
               {
@@ -294,7 +294,7 @@ export function SocialSentimentPanel({
                 value:
                   social.signal.attention != null
                     ? `${social.signal.attention.toFixed(0)}/100`
-                    : "—",
+                    : "-",
                 icon: Activity,
               },
               {

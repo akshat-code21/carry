@@ -1,4 +1,4 @@
-"""Tests for ETFMappingService — deterministic ETF resolution."""
+"""Tests for ETFMappingService - deterministic ETF resolution."""
 
 import pytest
 

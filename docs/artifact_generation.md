@@ -6,17 +6,17 @@
 
 ---
 
-## 1. Context — what already exists
+## 1. Context - what already exists
 
 The HFI subsystem already ingests hedge-fund content and has the building blocks for reports. The data pipeline is in place; the missing piece is a *deliverable artifact* rather than a markdown string in an accordion.
 
 ### Data layer (ready today)
-- `Investor` — a hedge fund / institutional investor tracked for 13F monitoring.
-- `HfiSource` — the origin of a piece of public content (13F filing, article, newsletter, video, …).
-- `ContentItem` — a single ingested content item with `extracted_entities` (JSONB) and `extracted_theses` (JSONB).
-- `PortfolioChange` — position deltas between 13F filing periods (new / increased / decreased / closed), with `shares_previous`, `shares_current`, `value_usd`, `percent_of_portfolio`, `filing_period`.
-- `HfiReport` — already persists `content_markdown`, `title`, `summary`, period, `source_item_ids`, `is_read`.
-- `HfiAlert` — high-priority events tied to a report.
+- `Investor` - a hedge fund / institutional investor tracked for 13F monitoring.
+- `HfiSource` - the origin of a piece of public content (13F filing, article, newsletter, video, …).
+- `ContentItem` - a single ingested content item with `extracted_entities` (JSONB) and `extracted_theses` (JSONB).
+- `PortfolioChange` - position deltas between 13F filing periods (new / increased / decreased / closed), with `shares_previous`, `shares_current`, `value_usd`, `percent_of_portfolio`, `filing_period`.
+- `HfiReport` - already persists `content_markdown`, `title`, `summary`, period, `source_item_ids`, `is_read`.
+- `HfiAlert` - high-priority events tied to a report.
 
 ### Existing report generation
 - **Endpoint**: `POST /api/hfi/reports/generate/{investor_id}` (`src/api/hfi_reports.py`)
@@ -28,7 +28,7 @@ The HFI subsystem already ingests hedge-fund content and has the building blocks
   - `INVESTOR_REPORT_PROMPT` lives in `src/pipeline/hfi/prompts/report_generation.py`.
 - **Frontend**: `web/src/app/(app)/investors/[id]/page.tsx`
   - "Generate Report" button (React Query mutation) + `Reports` tab listing reports as `ReportAccordionItem`s.
-  - A selected report is rendered with `whitespace-pre-wrap` over `content_markdown` — functional but **not** a professional artifact.
+  - A selected report is rendered with `whitespace-pre-wrap` over `content_markdown` - functional but **not** a professional artifact.
 
 ### LLM access in the repo
 - `src/config.py` exposes `anthropic_api_key` / `anthropic_model` (Claude) **and** `openai_api_key` / `openai_model` (default `gpt-4o`).
@@ -68,7 +68,7 @@ The HFI subsystem already ingests hedge-fund content and has the building blocks
 ### 4.1 New structured prompt
 **File**: `src/pipeline/hfi/prompts/report_generation.py` (add alongside the existing markdown prompt).
 
-Add `INVESTOR_REPORT_STRUCTURED_PROMPT` — the same narrative intent as the existing prompt, but instructing the model to return **strict JSON only**, conforming to:
+Add `INVESTOR_REPORT_STRUCTURED_PROMPT` - the same narrative intent as the existing prompt, but instructing the model to return **strict JSON only**, conforming to:
 ```jsonc
 {
   "title": "Intelligence Report: <Investor>",
@@ -99,7 +99,7 @@ Add `generate_structured_report_from_context(...)` (keep the existing `generate_
 
 - Uses `OpenAI(api_key=settings.openai_api_key)`, model = `settings.openai_model` (default `gpt-4o`).
 - `response_format={"type": "json_object"}`, `temperature=0.3` (or lower, e.g. `0.2`, for more consistent structure).
-- Tenacity retry (`stop_after_attempt(3)`, `wait_exponential`) — same pattern as the current `_call_llm`.
+- Tenacity retry (`stop_after_attempt(3)`, `wait_exponential`) - same pattern as the current `_call_llm`.
 - Parse + validate via a Pydantic schema (see 4.3); on validation failure, attempt once with a repair prompt; on repeated failure, persist the raw JSON and surface a clean error.
 - Derive a simple `content_markdown` from the JSON (so old API consumers keep working).
 - Persist the report (the executor already saves directly; **drop the `asyncio.sleep(0.5)` hack**).
@@ -117,7 +117,7 @@ Add nullable `content_json JSONB` column to `hfi_reports`, with a migration in `
 ### 4.5 Endpoint cleanup
 **File**: `src/api/hfi_reports.py`
 
-- `POST /api/hfi/reports/generate/{investor_id}` — call the new structured generator; return the report directly (no sleep hack).
+- `POST /api/hfi/reports/generate/{investor_id}` - call the new structured generator; return the report directly (no sleep hack).
 - Extend `ReportOut` schema with `content_json: dict | None` so the frontend can read the structured payload.
 
 ---
@@ -168,6 +168,6 @@ Add a dedicated stylesheet / `<style>` block for `@media print`:
 ## 7. Out of scope / future options
 
 - **Async / Celery queueing** of report generation (current plan uses cleaned-up sync in-request). Trivial later since the executor already detaches the save.
-- **Server-side PDF** (WeasyPrint / Playwright) if true server-generated PDFs are ever required — not needed given the print-CSS path chosen.
+- **Server-side PDF** (WeasyPrint / Playwright) if true server-generated PDFs are ever required - not needed given the print-CSS path chosen.
 - **Other LLM providers** (Gemini free tier, Groq): decoupled via prompt + Pydantic schema; swapping is a ~20-line change once keys are added to `settings`.
 

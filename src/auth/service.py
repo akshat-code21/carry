@@ -1,4 +1,4 @@
-"""Auth service — JIT user provisioning and invite redemption logic."""
+"""Auth service - JIT user provisioning and invite redemption logic."""
 
 import logging
 import uuid
@@ -118,7 +118,7 @@ async def redeem_invite(db: AsyncSession, user: User, code: str) -> User:
     if invite.invited_email and user.email.lower() != invite.invited_email.lower():
         raise InviteError("This invite was issued to a different email address.", 403)
 
-    # Invites never grant roles — admins are promoted manually via Clerk
+    # Invites never grant roles - admins are promoted manually via Clerk
     # public metadata (synced at login) or ADMIN_CLERK_USER_IDS.
     user.status = UserStatus.ACTIVE
     user.invite_id = invite.id

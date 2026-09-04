@@ -1,4 +1,4 @@
-"""Report generator node — produces structured markdown using LLM."""
+"""Report generator node - produces structured markdown using LLM."""
 
 import json
 import uuid

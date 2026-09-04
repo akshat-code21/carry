@@ -89,7 +89,7 @@ async def search(
         stocks = [StockDiscoveryResult(**s) for s in stock_results]
 
     elif intent.intent in ("ticker_narrative", "sentiment_check") and intent.ticker_hint:
-        # Direct ticker narrative / sentiment check — bypass text search,
+        # Direct ticker narrative / sentiment check - bypass text search,
         # go straight to structured data
         stock_results = await search_service.search_ticker_narrative(intent.ticker_hint)
         stocks = [StockDiscoveryResult(**s) for s in stock_results]
@@ -222,7 +222,7 @@ async def search_answer(
     """Synthesized answer for a search query with clip citations.
 
     Cached per normalized query for 24h. Returns available=False when there
-    is insufficient evidence or synthesis fails — clients hide the card.
+    is insufficient evidence or synthesis fails - clients hide the card.
     """
     ids = [s.strip() for s in segment_ids.split(",") if s.strip()] if segment_ids else None
     result = await answer_service.get_or_create(q, ids, max_input=limit)

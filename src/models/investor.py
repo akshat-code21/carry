@@ -1,4 +1,4 @@
-"""Investor model — tracks a hedge fund / institutional investor for 13F monitoring."""
+"""Investor model - tracks a hedge fund / institutional investor for 13F monitoring."""
 
 import uuid
 from datetime import datetime

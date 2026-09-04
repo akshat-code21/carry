@@ -1,4 +1,4 @@
-"""Agent 3 Node — Cleaning, cashtag extraction, and MinHash near-deduplication."""
+"""Agent 3 Node - Cleaning, cashtag extraction, and MinHash near-deduplication."""
 
 from __future__ import annotations
 

@@ -337,7 +337,7 @@ export function PredictionSentimentChart({ predictions, ticker }: Props) {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              Signal tape — {ticker}
+              Signal tape - {ticker}
             </CardTitle>
             <CardDescription>
               Sentiment trajectory, one chip per video, weighted by confidence

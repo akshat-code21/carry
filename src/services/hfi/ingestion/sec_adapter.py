@@ -1,6 +1,6 @@
 """
 SEC EDGAR 13F adapter.
-Custom implementation — uses EDGAR REST API directly (free, no key needed).
+Custom implementation - uses EDGAR REST API directly (free, no key needed).
 Rate limit: 10 req/s. Always send User-Agent header.
 """
 
@@ -87,7 +87,7 @@ class SECEdgarAdapter(BaseAdapter):
                     "filing_period": period_label,
                     "report_date": filing_period,
                     "published_at": filing.get("filingDate", ""),
-                    "title": f"13F Filing — {period_label}",
+                    "title": f"13F Filing - {period_label}",
                     "holdings": holdings,
                 },
             )
@@ -446,7 +446,7 @@ def _parse_html_holdings(html_content: str) -> list[dict]:
 
 
 def _holdings_to_text(holdings: list[dict], period: str) -> str:
-    lines = [f"13F Holdings — Period: {period}", f"Total positions: {len(holdings)}", ""]
+    lines = [f"13F Holdings - Period: {period}", f"Total positions: {len(holdings)}", ""]
     for h in holdings:
         lines.append(
             f"{h['name']} | CUSIP:{h['cusip']} | Value:${h['value']}K | Shares:{h['shares']}"

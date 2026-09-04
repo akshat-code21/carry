@@ -25,7 +25,7 @@ _CACHE_HEADERS = {"Cache-Control": "public, max-age=60, stale-while-revalidate=3
 async def get_theme_stats(
     theme_service: ThemeService = Depends(get_theme_service),
 ) -> JSONResponse:
-    """Get theme counts by level (lightweight — dashboard should call this, not full hierarchy)."""
+    """Get theme counts by level (lightweight - dashboard should call this, not full hierarchy)."""
     stats = await theme_service.get_theme_stats()
     return JSONResponse(content=stats, headers=_CACHE_HEADERS)
 

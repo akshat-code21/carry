@@ -1,4 +1,4 @@
-"""HfiReport model — generated intelligence reports for investors."""
+"""HfiReport model - generated intelligence reports for investors."""
 
 import uuid
 from datetime import datetime

@@ -79,7 +79,7 @@ export function InviteGate({ email }: { email?: string | null }) {
         {error && <p className="mt-3 text-small text-bearish">{error}</p>}
 
         <p className="mt-6 font-mono text-micro leading-relaxed text-ink-faint">
-          Don&apos;t have a code? Ask the team for an invite — each code is
+          Don&apos;t have a code? Ask the team for an invite - each code is
           single-use and can be bound to your email.
         </p>
       </div>

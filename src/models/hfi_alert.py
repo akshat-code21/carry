@@ -1,4 +1,4 @@
-"""HfiAlert model — rule-based alerts from content processing."""
+"""HfiAlert model - rule-based alerts from content processing."""
 
 import uuid
 from datetime import datetime

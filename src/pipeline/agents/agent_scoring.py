@@ -1,4 +1,4 @@
-"""Agent 8 & 9 Node — Scoring, Aggregation, and Driver Card Generation."""
+"""Agent 8 & 9 Node - Scoring, Aggregation, and Driver Card Generation."""
 
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ def agent_scoring_node(state: PipelineGraphState) -> dict[str, Any]:
 
     riss_score = round((bullish_weight / total_weight) * 100.0 if total_weight > 0 else 50.0, 1)
 
-    # Compute SMS (30% weight in OCS v0.1) — mention volume vs 30-day baseline
+    # Compute SMS (30% weight in OCS v0.1) - mention volume vs 30-day baseline
     # benchmark (e.g. 50 mentions/day)
     expected_mentions = 30.0
     sms_score = round(min(100.0, (total_mentions / expected_mentions) * 50.0), 1)

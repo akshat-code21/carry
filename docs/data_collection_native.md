@@ -1,4 +1,4 @@
-# Data Collection Agent plan — ticker-first Phase 1
+# Data Collection Agent plan - ticker-first Phase 1
 
 ## Validation and product target
 
@@ -21,7 +21,7 @@
 - Build a common async `SourceConnector.collect(request, cursor) -> SourcePage` protocol using `httpx`, typed provider payloads, timeouts, retry-after handling, jittered exponential backoff, per-source token buckets, and circuit breakers.
 - Implement these connectors in parallel behind that contract:
   - **Reddit OAuth:** search new submissions and comments for the ticker across `r/wallstreetbets`, `r/stocks`, and `r/investing`; retain post/comment structure, vote/comment metrics, author metadata, and subreddit. Do not use unauthenticated JSON/RSS as the production path.
-  - **StockTwits:** ingest the symbol stream and preserve native bullish/bearish labels as provider metadata only—never as SentimentAI’s score.
+  - **StockTwits:** ingest the symbol stream and preserve native bullish/bearish labels as provider metadata only-never as SentimentAI’s score.
   - **X API v2:** use recent search with cashtag, symbol, and company-name query variants; request author, engagement, conversation, media, and referenced-post expansions. Recent search covers the prior seven days, so longer history must accrue in SentimentAI’s store. [X recent search](https://docs.x.com/x-api/posts/search-recent-posts)
   - **News + prices:** use Alpha Vantage `NEWS_SENTIMENT` filtered by ticker and time window for article metadata/content, and its intraday price endpoint for 15-minute chart bars. Persist vendor sentiment only as a QA reference. [Alpha Vantage documentation](https://www.alphavantage.co/documentation/)
 - Add a canonical ticker registry with company aliases and an allow/deny collision list. A match must be based on cashtag, unambiguous symbol context, or company-name evidence; common-word tickers require stricter rules.

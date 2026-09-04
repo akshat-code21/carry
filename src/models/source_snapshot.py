@@ -1,4 +1,4 @@
-"""SourceSnapshot model — raw sentiment snapshots per source."""
+"""SourceSnapshot model - raw sentiment snapshots per source."""
 
 from datetime import datetime
 from typing import Any

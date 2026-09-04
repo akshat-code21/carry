@@ -1,4 +1,4 @@
-"""Search answer service — synthesizes cached LLM answers from transcript segments.
+"""Search answer service - synthesizes cached LLM answers from transcript segments.
 
 Given a query and a ranked set of transcript segments, produces a concise
 summary with key points and clip citations. Answers are cached per normalized
@@ -59,7 +59,7 @@ Rules:
 Return ONLY valid JSON:
 {"summary": "...", "key_points": ["..."], "cited_segment_ids": ["id1", "id2"]}"""
 
-# Per-process locks keyed by query hash — concurrent identical queries share
+# Per-process locks keyed by query hash - concurrent identical queries share
 # one synthesis instead of stampeding the LLM.
 _locks: dict[str, asyncio.Lock] = {}
 
@@ -80,7 +80,7 @@ def build_user_prompt(query: str, segments: list[dict[str, Any]]) -> str:
         channel = seg.get("channel_title") or "Unknown channel"
         title = seg.get("video_title") or "Unknown video"
         text = (seg.get("text") or "")[:SEGMENT_TEXT_LIMIT]
-        lines.append(f'[{seg["id"]}] (Channel: "{channel}" — "{title}"): {text}')
+        lines.append(f'[{seg["id"]}] (Channel: "{channel}" - "{title}"): {text}')
     return "\n".join(lines)
 
 
@@ -271,7 +271,7 @@ class SearchAnswerService:
                     if cached_source is not None:
                         if set(cached_source) != set(segment_ids):
                             logger.info(
-                                f"search/answer: cache bust for '{query[:60]}' — "
+                                f"search/answer: cache bust for '{query[:60]}' - "
                                 f"segment set changed ({len(cached_source)} vs {len(segment_ids)})"
                             )
                             try:
@@ -287,7 +287,7 @@ class SearchAnswerService:
                             cached_payload["cached"] = True
                             return cached_payload
                     else:
-                        # Legacy entry without source ids — be conservative: if it is
+                        # Legacy entry without source ids - be conservative: if it is
                         # a fallback empty answer ("don't mention ...") but the caller now
                         # has real clips, force re-synthesis.
                         summary_l = (cached_payload.get("summary") or "").lower()
@@ -318,7 +318,7 @@ class SearchAnswerService:
                     cached_payload["cached"] = True
                     return cached_payload
 
-            # Cache miss or bust — synthesize fresh
+            # Cache miss or bust - synthesize fresh
             try:
                 segments = await self._resolve_segments(query, segment_ids, max_input)
             except Exception as exc:
@@ -326,7 +326,7 @@ class SearchAnswerService:
                 await self._safe_rollback()
                 segments = []
             if len(segments) < MIN_SEGMENTS_FOR_ANSWER:
-                # Not enough evidence — don't cache negatives, cheap to recheck
+                # Not enough evidence - don't cache negatives, cheap to recheck
                 return unavailable
 
             started = time.perf_counter()
@@ -399,7 +399,7 @@ class SearchAnswerService:
             # Preserve caller-supplied ranking order, capped at max_input
             return [by_id[sid] for sid in segment_ids if sid in by_id][:max_input]
 
-        # No ids provided — derive top fused-rank segments server-side
+        # No ids provided - derive top fused-rank segments server-side
         search_service = SearchService(self.db, self.embedding_provider)
         results = await search_service.hybrid_search(query, limit=max_input)
         return list(results.get("segments", []))[:max_input]
@@ -450,7 +450,7 @@ class SearchAnswerService:
                 posts = (await self.db.execute(stmt)).scalars().all()
                 if posts:
                     snapshot_dict["sample_posts"] = list(posts)
-            except Exception as exc:  # noqa: BLE001 — posts are optional garnish
+            except Exception as exc:  # noqa: BLE001 - posts are optional garnish
                 logger.warning(f"search/answer: sample posts unavailable: {exc}")
                 await self._safe_rollback()
 
@@ -541,7 +541,7 @@ class SearchAnswerService:
         """Clear a poisoned transaction so the session stays usable."""
         try:
             await self.db.rollback()
-        except Exception:  # noqa: BLE001 — rollback is best-effort
+        except Exception:  # noqa: BLE001 - rollback is best-effort
             pass
 
     async def _read_cache(self, qhash: str) -> dict[str, Any] | None:
@@ -578,7 +578,7 @@ class SearchAnswerService:
                     sanitize_citation_text(kp, cited_ids) for kp in payload["key_points"]
                 ]
                 payload["key_points"] = [kp for kp in payload["key_points"] if kp]
-        except Exception:  # noqa: BLE001 — sanitization must never break cache reads
+        except Exception:  # noqa: BLE001 - sanitization must never break cache reads
             pass
         return payload
 

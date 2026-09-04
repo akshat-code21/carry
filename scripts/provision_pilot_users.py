@@ -5,7 +5,7 @@ For each user in a CSV (name,email[,password]):
   1. Creates a verified Clerk account. Uses the password from the CSV if
      given (min 8 chars), otherwise generates a strong random one.
      If the Clerk user already exists, a provided password RESETS it.
-  2. Creates an ACTIVE app-side User row — so they skip the invite gate.
+  2. Creates an ACTIVE app-side User row - so they skip the invite gate.
   3. Writes a credential sheet CSV you can send to each person.
 
 They can log in with the emailed credentials OR "Continue with Google"
@@ -158,7 +158,7 @@ async def provision(rows: list[dict], out_path: str | None, login_url: str) -> i
                     password_note = " (password reset)"
                     print(f"  ✓ reset password for existing user {email}")
                 else:
-                    print(f"  • Clerk user already exists for {email} — password unchanged")
+                    print(f"  • Clerk user already exists for {email} - password unchanged")
         except Exception as exc:
             failures += 1
             print(f"  ✗ Clerk failed for {email}: {exc}")
@@ -187,7 +187,7 @@ async def provision(rows: list[dict], out_path: str | None, login_url: str) -> i
             writer = csv.DictWriter(fh, fieldnames=["name", "email", "password", "login_url"])
             writer.writeheader()
             writer.writerows(results)
-        print(f"\nCredential sheet written to {out_path} — share each row privately.")
+        print(f"\nCredential sheet written to {out_path} - share each row privately.")
 
     print("\nSummary:")
     for r in results:
@@ -196,7 +196,7 @@ async def provision(rows: list[dict], out_path: str | None, login_url: str) -> i
         "\nTell each user:\n"
         f"  1. Sign in at {login_url}\n"
         "  2. Use the email + password above (prefer this), OR\n"
-        '  3. Click "Continue with Google" with the SAME email — accounts link automatically.'
+        '  3. Click "Continue with Google" with the SAME email - accounts link automatically.'
     )
     return failures
 

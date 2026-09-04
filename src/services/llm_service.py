@@ -1,4 +1,4 @@
-"""LLM service — Anthropic Claude implementation (swappable via interface)."""
+"""LLM service - Anthropic Claude implementation (swappable via interface)."""
 
 import json
 import logging
@@ -29,7 +29,7 @@ For the given transcript chunk, extract ALL of the following:
    - theme: The specific theme (e.g., "AI Chips", "Rate Cuts", "Retail")
    - narrative: A one-sentence description of what was said about this theme
    - sentiment: "bullish", "bearish", or "neutral"
-   - confidence: 0.0 to 1.0 — how confident the speaker seemed
+   - confidence: 0.0 to 1.0 - how confident the speaker seemed
 
 2. **Explicit Tickers**: Stock tickers explicitly mentioned by name or company name by \
 the speaker (e.g., speaker says "Nvidia" or "NVDA"). Do NOT include competitor tickers \
@@ -67,7 +67,7 @@ Return ONLY valid JSON matching this exact schema:
 
 Rules:
 - Skip generic banter, intros, ads, and non-financial discussion
-- Be conservative with predictions — only extract clear, testable calls
+- Be conservative with predictions - only extract clear, testable calls
 - Never assign a competitor stock ticker to a prediction unless that company was specifically \
 discussed for that prediction call
 - Never invent tickers or timeframes not mentioned in the transcript
@@ -80,7 +80,7 @@ its narrative context from a financial commentary, suggest additional single-nam
 
 For each ticker, provide:
 - ticker: The stock symbol of a public company (NOT an ETF, index fund, or bond fund)
-- relevance_score: 0.0 to 1.0 (how core and directly relevant this ticker is to the theme — \
+- relevance_score: 0.0 to 1.0 (how core and directly relevant this ticker is to the theme - \
 assign >= 0.85 only for essential core tickers)
 - reason: A brief explanation of why this ticker maps to this theme
 
@@ -90,7 +90,7 @@ Return ONLY valid JSON as an array:
 Rules:
 - Only suggest individual company equities (e.g. NVDA, JPM, XOM).
 - Do NOT suggest ETFs or funds (e.g. no QQQ, SPY, SMH, XLK, XLF, HYG, IWM, ARKK, ICLN, GLD, TLT).
-- Quality over quantity — 2-3 highly core tickers is better than loosely related ones.
+- Quality over quantity - 2-3 highly core tickers is better than loosely related ones.
 """
 
 

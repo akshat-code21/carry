@@ -1,4 +1,4 @@
-"""ContentItem model — a single piece of ingested content (13F filing, article, etc.)."""
+"""ContentItem model - a single piece of ingested content (13F filing, article, etc.)."""
 
 import uuid
 from datetime import datetime

@@ -469,7 +469,7 @@ Doc written: `docs/prod-latency-audit-2026-08-27.md:1` (prod DB `api_request_log
 
 ### Measured prod latency (7d, `src/analytics/middleware.py:47` `api_request_logs`)
 
-- `/api/themes` `src/api/themes.py:20` → `src/services/theme_service.py:173`: **p50 1 499 ms, p95 40 111 ms, max 55 916 ms** (n=78). Fastest successful `200` still **19 637 ms** — matches your 15–20 s. `403` (no data fetch) still **1 030 ms**, `401` (no DB) **80 ms** → bottleneck is DB/auth, not query complexity.
+- `/api/themes` `src/api/themes.py:20` → `src/services/theme_service.py:173`: **p50 1 499 ms, p95 40 111 ms, max 55 916 ms** (n=78). Fastest successful `200` still **19 637 ms** - matches your 15–20 s. `403` (no data fetch) still **1 030 ms**, `401` (no DB) **80 ms** → bottleneck is DB/auth, not query complexity.
 - `/api/channels` `src/api/channels.py:19` (2 rows, `EXPLAIN 0.19 ms`): **p50 1 520 ms, p95 30 515 ms**
 - `/api/videos` `src/api/videos.py:27` (27 rows): **p50 1 380 ms, p95 27 505 ms**
 - `/api/tickers` `src/api/tickers.py:37` (`EXPLAIN 0.24 ms`): **p50 282 ms, p95 3 044 ms**
@@ -477,7 +477,7 @@ Doc written: `docs/prod-latency-audit-2026-08-27.md:1` (prod DB `api_request_log
 
 ### Why
 
-1. **N+1 — `src/services/theme_service.py:173` `get_theme_hierarchy_tree()` does 133 sequential `SELECT`s** (`1 sector +6 industries+14 themes+111 mappings+1 narrative`, measured `1 987 ms` from Bengaluru, projected `6 185 ms` from Singapore 45 ms RTT ×133). Dashboard `web/src/lib/hooks.ts:107` `useDashboardData()` fans out 5 `useQuery` + `web/src/app/(app)/layout.tsx:13` `useMe()` = **6 parallel auth'd fetches**, `isLoading = a||b||c||d||e` `web/src/app/(app)/dashboard/page.tsx:17` shows skeleton until slowest (`themes`) finishes. Correlated slow minutes e.g. `2026-08-27 08:41` themes 55 917 + channels 38 025 + videos 34 293 together prove head-of-line blocking on single `uvicorn --workers 1` `Dockerfile:43`.
+1. **N+1 - `src/services/theme_service.py:173` `get_theme_hierarchy_tree()` does 133 sequential `SELECT`s** (`1 sector +6 industries+14 themes+111 mappings+1 narrative`, measured `1 987 ms` from Bengaluru, projected `6 185 ms` from Singapore 45 ms RTT ×133). Dashboard `web/src/lib/hooks.ts:107` `useDashboardData()` fans out 5 `useQuery` + `web/src/app/(app)/layout.tsx:13` `useMe()` = **6 parallel auth'd fetches**, `isLoading = a||b||c||d||e` `web/src/app/(app)/dashboard/page.tsx:17` shows skeleton until slowest (`themes`) finishes. Correlated slow minutes e.g. `2026-08-27 08:41` themes 55 917 + channels 38 025 + videos 34 293 together prove head-of-line blocking on single `uvicorn --workers 1` `Dockerfile:43`.
 
 2. **1.1 MB payload wasted**: `theme_hierarchy` 2 951 rows (narrative 2 820) + `theme_ticker_mappings` 2 477 rows → JSON ~909 KB narratives +250 KB tree. Dashboard only uses `data.themes.length` `web/src/app/(app)/dashboard/page.tsx:103`. No `gzip` (`deploy/nginx.conf:1` missing), no `Cache-Control`, no server cache. No index on `theme_hierarchy.level` `src/models/theme.py:22` → seq-scan 2 945 rows each request.
 

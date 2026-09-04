@@ -1,4 +1,4 @@
-"""Source service — auto-creates SEC 13F sources for investors."""
+"""Source service - auto-creates SEC 13F sources for investors."""
 
 import uuid
 
@@ -9,7 +9,7 @@ from src.models.hfi_source import HfiSource
 
 
 def sec_13f_source_url(cik: str) -> str:
-    """EDGAR company filings browse URL for a CIK — used as the canonical source URL."""
+    """EDGAR company filings browse URL for a CIK - used as the canonical source URL."""
     cik_padded = cik.zfill(10)
     return f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={cik_padded}&type=13F"
 

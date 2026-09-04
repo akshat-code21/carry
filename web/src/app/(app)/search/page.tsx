@@ -201,7 +201,7 @@ function SearchAnswerCard({
           )} */}
 
           {/* <p className="mt-3 text-micro text-ink-faint">
-            AI-generated from transcript clips — verify against the sources.
+            AI-generated from transcript clips - verify against the sources.
           </p> */}
         </>
       ) : null}
@@ -493,7 +493,7 @@ function SearchPageContent() {
     setChannelFilter(null);
   };
 
-  // ── AI answer — synthesized from the top fused-rank segments ──────────
+  // ── AI answer - synthesized from the top fused-rank segments ──────────
   // Avoid the keepPreviousData race: while a new query is fetching, results
   // still holds the previous query's groups. Sending those stale ids with the
   // new query poisons the answer cache (MSFT query + NVDA ids → "don't mention MSFT").
@@ -594,7 +594,7 @@ function SearchPageContent() {
           </form>
         </div>
 
-        {/* AI Answer + Coverage Snapshot — lazy-loaded after segments render */}
+        {/* AI Answer + Coverage Snapshot - lazy-loaded after segments render */}
         {(showAnswerSkeleton || answer?.available || showCoverage) && (
           <div
             className={cn(
@@ -624,7 +624,7 @@ function SearchPageContent() {
             initial={reducedMotion ? false : "hidden"}
             animate="show"
           >
-            {/* Stock / ETF Discovery Cards — shown prominently for exploratory queries */}
+            {/* Stock / ETF Discovery Cards - shown prominently for exploratory queries */}
             {/* {results.stocks && results.stocks.length > 0 && (
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
@@ -730,7 +730,7 @@ function SearchPageContent() {
               </div>
             )}
 
-            {/* Filter bar — only meaningful for grouped results */}
+            {/* Filter bar - only meaningful for grouped results */}
             {groups && groups.length > 0 && (
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-line bg-panel p-3">
                 {/* Sort */}
@@ -1048,7 +1048,7 @@ function SearchPageContent() {
               </div>
             )}
 
-            {/* Load more — fetches a larger result set; hidden while filters narrow the view */}
+            {/* Load more - fetches a larger result set; hidden while filters narrow the view */}
             {groups && results.has_more && !hasActiveFilters && (
               <Button
                 variant="outline"
@@ -1107,7 +1107,7 @@ function SearchPageContent() {
                         )}
                       </div>
                       <span className="line-clamp-1 text-small text-ink-secondary">
-                        {stock.themes.slice(0, 2).join(", ") || "—"}
+                        {stock.themes.slice(0, 2).join(", ") || "-"}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5">

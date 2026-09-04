@@ -1,7 +1,7 @@
 import { SignUp } from "@clerk/nextjs";
 import { InviteCodeCapture } from "@/components/InviteCodeCapture";
 
-export const metadata = { title: "Sign up — Carry" };
+export const metadata = { title: "Sign up - Carry" };
 
 export default function SignUpPage() {
   return (

@@ -1,4 +1,4 @@
-"""Authentication endpoints — current user profile and invite redemption."""
+"""Authentication endpoints - current user profile and invite redemption."""
 
 import logging
 

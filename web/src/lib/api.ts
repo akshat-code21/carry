@@ -62,7 +62,7 @@ export interface SearchResult {
   /** More distinct video groups available beyond the current limit */
   has_more?: boolean;
   query_intent: string;
-  /** stocks | etfs — which instrument class discovery results represent */
+  /** stocks | etfs - which instrument class discovery results represent */
   instrument_type?: string;
 }
 
@@ -685,7 +685,7 @@ export const api = {
     return request(`/admin/metrics/overview?days=${days}`);
   },
 
-  /* ── HFI — Investors ────────────────────────────────────────────── */
+  /* ── HFI - Investors ────────────────────────────────────────────── */
 
   async getHfiInvestors(): Promise<HfiInvestor[]> {
     return request("/hfi/investors");
@@ -735,7 +735,7 @@ export const api = {
     return request(`/hfi/reports/generate/${investorId}`, { method: "POST" });
   },
 
-  /* ── HFI — Analytics ────────────────────────────────────────────── */
+  /* ── HFI - Analytics ────────────────────────────────────────────── */
 
   async getHfiConsensus(period?: string): Promise<HfiConsensusResponse> {
     const params = period ? `?period=${encodeURIComponent(period)}` : "";
@@ -757,7 +757,7 @@ export const api = {
     return request(`/hfi/analytics/portfolio/${investorId}${params}`);
   },
 
-  /* ── HFI — Reports ──────────────────────────────────────────────── */
+  /* ── HFI - Reports ──────────────────────────────────────────────── */
 
   async getHfiReports(investorId?: string, limit = 20, offset = 0): Promise<HfiReportListItem[]> {
     let params = `?limit=${limit}&offset=${offset}`;
@@ -769,7 +769,7 @@ export const api = {
     return request(`/hfi/reports/${reportId}`);
   },
 
-  /* ── HFI — Alerts ───────────────────────────────────────────────── */
+  /* ── HFI - Alerts ───────────────────────────────────────────────── */
 
   async getHfiAlerts(opts?: { investor_id?: string; severity?: string; unread_only?: boolean; limit?: number; offset?: number }): Promise<HfiAlertsResponse> {
     const params = new URLSearchParams();

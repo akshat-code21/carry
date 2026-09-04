@@ -1,4 +1,4 @@
-"""Performance record model — tracks price changes after predictions."""
+"""Performance record model - tracks price changes after predictions."""
 
 import uuid
 

@@ -26,7 +26,7 @@ Do not invent information not present in the extracted data.
 
 # Intelligence Report: {investor_name}
 **Generated:** {generated_at}
-**Period:** {period_start} — {period_end}
+**Period:** {period_start} - {period_end}
 **Sources analyzed:** {source_count} | **New content items:** {content_count}
 
 ---
@@ -37,7 +37,7 @@ Do not invent information not present in the extracted data.
 ---
 
 ## Key Observations
-[Bulleted list of 3-7 most significant findings. Be specific — mention companies, tickers, themes.]
+[Bulleted list of 3-7 most significant findings. Be specific - mention companies, tickers, themes.]
 
 ---
 

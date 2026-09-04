@@ -5,12 +5,12 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * yt·tape — instrument token layer
+ * yt·tape - instrument token layer
  * Every color and font below traces to the Pass 1 plan: a deep desaturated
  * navy "desk" ink, one chartreuse signal accent, and deliberate market
  * semantics (bullish/bearish/neutral) chosen to hold at small sizes on both
  * the dark and light surface. Component code must NOT introduce palette
- * classes or raw hex values — everything resolves through these tokens.
+ * classes or raw hex values - everything resolves through these tokens.
  */
 @theme inline {
   /* Surfaces & ink */
@@ -244,7 +244,7 @@
     @apply font-sans;
   }
 
-  /* Native color-scheme hooks — also drives Clerk's default theme
+  /* Native color-scheme hooks - also drives Clerk's default theme
      (light primary; .dark flips Clerk components to their dark palette). */
   :root {
     color-scheme: light;
@@ -257,12 +257,12 @@
 
 @layer components {
 
-  /* Overline label — the recurring section/column label treatment */
+  /* Overline label - the recurring section/column label treatment */
   .label-overline {
     @apply font-mono text-caption font-medium uppercase tracking-[0.1em] text-ink-faint;
   }
 
-  /* Numeric data — monospaced, aligned digits (prices, %, counts, scores) */
+  /* Numeric data - monospaced, aligned digits (prices, %, counts, scores) */
   .numeric {
     @apply font-mono tabular-nums tracking-tight;
   }
@@ -370,7 +370,7 @@
 }
 
 /* ── Landing page utilities ────────────────────────────────────────
- * Resolution through tokens only — no raw hex values.
+ * Resolution through tokens only - no raw hex values.
  */
 
 @layer components {

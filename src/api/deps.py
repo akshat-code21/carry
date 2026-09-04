@@ -1,4 +1,4 @@
-"""FastAPI dependency injection — provides services and DB sessions to route handlers."""
+"""FastAPI dependency injection - provides services and DB sessions to route handlers."""
 
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -1,4 +1,4 @@
-"""Pipeline trigger API endpoints (admin-only — these enqueue expensive work)."""
+"""Pipeline trigger API endpoints (admin-only - these enqueue expensive work)."""
 
 from fastapi import APIRouter, Depends
 

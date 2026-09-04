@@ -32,7 +32,7 @@ function InvestorStat({
     queryFn: () => api.getHfiInvestorStats(investorId),
   });
   const value = stats?.[kind];
-  if (value == null) return <span className="text-ink-faint">—</span>;
+  if (value == null) return <span className="text-ink-faint">-</span>;
   const highlight = kind === "unread_alerts" && value > 0;
   return (
     <span className={`numeric text-small ${highlight ? "font-semibold text-warning" : "text-ink"}`}>
@@ -182,7 +182,7 @@ function investorColumns(
             <ExternalLink className="h-3 w-3" />
           </a>
         ) : (
-          <span className="text-ink-faint">—</span>
+          <span className="text-ink-faint">-</span>
         ),
     },
     {

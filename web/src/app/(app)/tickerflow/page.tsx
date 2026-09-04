@@ -97,7 +97,7 @@ type TooltipEntry = {
   value?: number | string;
 };
 
-/* Uses the Next.js rewrite proxy — /api/v1/* → backend:8000/api/v1/* */
+/* Uses the Next.js rewrite proxy - /api/v1/* → backend:8000/api/v1/* */
 const API_BASE = `${API_BASE_URL}/v1`;
 
 const QUICK_TICKERS = ["NVDA", "TSLA", "AAPL", "MSFT"] as const;
@@ -115,7 +115,7 @@ const sourceDescriptions: Record<Source, string> = {
 };
 
 function formatNumber(value?: number | null, digits = 0) {
-  if (value === undefined || value === null) return "—";
+  if (value === undefined || value === null) return "-";
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: digits,
     minimumFractionDigits: digits,
@@ -254,7 +254,7 @@ function ChartTooltip({
               {entry.dataKey === "close" ? "$" : ""}
               {typeof entry.value === "number"
                 ? formatNumber(entry.value, entry.dataKey === "close" ? 2 : 0)
-                : "—"}
+                : "-"}
             </span>
           </div>
         ))}

@@ -138,7 +138,7 @@ export default function TickerPage() {
     })) || [];
 
   /**
-   * Shared TradingView Lightweight-Charts renderer (v5) — replaces the Recharts
+   * Shared TradingView Lightweight-Charts renderer (v5) - replaces the Recharts
    * price charts. B/S sentiment markers are drawn by the library’s marker plugin;
    * the candlestick toggle switches the price series type in place.
    */
@@ -151,7 +151,7 @@ export default function TickerPage() {
   );
 
   /**
-   * “Price Chart & Predictions Performance” — actual close vs the close one week
+   * “Price Chart & Predictions Performance” - actual close vs the close one week
    * later (dashed), with prediction dots colored by predicted direction.
    */
   const priceIndexByDate = new Map(priceHistory.map((p: any, idx: number) => [p.date, idx]));
@@ -289,7 +289,7 @@ export default function TickerPage() {
           <CardHeader>
             <CardTitle>Price Chart & Predictions Performance</CardTitle>
             <CardDescription>
-              Historical price performance with prediction timestamps — dots are colored by
+              Historical price performance with prediction timestamps - dots are colored by
               predicted direction (▲ bullish / ▼ bearish / ● neutral); the dashed line
               shows the close price one week later
             </CardDescription>

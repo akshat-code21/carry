@@ -1,4 +1,4 @@
-"""TickerDailyMetric model — daily sentiment/buzz time-series."""
+"""TickerDailyMetric model - daily sentiment/buzz time-series."""
 
 from datetime import date, datetime
 

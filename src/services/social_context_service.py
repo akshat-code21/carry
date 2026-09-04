@@ -1,4 +1,4 @@
-"""Social context service — TickerFlow (Reddit/X/News) sentiment for yt-chatter surfaces.
+"""Social context service - TickerFlow (Reddit/X/News) sentiment for yt-chatter surfaces.
 
 Bridges the YouTube-side search/ticker endpoints with the TickerFlow
 CollectionService stashed in ``app.state.tickerflow_service``. All fetches are
@@ -77,7 +77,7 @@ class SocialContextService:
     def _service(self) -> CollectionService | None:
         try:
             return self._service_getter()
-        except Exception:  # noqa: BLE001 — app.state may be absent in some contexts
+        except Exception:  # noqa: BLE001 - app.state may be absent in some contexts
             return None
 
     async def get_ticker(
@@ -113,7 +113,7 @@ class SocialContextService:
                 effective_timeout,
             )
             return None
-        except Exception as exc:  # noqa: BLE001 — unsupported/unknown tickers are expected
+        except Exception as exc:  # noqa: BLE001 - unsupported/unknown tickers are expected
             logger.debug("social_context: no social data for %s: %s", normalized, exc)
             return None
 

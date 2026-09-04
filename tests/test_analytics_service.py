@@ -1,4 +1,4 @@
-"""Tests for the analytics service — event recording and rollup bumps."""
+"""Tests for the analytics service - event recording and rollup bumps."""
 
 import uuid
 

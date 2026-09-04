@@ -1,4 +1,4 @@
-"""CollectionRun model — tracks Adanos sentiment collection runs."""
+"""CollectionRun model - tracks Adanos sentiment collection runs."""
 
 from datetime import datetime
 

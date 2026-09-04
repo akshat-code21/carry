@@ -300,7 +300,7 @@ Let me outline both options.
 
 Two free paths on GCP:
 
-### 1. Cloud SQL for PostgreSQL — 12-month Free Tier (Managed)
+### 1. Cloud SQL for PostgreSQL - 12-month Free Tier (Managed)
 - `db-f1-micro` (1 vCPU, 0.6 GB RAM), 10 GB storage, 1 GB egress/mo (NA regions)
 - `postgresql-16` + `pgvector` supported via flags
 - **Expires after 12 months** → then ~$7/mo
@@ -338,9 +338,9 @@ DATABASE_URL_SYNC="postgresql://yt_chatter:<APP_PASS>@<PUBLIC_IP>:5432/yt_chatte
 
 ---
 
-### 2. e2-micro VM — Forever Free (Self-hosted, no egress limit in-region)
+### 2. e2-micro VM - Forever Free (Self-hosted, no egress limit in-region)
 - 2 vCPU (burst), 1 GB RAM, 30 GB disk, **1 GB/day egress** (~30 GB/mo) in US regions
-- You run `pgvector/pgvector:pg16` in Docker — full control, no 12-mo clock
+- You run `pgvector/pgvector:pg16` in Docker - full control, no 12-mo clock
 
 **Steps:**
 ```bash

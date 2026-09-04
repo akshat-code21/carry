@@ -1,8 +1,8 @@
 # SentimentAI: AI-Powered Stock Sentiment & Market Intelligence Platform
-## Complete Project Blueprint — VC-Ready Technical Due Diligence Package
+## Complete Project Blueprint - VC-Ready Technical Due Diligence Package
 
 > **Document Version:** 2.0.0  
-> **Classification:** Confidential — For Investor & Technical Review  
+> **Classification:** Confidential - For Investor & Technical Review  
 > **Prepared By:** Principal AI Architect & Quantitative Research Team  
 > **Date:** June 2026  
 > **Status:** Final Draft
@@ -46,15 +46,15 @@
 
 ## The Opportunity
 
-Retail investors — numbering over **170 million globally** and controlling approximately **$38 trillion in assets** — lack access to the same real-time sentiment intelligence infrastructure that institutional investors have used for decades. Bloomberg Terminal subscriptions cost $24,000/year. Refinitiv's Eikon runs $22,000/year. Sophisticated alternative data feeds are priced exclusively for hedge funds.
+Retail investors - numbering over **170 million globally** and controlling approximately **$38 trillion in assets** - lack access to the same real-time sentiment intelligence infrastructure that institutional investors have used for decades. Bloomberg Terminal subscriptions cost $24,000/year. Refinitiv's Eikon runs $22,000/year. Sophisticated alternative data feeds are priced exclusively for hedge funds.
 
-Meanwhile, the signal is hiding in plain sight: Twitter/X, Reddit, Substack, and financial blogs collectively generate over **2.5 million stock-related posts per day**, carrying predictive information about price movements that academic research has repeatedly validated — yet no product synthesizes this signal into actionable, quantitatively rigorous intelligence accessible to retail investors at scale.
+Meanwhile, the signal is hiding in plain sight: Twitter/X, Reddit, Substack, and financial blogs collectively generate over **2.5 million stock-related posts per day**, carrying predictive information about price movements that academic research has repeatedly validated - yet no product synthesizes this signal into actionable, quantitatively rigorous intelligence accessible to retail investors at scale.
 
 **SentimentAI** closes this gap.
 
 ## What We Are Building
 
-SentimentAI is a **multi-agent AI platform** that ingests near-real-time financial social media content, news, and public market commentary for any publicly traded stock ticker, processes it through a 10-agent LangGraph pipeline powered by LLMs, and produces seven distinct quantitative sentiment scores with explainable confidence intervals — delivered through a consumer-grade interface and a developer-facing API.
+SentimentAI is a **multi-agent AI platform** that ingests near-real-time financial social media content, news, and public market commentary for any publicly traded stock ticker, processes it through a 10-agent LangGraph pipeline powered by LLMs, and produces seven distinct quantitative sentiment scores with explainable confidence intervals - delivered through a consumer-grade interface and a developer-facing API.
 
 ## Market Sizing
 
@@ -73,11 +73,11 @@ SentimentAI is a **multi-agent AI platform** that ingests near-real-time financi
 
 SentimentAI's durable competitive advantages compound over time:
 
-1. **Proprietary Multi-Source Fusion** — No existing product aggregates all 10+ sources into a single normalized scoring engine
-2. **Author Credibility Network** — A persistent author reputation database grows more accurate and defensible with every data point processed
-3. **Backtested Signal Validation** — Correlating predictions against actual returns creates a trust signal competitors cannot purchase
-4. **Narrative Intelligence Layer** — LLM-powered theme detection identifies investment narratives, not just sentiment polarity
-5. **Data Flywheel** — More users → more feedback data → better calibration → better product → more users
+1. **Proprietary Multi-Source Fusion** - No existing product aggregates all 10+ sources into a single normalized scoring engine
+2. **Author Credibility Network** - A persistent author reputation database grows more accurate and defensible with every data point processed
+3. **Backtested Signal Validation** - Correlating predictions against actual returns creates a trust signal competitors cannot purchase
+4. **Narrative Intelligence Layer** - LLM-powered theme detection identifies investment narratives, not just sentiment polarity
+5. **Data Flywheel** - More users → more feedback data → better calibration → better product → more users
 
 ## Business Model
 
@@ -88,7 +88,7 @@ SentimentAI's durable competitive advantages compound over time:
 | Trader | $99/mo | API access, alerts, portfolio dashboard, 2-year history | Active traders |
 | Enterprise | $799+/mo | White-label, bulk API, custom agents, SLA | RIAs, fintechs |
 
-## Key Metrics (Target — Year 2)
+## Key Metrics (Target - Year 2)
 
 - 50,000 Pro+ subscribers → $23.4M ARR
 - API: 200 enterprise accounts → $19.2M ARR  
@@ -107,7 +107,7 @@ A **Seed round of $3.5M** funds Phase 1–2 (18 months), covering team (8 FTEs),
 ## Problem Statement
 
 ### Primary Problem
-Retail investors making multi-thousand dollar investment decisions rely on manual browsing of Reddit threads, Twitter feeds, and financial blogs — a process that is:
+Retail investors making multi-thousand dollar investment decisions rely on manual browsing of Reddit threads, Twitter feeds, and financial blogs - a process that is:
 - **Incomplete:** No single person can monitor 10+ platforms simultaneously
 - **Biased:** Manual curation introduces recency and confirmation bias
 - **Unquantified:** There is no systematic way to measure sentiment strength or credibility
@@ -118,7 +118,7 @@ The financial content ecosystem is polluted with bots, paid promoters, misinform
 
 ### Market Validation
 - Academic research (Da et al., 2011; Chen et al., 2014; Bollen et al., 2011) demonstrates that social media sentiment Granger-causes stock returns with statistical significance
-- Reddit's r/WallStreetBets GME episode demonstrated that retail social sentiment can move markets — yet no product systematically monitors this
+- Reddit's r/WallStreetBets GME episode demonstrated that retail social sentiment can move markets - yet no product systematically monitors this
 - 73% of retail investors surveyed (Schwab 2024) report using social media as a primary research input
 
 ## Goals
@@ -154,7 +154,7 @@ The financial content ecosystem is polluted with bots, paid promoters, misinform
 
 ## User Personas
 
-### Persona 1: The Active Retail Trader — "Alex"
+### Persona 1: The Active Retail Trader - "Alex"
 - **Demographics:** 32 years old, software engineer, trades 10–20 hours/week
 - **Portfolio:** $50K–$200K, primarily individual stocks + ETFs
 - **Behavior:** Monitors Reddit, Twitter, Discord daily; uses TradingView for charts
@@ -162,7 +162,7 @@ The financial content ecosystem is polluted with bots, paid promoters, misinform
 - **Jobs to Be Done:** "Know what the crowd is feeling about a stock before I enter a position"
 - **Willingness to Pay:** $50–100/month for a reliable signal
 
-### Persona 2: The Long-Term Growth Investor — "Sarah"
+### Persona 2: The Long-Term Growth Investor - "Sarah"
 - **Demographics:** 45 years old, marketing director, invests 3–5 hours/week
 - **Portfolio:** $150K–$500K, concentrated in 15–25 stocks, 3–5 year horizon
 - **Behavior:** Reads Seeking Alpha, WSJ; follows select analysts on Substack
@@ -170,7 +170,7 @@ The financial content ecosystem is polluted with bots, paid promoters, misinform
 - **Jobs to Be Done:** "Track how the investment thesis for my holdings is evolving across public discourse"
 - **Willingness to Pay:** $30–50/month
 
-### Persona 3: The Investment Researcher — "Marcus"
+### Persona 3: The Investment Researcher - "Marcus"
 - **Demographics:** 28 years old, works at a family office; runs independent research on the side
 - **Portfolio/Role:** Conducts due diligence on 40–60 stocks per quarter
 - **Behavior:** Uses Bloomberg for fundamentals; needs a sentiment layer; writes Substack newsletter
@@ -178,7 +178,7 @@ The financial content ecosystem is polluted with bots, paid promoters, misinform
 - **Jobs to Be Done:** "Get API access to sentiment scores I can incorporate into my models and reports"
 - **Willingness to Pay:** $100–200/month for API access
 
-### Persona 4: The Fintech Builder — "Priya"
+### Persona 4: The Fintech Builder - "Priya"
 - **Demographics:** 35 years old, co-founder of a retail investment app
 - **Company:** 50K DAU mobile investing app
 - **Behavior:** Looking for white-labeled sentiment data to embed in their product
@@ -750,7 +750,7 @@ from typing import TypedDict, List, Dict, Optional, Literal, Annotated
 import operator
 
 # ─────────────────────────────────────────────────────────────────
-# STATE DEFINITION — extended to support loop control
+# STATE DEFINITION - extended to support loop control
 # ─────────────────────────────────────────────────────────────────
 class AgentState(TypedDict):
     # Input
@@ -763,7 +763,7 @@ class AgentState(TypedDict):
     validated_items:    List[Dict]
     cleaned_items:      List[Dict]
 
-    # Parallel branch outputs — kept SEPARATE until merge node
+    # Parallel branch outputs - kept SEPARATE until merge node
     llm_results:        List[Dict]   # from analyze node (LLM)
     sentiment_results:  List[Dict]   # from sentiment node (FinBERT)
 
@@ -771,9 +771,9 @@ class AgentState(TypedDict):
     merged_results:     List[Dict]   # combined, disagreement-annotated items
     disagreement_score: float        # mean disagreement across all items
 
-    # Loop control — NEW, was completely missing before
+    # Loop control - NEW, was completely missing before
     retry_count:        int          # 0 = never retried, 1 = retried once (max)
-    llm_tier:           str          # "haiku" | "sonnet" — escalates on retry
+    llm_tier:           str          # "haiku" | "sonnet" - escalates on retry
 
     # Downstream
     narrative_clusters:     List[Dict]
@@ -791,12 +791,12 @@ class AgentState(TypedDict):
 
 
 # ─────────────────────────────────────────────────────────────────
-# NODE IMPLEMENTATIONS — the three missing ones
+# NODE IMPLEMENTATIONS - the three missing ones
 # ─────────────────────────────────────────────────────────────────
 
 def merge_and_check(state: AgentState) -> AgentState:
     """
-    NEW NODE — was completely absent in original code.
+    NEW NODE - was completely absent in original code.
 
     1. Zips LLM results with FinBERT results item by item
     2. Computes per-item disagreement score
@@ -845,7 +845,7 @@ def merge_and_check(state: AgentState) -> AgentState:
 
 def escalation_prep(state: AgentState) -> AgentState:
     """
-    NEW NODE — prepares state for LLM retry with a stronger model.
+    NEW NODE - prepares state for LLM retry with a stronger model.
 
     Only runs when merge detects high disagreement on first pass.
     Upgrades llm_tier to 'sonnet' so analyze node uses the right model.
@@ -863,7 +863,7 @@ def escalation_prep(state: AgentState) -> AgentState:
 
 def apply_confidence_penalty(state: AgentState) -> AgentState:
     """
-    NEW NODE — runs when disagreement is high but we've exhausted retries.
+    NEW NODE - runs when disagreement is high but we've exhausted retries.
 
     Items with high disagreement still proceed to narrative clustering
     (Agent 6 can still place them in thematic clusters) but carry
@@ -920,7 +920,7 @@ def route_after_merge(
     retry_count  = state["retry_count"]
 
     if disagreement < 0.4:
-        # Agreement is acceptable — proceed regardless of retry_count
+        # Agreement is acceptable - proceed regardless of retry_count
         return "narrative"
 
     if retry_count == 0:
@@ -934,14 +934,14 @@ def route_after_merge(
 def route_after_aggregate(
     state: AgentState,
 ) -> Literal["escalate", "report"]:
-    """Unchanged from original — human escalation for low overall confidence."""
+    """Unchanged from original - human escalation for low overall confidence."""
     if state["human_escalation_required"]:
         return "escalate"
     return "report"
 
 
 # ─────────────────────────────────────────────────────────────────
-# GRAPH CONSTRUCTION — corrected
+# GRAPH CONSTRUCTION - corrected
 # ─────────────────────────────────────────────────────────────────
 
 workflow = StateGraph(AgentState)
@@ -1029,11 +1029,11 @@ app = workflow.compile(checkpointer=checkpointer)
 
 **Short-term memory (within run):** LangGraph state object (in-memory, Redis-backed checkpoint)
 
-**Cross-run memory (author reputation):** PostgreSQL `author_credibility` table — persists and improves author scores across all analyses
+**Cross-run memory (author reputation):** PostgreSQL `author_credibility` table - persists and improves author scores across all analyses
 
-**Semantic memory (narrative fingerprints):** Qdrant collection `narrative_fingerprints` — stores cluster centroids for historical narrative matching
+**Semantic memory (narrative fingerprints):** Qdrant collection `narrative_fingerprints` - stores cluster centroids for historical narrative matching
 
-**Episodic memory (analysis cache):** Redis — caches completed analyses for 30 minutes; prevents redundant processing for same ticker/window
+**Episodic memory (analysis cache):** Redis - caches completed analyses for 30 minutes; prevents redundant processing for same ticker/window
 
 ## CrewAI Integration
 
@@ -1348,7 +1348,7 @@ For long articles (up to 50,000 characters):
 ### Notation
 
 Let:
-- **D** = {d₁, d₂, ..., dₙ} — the set of all processed content items for ticker **T** over time window **W**
+- **D** = {d₁, d₂, ..., dₙ} - the set of all processed content items for ticker **T** over time window **W**
 - For each item **dᵢ**: a feature vector **fᵢ** = (fᵢᵃ, fᵢᶜ, fᵢᵉ, fᵢᵇ, fᵢᵗ, fᵢˢ, fᵢᵐ)
   where superscripts denote: **a**=author, **c**=content, **e**=engagement, **b**=behavior, **t**=time, **s**=source, **m**=market
 
@@ -1356,14 +1356,14 @@ Let:
 
 ## Feature Engineering
 
-### 1. Author Score — A(dᵢ)
+### 1. Author Score - A(dᵢ)
 
 $$A(d_i) = \alpha_1 \cdot \text{log\_norm}(F_i) + \alpha_2 \cdot V_i + \alpha_3 \cdot \text{age\_score}(a_i) + \alpha_4 \cdot \text{EMA}(C_i) + \alpha_5 \cdot \text{acc\_score}(i)$$
 
 Where:
 - **log\_norm(Fᵢ)** = log(1 + follower\_count) / log(1 + max\_follower\_count) ∈ [0, 1]
 - **Vᵢ** = 1 if verified else 0
-- **age\_score(aᵢ)** = min(account\_age\_years / 5, 1.0) — capped at 5 years
+- **age\_score(aᵢ)** = min(account\_age\_years / 5, 1.0) - capped at 5 years
 - **EMA(Cᵢ)** = exponential moving average of historical credibility ratings ∈ [0, 1]
 - **acc\_score(i)** = historical directional accuracy: TP / (TP + FP) from tracked predictions
 
@@ -1373,7 +1373,7 @@ Where:
 - Institutional accounts (verified news organizations): A(dᵢ) multiplied by 1.3 (capped at 1.0)
 - Anonymous accounts (no verifiable identity): A(dᵢ) multiplied by 0.7
 
-### 2. Sentiment Score — S(dᵢ)
+### 2. Sentiment Score - S(dᵢ)
 
 Raw directional sentiment derived from ensemble model:
 
@@ -1387,7 +1387,7 @@ $$\text{conf}(d_i) = \max(P(\text{bullish}), P(\text{bearish}), P(\text{neutral}
 
 where σ_models is the standard deviation of sentiment probabilities across models (disagreement penalty).
 
-### 3. Bot Probability — P_bot(dᵢ)
+### 3. Bot Probability - P_bot(dᵢ)
 
 $$P_{\text{bot}}(d_i) = \sigma\left(\mathbf{w}_{\text{bot}}^T \mathbf{x}_{\text{bot}}(d_i) + b\right)$$
 
@@ -1411,7 +1411,7 @@ $$P_{\text{bot}}(d_i) = \sigma\left(\mathbf{w}_{\text{bot}}^T \mathbf{x}_{\text{
 - P_bot(dᵢ) ∈ [0.30, 0.70] → partial weight: w_bot(dᵢ) = 1 - P_bot(dᵢ)
 - P_bot(dᵢ) < 0.30 → full weight: w_bot(dᵢ) = 1.0
 
-### 4. Time Decay — w_t(dᵢ)
+### 4. Time Decay - w_t(dᵢ)
 
 Standard exponential decay:
 $$w_t(d_i) = e^{-\lambda \cdot \Delta t_i}$$
@@ -1430,7 +1430,7 @@ where Δtᵢ = (now − published\_at) in hours.
 
 **Burst Detection:** During high-activity periods (mention volume > 3σ above 30-day baseline), the STSS decay is further accelerated (λ → 0.75) to emphasize the most recent signals.
 
-### 5. Engagement Quality Score — E(dᵢ)
+### 5. Engagement Quality Score - E(dᵢ)
 
 $$E(d_i) = \sum_j \gamma_j \cdot \text{norm}(e_{ij}) + \delta \cdot \text{EV\_norm}(d_i)$$
 
@@ -1457,7 +1457,7 @@ A post with 10 substantive comments > a post with 1,000 bot-generated likes. The
 - Applying bot probability to engagement attribution (high-bot-probability engagers discounted)
 - Flagging engagement anomalies (sudden spike > 5σ in 1 hour without news catalyst)
 
-### 6. Source Trust Score — T(dᵢ)
+### 6. Source Trust Score - T(dᵢ)
 
 Static baseline (updated quarterly via editorial review):
 
@@ -1480,7 +1480,7 @@ Static baseline (updated quarterly via editorial review):
 - Misinformation incident history (−0.15 per confirmed incident)
 - Peer review signal (content from this source engaged with by high-credibility authors: +0.03)
 
-### 7. Content Quality Score — Q(dᵢ)
+### 7. Content Quality Score - Q(dᵢ)
 
 LLM-assigned quality score from analysis prompt, normalized ∈ [0, 1].
 
@@ -1559,7 +1559,7 @@ Where:
 - mₖ = narrative momentum (slope of cluster size over time)
 
 ### Score 5: Social Momentum Score (SMS)
-**Purpose:** Rate of change in social attention — identifies acceleration before price moves.
+**Purpose:** Rate of change in social attention - identifies acceleration before price moves.
 
 $$\text{SMS}(T) = 100 \cdot \tanh\left(\frac{V_{24h} - \bar{V}_{30d}}{\sigma_{30d}}\right)$$
 
@@ -1586,9 +1586,9 @@ Where:
 - Div = source diversity ratio: unique_sources_with_data / total_configured_sources
 
 **Interpretation:**
-- CS > 80: High confidence — large volume, consistent signal, diverse sources
-- CS 50–80: Moderate confidence — usable signal, interpret with caution
-- CS < 50: Low confidence — small stock or news gap; score less reliable
+- CS > 80: High confidence - large volume, consistent signal, diverse sources
+- CS 50–80: Moderate confidence - usable signal, interpret with caution
+- CS < 50: Low confidence - small stock or news gap; score less reliable
 
 ### Score 7: Overall Composite Score (OCS)
 
@@ -2437,7 +2437,7 @@ Automated checks run after each analysis cycle:
 ### Recommendation: **Render (Primary)**
 
 **Rationale:**
-- Largest ecosystem and talent pool — easier hiring
+- Largest ecosystem and talent pool - easier hiring
 - Managed Redis Queue (Managed Redis Queue) is best-in-class managed Redis Queue
 - Aurora PostgreSQL Serverless v2 perfect for variable load at seed stage
 - GitHub Actions → Container Registry → Render → Render Deployments: industry-standard MLOps pipeline
@@ -2555,7 +2555,7 @@ Automated checks run after each analysis cycle:
 
 # Regulatory & Compliance Considerations
 
-> ⚠️ **Critical Section — Consult Legal Counsel Before Launch**
+> ⚠️ **Critical Section - Consult Legal Counsel Before Launch**
 
 ## US Securities Regulations
 
@@ -2583,7 +2583,7 @@ Automated checks run after each analysis cycle:
 | Seeking Alpha | Yes (commercial license) | $200–$2,000/mo |
 | Reuters | Yes (commercial news feed) | $500–$5,000/mo |
 | StockTwits | Yes (commercial tier) | $200–$1,000/mo |
-| Yahoo Finance | Unofficial — avoid for commercial | Risk |
+| Yahoo Finance | Unofficial - avoid for commercial | Risk |
 | Bloomberg | Yes (B-PIPE) | $2,000–$10,000/mo |
 | AlphaVantage (price data) | Freemium | $50–$500/mo |
 
@@ -2608,7 +2608,7 @@ Automated checks run after each analysis cycle:
 
 ## Monthly Infrastructure Cost (Render)
 
-### Phase 1 — MVP (Months 1–6)
+### Phase 1 - MVP (Months 1–6)
 
 | Component | Spec | Monthly Cost |
 |-----------|------|-------------|
@@ -2618,8 +2618,8 @@ Automated checks run after each analysis cycle:
 | ElastiCache Redis | cache.r6g.large, 2 nodes | $280 |
 | Qdrant (self-hosted on EC2) | r6i.2xlarge × 3 | $720 |
 | S3 Storage | 5TB | $115 |
-| ALB + Data Transfer | — | $300 |
-| CloudWatch, Route53, misc | — | $200 |
+| ALB + Data Transfer | - | $300 |
+| CloudWatch, Route53, misc | - | $200 |
 | **Infrastructure Subtotal** | | **$4,715/mo** |
 
 | LLM Costs | Volume | Monthly Cost |
@@ -2635,14 +2635,14 @@ Automated checks run after each analysis cycle:
 | Reddit API | ~1M calls | $240 |
 | StockTwits | Basic commercial | $200 |
 | AlphaVantage | Premium | $200 |
-| News RSS + SerpAPI | — | $150 |
+| News RSS + SerpAPI | - | $150 |
 | **Data Subtotal** | | **$890/mo** |
 
 **Total Phase 1 Monthly Cost: ~$9,280/month**
 
 **Gross Margin at 500 Pro subscribers ($39/mo) = $19,500 revenue → GM = 52.5%**
 
-### Phase 3 — Growth (Month 18+, 5,000 subscribers)
+### Phase 3 - Growth (Month 18+, 5,000 subscribers)
 
 | Component | Monthly Cost |
 |-----------|-------------|
@@ -2748,7 +2748,7 @@ The MVP focuses on **validating the core value proposition** (sentiment scores t
 
 ---
 
-# Phase 1 Implementation Plan — Foundation & MVP
+# Phase 1 Implementation Plan - Foundation & MVP
 **Timeline: Months 1–6 | Budget: ~$600K**
 
 ## Objectives
@@ -2845,7 +2845,7 @@ Build and validate the core data pipeline, scoring engine, and consumer-facing p
 
 ---
 
-# Phase 2 Implementation Plan — Advanced Sentiment Intelligence
+# Phase 2 Implementation Plan - Advanced Sentiment Intelligence
 **Timeline: Months 7–12 | Budget: ~$800K**
 
 ## Objectives
@@ -2901,7 +2901,7 @@ Introduce LangGraph multi-agent pipeline, expand scores to all 7, add narrative 
 
 ---
 
-# Phase 3 Implementation Plan — Multi-Agent Automation
+# Phase 3 Implementation Plan - Multi-Agent Automation
 **Timeline: Months 13–18 | Budget: ~$1.2M**
 
 ## Objectives
@@ -2944,7 +2944,7 @@ Full multi-agent automation with CrewAI crews, cross-ticker intelligence, mobile
 
 ---
 
-# Phase 4 Implementation Plan — Advanced Quantitative Scoring
+# Phase 4 Implementation Plan - Advanced Quantitative Scoring
 **Timeline: Months 19–24 | Budget: ~$1.5M**
 
 ## Objectives
@@ -2962,7 +2962,7 @@ Fine-tuned models, calibrated scoring, options sentiment, advanced quantitative 
 
 ---
 
-# Phase 5 Implementation Plan — Backtesting & Validation
+# Phase 5 Implementation Plan - Backtesting & Validation
 **Timeline: Months 25–30 | Budget: ~$1.0M**
 
 ## Objectives
@@ -2979,7 +2979,7 @@ Public signal performance disclosure, third-party validation, research publicati
 
 ---
 
-# Phase 6 Implementation Plan — Production Scaling
+# Phase 6 Implementation Plan - Production Scaling
 **Timeline: Months 31–36 | Budget: ~$2.0M**
 
 ## Objectives
@@ -3060,7 +3060,7 @@ Global scale, international expansion, platform ecosystem, strategic partnership
 
 **Months 1–3: Build the data moat, not the product.**
 
-The most defensible long-term asset in SentimentAI is not the frontend or the scoring algorithm — it is the **accumulated historical database** of scored content items matched against price outcomes. Start collecting and storing data on Day 1, even before the product is usable, because every day of historical data has compounding value for backtesting and calibration that can never be recovered retroactively.
+The most defensible long-term asset in SentimentAI is not the frontend or the scoring algorithm - it is the **accumulated historical database** of scored content items matched against price outcomes. Start collecting and storing data on Day 1, even before the product is usable, because every day of historical data has compounding value for backtesting and calibration that can never be recovered retroactively.
 
 **Specific Recommendation:**
 1. Stand up the Redis Queue pipeline and 3 primary collectors (Twitter, Reddit, StockTwits) in Week 1
@@ -3081,7 +3081,7 @@ The MVP architecture intentionally avoids LangGraph, CrewAI, and multi-model ens
 
 ## Hiring Sequence
 
-1. **First hire:** Senior ML Engineer with NLP background and production experience. This person owns the scoring engine and model quality — the core product.
+1. **First hire:** Senior ML Engineer with NLP background and production experience. This person owns the scoring engine and model quality - the core product.
 2. **Second hire:** Senior Backend Engineer with distributed systems and Redis Queue experience. This person owns the pipeline reliability.
 3. **Third hire:** Full-stack Engineer with TypeScript/Next.js and some backend capability. This person ships the product users actually see.
 4. **Fourth hire:** Data Engineer. The data moat is everything; this person ensures the pipeline never loses data.
@@ -3103,7 +3103,7 @@ The MVP architecture intentionally avoids LangGraph, CrewAI, and multi-model ens
 
 If the signal has predictive power, the IC will show it. Publish it on the website. This is the most differentiated trust signal in the market: no competitor publishes validated signal performance for retail investors. If IC is positive and improving, marketing writes itself. If IC is declining, you know which model component to fix before users churn.
 
-A platform with a validated IC of 0.08 over 5-day windows is a **fundamentally different product** than one with an IC of 0.02 — and users sophisticated enough to care about data quality (your Pro/Trader buyers) will recognize this immediately.
+A platform with a validated IC of 0.08 over 5-day windows is a **fundamentally different product** than one with an IC of 0.02 - and users sophisticated enough to care about data quality (your Pro/Trader buyers) will recognize this immediately.
 
 ## Summary Investment Thesis
 
@@ -3111,11 +3111,11 @@ SentimentAI is built on three compounding advantages:
 
 1. **Data flywheel:** Every processed item makes the author credibility database more accurate, which improves scoring, which generates better product outcomes, which attracts more users, which justifies more data investment.
 
-2. **Backtested trust:** In a market saturated with unvalidated "AI signals," a platform that publicly publishes IC, hit rate, and signal Sharpe — and continuously improves them — builds a trust moat that price cannot erode.
+2. **Backtested trust:** In a market saturated with unvalidated "AI signals," a platform that publicly publishes IC, hit rate, and signal Sharpe - and continuously improves them - builds a trust moat that price cannot erode.
 
 3. **Distribution via API:** The Enterprise/API business model makes every fintech app that embeds SentimentAI a distribution channel. At scale, the embedded API business generates higher-margin revenue than direct consumer subscriptions while requiring no incremental marketing spend.
 
-The market is large, the problem is real, the technical path is clear, and the timing — with LLMs making agent architectures economically viable for the first time — is exactly right.
+The market is large, the problem is real, the technical path is clear, and the timing - with LLMs making agent architectures economically viable for the first time - is exactly right.
 
 ---
 

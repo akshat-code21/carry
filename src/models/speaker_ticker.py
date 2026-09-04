@@ -1,4 +1,4 @@
-"""Speaker-ticker aggregation model — per-channel ticker stats."""
+"""Speaker-ticker aggregation model - per-channel ticker stats."""
 
 import uuid
 from datetime import datetime

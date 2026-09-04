@@ -1,4 +1,4 @@
-"""CollectionService — main TickerFlow orchestrator.
+"""CollectionService - main TickerFlow orchestrator.
 
 Coordinates sentiment collection from multiple sources, caching, quota
 management, price data, and signal computation.  Ported from market-chatter

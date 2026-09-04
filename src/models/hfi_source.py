@@ -1,4 +1,4 @@
-"""HFI Source model — data sources (SEC 13F, website, RSS, etc.) for an investor."""
+"""HFI Source model - data sources (SEC 13F, website, RSS, etc.) for an investor."""
 
 import uuid
 from datetime import datetime

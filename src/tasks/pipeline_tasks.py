@@ -416,7 +416,7 @@ def subscribe_channel_websub_task(self, channel_id: str) -> dict:
         settings = get_settings()
         if not settings.websub_enabled:
             logger.info(
-                "Skipping WebSub subscribe for %s — PUBLIC_BASE_URL not set",
+                "Skipping WebSub subscribe for %s - PUBLIC_BASE_URL not set",
                 channel_id,
             )
             return {"status": "skipped_no_public_url", "channel_id": channel_id}

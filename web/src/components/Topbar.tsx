@@ -184,7 +184,7 @@ export function Topbar({
                 )}
                 {!loading && events.length === 0 && (
                   <p className="px-3 py-6 text-center text-small text-ink-faint">
-                    Nothing to flag yet — new uploads and processing results land here.
+                    Nothing to flag yet - new uploads and processing results land here.
                   </p>
                 )}
                 {!loading &&

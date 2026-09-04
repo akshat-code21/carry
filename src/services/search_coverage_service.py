@@ -1,4 +1,4 @@
-"""Search coverage service — per-topic video coverage stats with sentiment.
+"""Search coverage service - per-topic video coverage stats with sentiment.
 
 Given a query, finds every video with matching transcript content in a time
 window, classifies one representative snippet per video with FinBERT (local,
@@ -301,7 +301,7 @@ class SearchCoverageService:
         """Clear a poisoned transaction so the session stays usable."""
         try:
             await self.db.rollback()
-        except Exception:  # noqa: BLE001 — rollback is best-effort
+        except Exception:  # noqa: BLE001 - rollback is best-effort
             pass
 
     async def _fallback_snippets(

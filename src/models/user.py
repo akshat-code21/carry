@@ -1,4 +1,4 @@
-"""User and Invite models — Clerk-backed identity with app-side roles/status."""
+"""User and Invite models - Clerk-backed identity with app-side roles/status."""
 
 import enum
 import uuid

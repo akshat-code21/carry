@@ -1,4 +1,4 @@
-"""FinBERT service — ONNX-based financial sentiment classification.
+"""FinBERT service - ONNX-based financial sentiment classification.
 
 Uses ProsusAI/finbert exported to ONNX format for deterministic,
 calibrated sentiment scoring without PyTorch dependency.

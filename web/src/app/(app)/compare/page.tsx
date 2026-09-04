@@ -61,11 +61,10 @@ export default function ComparePage() {
                   variant={selected ? "default" : "outline"}
                   size="sm"
                   onClick={() => toggleInvestor(inv.id)}
-                  className={`gap-1.5 ${
-                    selected
+                  className={`gap-1.5 ${selected
                       ? "bg-signal text-black hover:bg-signal/90"
                       : "border-line text-ink-secondary hover:border-signal/40 hover:text-ink"
-                  }`}
+                    }`}
                 >
                   {selected && <Check className="h-3.5 w-3.5" />}
                   {inv.name}
@@ -118,7 +117,7 @@ export default function ComparePage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">
-                Portfolio Comparison — {comparison.period}
+                Portfolio Comparison - {comparison.period}
               </CardTitle>
               <Badge variant="secondary" className="font-mono">
                 {comparison.all_tickers.length} tickers
@@ -180,13 +179,13 @@ export default function ComparePage() {
                                 key={`${inv.investor_id}-${ticker}-s`}
                                 className="text-right px-3 py-2 text-ink-faint"
                               >
-                                —
+                                -
                               </td>
                               <td
                                 key={`${inv.investor_id}-${ticker}-v`}
                                 className="text-right px-3 py-2 text-ink-faint"
                               >
-                                —
+                                -
                               </td>
                             </>
                           );
@@ -215,7 +214,7 @@ export default function ComparePage() {
                             >
                               {cell.value_usd != null
                                 ? `$${(cell.value_usd / 1000).toLocaleString()}K`
-                                : "—"}
+                                : "-"}
                             </td>
                           </>
                         );

@@ -1,4 +1,4 @@
-# YT Chatter — Search Engine for Financial Market Commentary
+# YT Chatter - Search Engine for Financial Market Commentary
 
 ## Problem Statement
 
@@ -228,7 +228,7 @@ After LLM analysis:
 3. Merge curated + LLM-generated ticker lists
 4. Score relevance (0-1) for each (ticker, theme, video) triple
 5. Store or update in `theme_ticker_mappings`
-6. **Update `speaker_ticker_aggregation`** — this is the "top stocks" source table
+6. **Update `speaker_ticker_aggregation`** - this is the "top stocks" source table
 
 ### Step 4: Embeddings for Semantic Search
 - Generate vector embeddings for each transcript segment
@@ -351,11 +351,11 @@ Sector: Industrials
 | Route | Page | Description |
 |-------|------|-------------|
 | `/` | Search | Search bar + results (transcript clips, predictions, themes) |
-| `/` | — | **"Stocks Mentioned" sidebar** — tickers relevant to search query |
+| `/` | - | **"Stocks Mentioned" sidebar** - tickers relevant to search query |
 | `/channels` | Channels | Browse all channels |
 | `/channels/:id` | Channel Detail | All videos + **"Top Stocks This Channel Talks About"** panel (ranked with sentiment) + theme/topic breakdown |
 | `/videos/:id` | Video Detail | Full transcript predictions, performance overlay, **"Stocks Discussed"** panel |
-| `/videos/:id` | — | Timeline showing which themes were discussed at which timestamps |
+| `/videos/:id` | - | Timeline showing which themes were discussed at which timestamps |
 | `/tickers/:ticker` | Ticker Page | All predictions for ticker, price chart with annotations, all themes mentioning this ticker |
 | `/themes/:id` | Theme Page | All videos discussing this theme, mapped tickers, aggregate sentiment |
 | `/themes` | Theme Explorer | Hierarchical navigation: Sector → Industry → Theme → Videos + Stocks |
@@ -371,7 +371,7 @@ Sector: Industrials
 | Prediction | Theme | Ticker | Direction | Price at Video | 1W Return | Accurate? |
 |------------|-------|--------|-----------|----------------|-----------|-----------|
 | "NVDA will dominate AI chips" | AI Chips | NVDA | Bullish | $480 | +5.2% | ✅ Yes |
-| "retail is getting crushed" | Retail | AMZN, WMT, TGT | Bearish | — | — | See chart |
+| "retail is getting crushed" | Retail | AMZN, WMT, TGT | Bearish | - | - | See chart |
 
 **Chart View**
 - Line chart of ticker price with annotated markers:
@@ -410,7 +410,7 @@ Sector: Industrials
 - [ ] Build `data/theme_taxonomy.json` with hierarchical theme→ticker mappings
 - [ ] Create database migration for new tables (theme_hierarchy, theme_mentions, theme_ticker_mappings, speaker_ticker_aggregation)
 
-### Phase 1: Foundation — Data Pipeline (Days 1-2)
+### Phase 1: Foundation - Data Pipeline (Days 1-2)
 - [ ] Scaffold Python project (Poetry, pyproject.toml)
 - [ ] Docker Compose: PostgreSQL + pgvector + Redis
 - [ ] Database models + Alembic migrations (all tables)
@@ -462,17 +462,17 @@ Sector: Industrials
 | Market data gaps (weekends, holidays) | Forward-fill to next trading day; clearly label trading vs calendar days |
 | LLM API costs for processing | Batch segments; cache responses; use cheaper models for classification |
 | Prediction accuracy is subjective | Focus on directional + return-based evaluation; human-in-loop for prototype |
-| No new videos during 3-day window | Backfill solves this — we have 20 videos to work with |
+| No new videos during 3-day window | Backfill solves this - we have 20 videos to work with |
 
 ---
 
 ## Future Roadmap (Post-Prototype)
 
-1. **User Authentication** — Allow users to add their own channels
-2. **Scheduled Pipeline** — Cron/webhook to auto-process new videos on publish
-3. **Multi-User** — Per-user channel subscriptions, saved searches, alerts
-4. **Advanced Predictions** — More granular extraction: price targets, timeframes
-5. **Multiple Data Sources** — Podcasts, Twitter/X, newsletters, SEC filings
-6. **Backtesting** — Aggregate prediction accuracy across channels to rank analysts
-7. **Real-Time** — Push notifications when a new channel video is processed
-8. **Community Curation** — Users can suggest theme→ticker mappings, vote on accuracy
+1. **User Authentication** - Allow users to add their own channels
+2. **Scheduled Pipeline** - Cron/webhook to auto-process new videos on publish
+3. **Multi-User** - Per-user channel subscriptions, saved searches, alerts
+4. **Advanced Predictions** - More granular extraction: price targets, timeframes
+5. **Multiple Data Sources** - Podcasts, Twitter/X, newsletters, SEC filings
+6. **Backtesting** - Aggregate prediction accuracy across channels to rank analysts
+7. **Real-Time** - Push notifications when a new channel video is processed
+8. **Community Curation** - Users can suggest theme→ticker mappings, vote on accuracy

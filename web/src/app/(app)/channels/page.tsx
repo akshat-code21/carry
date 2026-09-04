@@ -132,9 +132,8 @@ export default function ChannelsPage() {
 
             {feedback && (
               <p
-                className={`mt-3 text-small ${
-                  feedback.type === "success" ? "text-bullish" : "text-bearish"
-                }`}
+                className={`mt-3 text-small ${feedback.type === "success" ? "text-bullish" : "text-bearish"
+                  }`}
               >
                 {feedback.message}
               </p>
@@ -198,7 +197,7 @@ const channelColumns: Column<ChannelRow>[] = [
       typeof ch.video_count === "number" ? (
         <span className="numeric text-small text-ink">{ch.video_count}</span>
       ) : (
-        <span className="text-ink-faint">—</span>
+        <span className="text-ink-faint">-</span>
       ),
   },
 ];

@@ -58,7 +58,7 @@ def _get_sync_engine():
 
 
 # ---------------------------------------------------------------------------
-# Public entrypoint — called by the pipeline portfolio node.
+# Public entrypoint - called by the pipeline portfolio node.
 # ---------------------------------------------------------------------------
 
 

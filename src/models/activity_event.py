@@ -1,4 +1,4 @@
-"""Activity event model — in-app feed for video detection/processing."""
+"""Activity event model - in-app feed for video detection/processing."""
 
 import uuid
 from datetime import datetime

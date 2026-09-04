@@ -148,7 +148,7 @@ export function Sidebar({
 
               return (
                 <div key={item.href}>
-                  {/* Section divider — admin tools live under their own overline */}
+                  {/* Section divider - admin tools live under their own overline */}
                   {isAdminItem && adminItems[0].href === item.href && (
                     isCollapsed ? (
                       <div className="my-2 border-t border-line/60 mx-1" />
@@ -195,7 +195,7 @@ export function Sidebar({
           </nav>
         </div>
 
-        {/* Watch status — live tape line */}
+        {/* Watch status - live tape line */}
         <div
           className={cn(
             "border-t border-line",

@@ -1,4 +1,4 @@
-"""Usage analytics models — raw event logs, request logs, LLM cost ledger, rollups."""
+"""Usage analytics models - raw event logs, request logs, LLM cost ledger, rollups."""
 
 import uuid
 from datetime import date, datetime
@@ -77,7 +77,7 @@ class ApiRequestLog(Base):
 
 
 class LlmUsageLog(Base):
-    """LLM / embedding cost ledger — one row per model call.
+    """LLM / embedding cost ledger - one row per model call.
 
     Attributes real spend to users, features and days.
     """

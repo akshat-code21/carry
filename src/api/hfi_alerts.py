@@ -11,7 +11,7 @@ from src.models.user import User
 from src.schemas.hfi import AlertOut, AlertsResponse
 from src.services.hfi import alert_service
 
-router = APIRouter(prefix="/api/hfi/alerts", tags=["HFI — Alerts"])
+router = APIRouter(prefix="/api/hfi/alerts", tags=["HFI - Alerts"])
 
 
 @router.get("", response_model=AlertsResponse)

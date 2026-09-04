@@ -1,4 +1,4 @@
-"""Entity extractor node — batches chunks through LLM with JSON output mode."""
+"""Entity extractor node - batches chunks through LLM with JSON output mode."""
 
 import json
 import re

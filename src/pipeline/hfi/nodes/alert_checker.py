@@ -1,4 +1,4 @@
-"""Alert checker node — rule-based scoring, no LLM calls."""
+"""Alert checker node - rule-based scoring, no LLM calls."""
 
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -174,7 +174,7 @@ async def _create_alerts_async(
                         investor_id=uuid.UUID(investor_id),
                         content_item_id=uuid.UUID(content_item_id),
                         alert_type=base,
-                        title=f"Investment Thesis — {thesis.get('company', '')}",
+                        title=f"Investment Thesis - {thesis.get('company', '')}",
                         summary=thesis.get("thesis_summary", "")[:300],
                         severity=severity,
                         score=score,

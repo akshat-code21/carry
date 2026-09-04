@@ -1,8 +1,8 @@
-# Carry — Deep-Level Technical & Product Summary
+# Carry - Deep-Level Technical & Product Summary
 
 > Companion to `carry_high_level_summary.md`. This document is the engineer's map of the system: architecture, data flows, pipelines, data model, API surface, frontend structure, infrastructure, and known trade-offs.
 >
-> **Naming note:** the product is **Carry** (web: `carry-fin.vercel.app`, API: `carry-api.akshat21.me`). The repo and much of the internal vocabulary retain the original names — "yt-chatter" (the YouTube commentary engine) and "market-chatter"/"TickerFlow" (the social sentiment engine). `COSTING.md` refers to "YT Chatter / Carry" for the same platform.
+> **Naming note:** the product is **Carry** (web: `carry-fin.vercel.app`, API: `carry-api.akshat21.me`). The repo and much of the internal vocabulary retain the original names - "yt-chatter" (the YouTube commentary engine) and "market-chatter"/"TickerFlow" (the social sentiment engine). `COSTING.md` refers to "YT Chatter / Carry" for the same platform.
 
 ---
 
@@ -17,7 +17,7 @@
 └────────────────────────────────┬────────────────────────────────────────┘
                                  │ REST (JSON) via Vercel edge proxy rewrite
 ┌────────────────────────────────▼────────────────────────────────────────┐
-│                        BACKEND — Python 3.12                            │
+│                        BACKEND - Python 3.12                            │
 │  FastAPI (uvicorn, 4 workers) │ Celery worker + beat │ Nginx + TLS      │
 │  Clerk JWT verification on every request                                │
 └───────┬──────────────────────────────────────────────┬──────────────────┘
@@ -63,15 +63,15 @@ yt-chatter/
 └── docs/                   # Architecture & product docs (this file's home)
 ```
 
-## 3. Pipeline 1 — YouTube Commentary Engine (`src/pipeline/`)
+## 3. Pipeline 1 - YouTube Commentary Engine (`src/pipeline/`)
 
 The original core of the product. Five stages run per video (orchestrated in `pipeline/ingestion.py` → `analysis.py` → `theme_mapping.py` → `embeddings.py` → `market_tracking.py`, executed as Celery tasks from `tasks/pipeline_tasks.py`):
 
-1. **Ingestion** — fetch video metadata via YouTube Data API v3; retrieve timestamped transcript segments. Transcript acquisition is tiered: `youtube-transcript-api` (free, primary) → Supadata API (fallback) → `yt-dlp` + local faster-Whisper (`tiny.en`) ASR (last resort). Caption retries are scheduled (captions often lag behind publish).
-2. **LLM structured analysis** — transcripts are batched and sent to Claude/OpenAI models which return structured JSON: predictions (direction, confidence, horizon), sentiment, ticker mentions (explicit cashtags + implicit thematic ties), and theme assignments.
-3. **Theme & ticker mapping** — claims are linked to the seeded taxonomy in `data/theme_taxonomy.json` (Sector → Industry → Theme → Ticker). Implicit ticker references are resolved; an ETF mapping service (`services/etf_mapping_service.py`, backed by `data/etf_mappings.json`) resolves themes to representative ETFs and prevents ETFs (SPY, XLF, …) from being misread as single-name stocks.
-4. **Embeddings** — transcript segments are embedded with OpenAI `text-embedding-3-small` (384-dim) into `pgvector` for semantic search.
-5. **Market tracking** — `yfinance` historical prices are matched against each prediction's publish date to compute realized 1-day / 1-week / 1-month returns, grading every prediction as accurate/inaccurate (`performance` tables; daily refresh via Celery Beat).
+1. **Ingestion** - fetch video metadata via YouTube Data API v3; retrieve timestamped transcript segments. Transcript acquisition is tiered: `youtube-transcript-api` (free, primary) → Supadata API (fallback) → `yt-dlp` + local faster-Whisper (`tiny.en`) ASR (last resort). Caption retries are scheduled (captions often lag behind publish).
+2. **LLM structured analysis** - transcripts are batched and sent to Claude/OpenAI models which return structured JSON: predictions (direction, confidence, horizon), sentiment, ticker mentions (explicit cashtags + implicit thematic ties), and theme assignments.
+3. **Theme & ticker mapping** - claims are linked to the seeded taxonomy in `data/theme_taxonomy.json` (Sector → Industry → Theme → Ticker). Implicit ticker references are resolved; an ETF mapping service (`services/etf_mapping_service.py`, backed by `data/etf_mappings.json`) resolves themes to representative ETFs and prevents ETFs (SPY, XLF, …) from being misread as single-name stocks.
+4. **Embeddings** - transcript segments are embedded with OpenAI `text-embedding-3-small` (384-dim) into `pgvector` for semantic search.
+5. **Market tracking** - `yfinance` historical prices are matched against each prediction's publish date to compute realized 1-day / 1-week / 1-month returns, grading every prediction as accurate/inaccurate (`performance` tables; daily refresh via Celery Beat).
 
 **Near-real-time discovery (WebSub):** every ingested channel is subscribed to Google's PubSubHubbub hub (`pubsubhubbub.appspot.com`). The hub pushes Atom notifications to `POST /api/websub/callback` (HMAC-signature verified, no quota cost). New uploads emit `video_detected` activity events; Celery then auto-ingests (`auto_ingest_video`), emitting `video_processed` / `video_failed`. Beat renews WebSub leases and runs a rare RSS fallback poll (`DISCOVERY_FALLBACK_POLL_HOURS`). A simulate endpoint (`/api/websub/simulate`, `make simulate-websub`) enables testing without a real publish.
 
@@ -87,25 +87,25 @@ Documented in detail in `docs/search_scenarios.md`.
 - **Coverage (`GET /api/search/coverage`):** aggregates how many channels/videos discussed the query in a lookback window (6h cache) to feed the answer's "what we heard" context.
 - **Frontend:** React Query with `keepPreviousData`; answer fetch is gated on settled results (fixing a previously documented race where stale segment IDs poisoned cached answers).
 
-## 5. Pipeline 2 — TickerFlow / Market Chatter (`src/pipeline/agents/`, `services/market_chatter/`)
+## 5. Pipeline 2 - TickerFlow / Market Chatter (`src/pipeline/agents/`, `services/market_chatter/`)
 
 Social sentiment engine, mounted at `/api/v1` (separate from the `/api/tickers` YouTube routes). Ticker universe is currently the **S&P 100** (`universe.py`) to bound provider costs; symbol normalization accepts `BRK.B`-style dots.
 
 - **Collectors** (`collectors/`): Reddit (OAuth), X via `twikit`, StockTwits, news via GDELT; an Adanos gateway adapter exists but is unused (`provider = native_raw`). Every run is recorded in `collection_runs` with per-source status and request counts (quota accounting in `quota_usage`).
-- **LangGraph multi-agent graph** (`pipeline/graph.py`, `pipeline/agents/`, `langgraph==1.2.10`) — a compiled state graph with parallel branches:
-  - *Agent 2 — Validation:* length, lookback-window, ticker-relevance filters.
-  - *Agent 3 — Cleaner:* HTML/URL stripping, cashtag extraction, **MinHash LSH near-dedup** (128 permutations, Jaccard 0.85).
-  - *Agent 4 — FinBERT (parallel):* local ProsusAI FinBERT via ONNX (512-token limit) → bullish/bearish/neutral + confidence.
-  - *Agent 5 — LLM narrative (parallel):* top-engagement items → catalyst themes + representative quotes.
-  - *Agents 8/9 — Scoring & aggregation:* **RISS** = engagement-weighted (sqrt) sentiment mean ×100; **SMS** = mention volume vs 30-day baseline; **OCS v0.1** = `0.70·RISS + 0.30·SMS`; trend = rising (≥65) / falling (≤40) / stable; outputs `ScoreDriverCard`s for the UI.
+- **LangGraph multi-agent graph** (`pipeline/graph.py`, `pipeline/agents/`, `langgraph==1.2.10`) - a compiled state graph with parallel branches:
+  - *Agent 2 - Validation:* length, lookback-window, ticker-relevance filters.
+  - *Agent 3 - Cleaner:* HTML/URL stripping, cashtag extraction, **MinHash LSH near-dedup** (128 permutations, Jaccard 0.85).
+  - *Agent 4 - FinBERT (parallel):* local ProsusAI FinBERT via ONNX (512-token limit) → bullish/bearish/neutral + confidence.
+  - *Agent 5 - LLM narrative (parallel):* top-engagement items → catalyst themes + representative quotes.
+  - *Agents 8/9 - Scoring & aggregation:* **RISS** = engagement-weighted (sqrt) sentiment mean ×100; **SMS** = mention volume vs 30-day baseline; **OCS v0.1** = `0.70·RISS + 0.30·SMS`; trend = rising (≥65) / falling (≤40) / stable; outputs `ScoreDriverCard`s for the UI.
 - **Caching & price overlay:** Redis-backed ticker caches; daily `price_bars` from yfinance enable sentiment-vs-price charts. The dashboard service (`dashboard_service.py`) powers the Overview page and the market-chatter component suite (`web/src/components/market-chatter/`).
 
-## 6. Pipeline 3 — HFI (Hedge Fund Intelligence) (`src/pipeline/hfi/`, `services/hfi/`)
+## 6. Pipeline 3 - HFI (Hedge Fund Intelligence) (`src/pipeline/hfi/`, `services/hfi/`)
 
 A per-user tracking system for individual investors / funds ("smart money"), exposed at `/api/hfi/*` and surfaced in the **Investors** and **Consensus** pages.
 
 - **Investors** (`investor_service.py`): user-owned records with name, description, and optional **CIK number** (SEC identity). Full CRUD.
-- **Sources** (`source_service.py`, `ingestion/`): per-investor content sources — websites, RSS, and an SEC adapter (`sec_adapter.py`) for filings. Raw content is fetched, **content-hashed** (`content_hasher.py`, dedupe), and stored as `content_item` / `raw_content` rows via `raw_ingestion_service.py`.
+- **Sources** (`source_service.py`, `ingestion/`): per-investor content sources - websites, RSS, and an SEC adapter (`sec_adapter.py`) for filings. Raw content is fetched, **content-hashed** (`content_hasher.py`, dedupe), and stored as `content_item` / `raw_content` rows via `raw_ingestion_service.py`.
 - **LangGraph HFI pipeline** (`pipeline/hfi/`): nodes for normalizer → entity extractor → thesis extractor → embedder (vector store: `services/hfi/vector_store.py`) → portfolio tracker (`portfolio_node.py` → `portfolio_change` records) → report generator (LLM-written investor reports, `hfi_report`) → alert checker (`hfi_alert` thresholds). Prompts live in `pipeline/hfi/prompts/`; Celery jobs in `tasks/hfi_jobs.py`.
 - **Analytics:** `hfi_analytics.py` exposes per-investor stats (content items, reports, unread alerts).
 - **Consensus page:** aggregates portfolio positions/changes across tracked investors into a "Smart Money Consensus" view; a Compare page exists but is currently commented out of the sidebar.
@@ -121,7 +121,7 @@ A per-user tracking system for individual investors / funds ("smart money"), exp
 - `/usage` shows personal stats; `/admin` (admin-only) manages invites and platform-wide metrics. Admin scripts include `promote_admin.py` and `sync_users_from_clerk.py`.
 
 ### 7.3 Activity feed (`services/activity_service.py`, `api/activity.py`)
-- Idempotent (`event_type`, `youtube_video_id`) activity events — `video_detected` / `video_processed` / `video_failed` — surfaced in the bell-icon Activity feed.
+- Idempotent (`event_type`, `youtube_video_id`) activity events - `video_detected` / `video_processed` / `video_failed` - surfaced in the bell-icon Activity feed.
 
 ### 7.4 Caching & performance
 - Redis: Celery broker + TickerFlow response caches. Postgres: search answers (24h), coverage (6h), ticker caches, query-router heuristic bypass. Performance indexes added in migration `008`; latency audits live in `docs/prod-latency-audit-2026-08-27.md` and `api_performance_chat.md`.
@@ -173,24 +173,24 @@ Interactive Swagger docs at `/docs` on the API host.
 
 ## 12. Testing & Tooling
 
-- `make test` (pytest) — unit tests cover ticker extraction, FinBERT service, LangGraph pipeline, search grouping/answers/coverage, WebSub, auth, analytics, ETF mapping, social context, instrument-type routing, plus a dedicated `tests/market_chatter/` suite.
+- `make test` (pytest) - unit tests cover ticker extraction, FinBERT service, LangGraph pipeline, search grouping/answers/coverage, WebSub, auth, analytics, ETF mapping, social context, instrument-type routing, plus a dedicated `tests/market_chatter/` suite.
 - `make lint` / `make format` (ruff); frontend `bun run lint` (eslint-config-next). `make process-video id=...` and `make backfill channel=...` run the pipeline manually.
 
 ## 13. Known Trade-offs & Watch Items
 
-- **Single-VM backend** (`e2-medium`, 1 vCPU / 4 GB) runs API + Celery + Beat + Whisper + FinBERT — fine at beta scale, first bottleneck at public-launch traffic.
+- **Single-VM backend** (`e2-medium`, 1 vCPU / 4 GB) runs API + Celery + Beat + Whisper + FinBERT - fine at beta scale, first bottleneck at public-launch traffic.
 - **Cloud SQL sizing** is the dominant cost; downsizing is the single biggest lever (per `COSTING.md`).
 - **yfinance is unofficial** (ToS risk) as the market-data source; FinBERT's 512-token limit truncates long social posts.
 - **TickerFlow universe** is limited to the S&P 100 by design (budget control).
-- **Product-name drift:** repo/internal docs still say "yt-chatter" / "SentimentAI" / "Market Chatter"; only user-facing surfaces and `COSTING.md` say "Carry" — a renaming pass is pending.
+- **Product-name drift:** repo/internal docs still say "yt-chatter" / "SentimentAI" / "Market Chatter"; only user-facing surfaces and `COSTING.md` say "Carry" - a renaming pass is pending.
 - **Security note (from audit):** the live Clerk secret in `web/.env.prod` is gitignored but sensitive; rotate if ever shared.
 
 ## 14. Product Lineage (for context)
 
-1. **SentimentAI blueprint** (`docs/Initial_Plan.md`) — an ambitious 10-agent, seven-score platform vision.
-2. **Competitive analysis** (`docs/competitve_analysis.md`) — found the "sentiment API" layer commoditized; recommended differentiating on narrative intelligence, credibility modeling, and validated backtesting.
-3. **YT Chatter build-out** — shipped the YouTube commentary engine, hybrid search, prediction verification, and WebSub ingestion first.
-4. **Carry** — the current multi-source product: commentary intelligence + social sentiment (TickerFlow) + smart-money tracking (HFI), under the "Hear what the market is saying" positioning, in invite-only beta.
+1. **SentimentAI blueprint** (`docs/Initial_Plan.md`) - an ambitious 10-agent, seven-score platform vision.
+2. **Competitive analysis** (`docs/competitve_analysis.md`) - found the "sentiment API" layer commoditized; recommended differentiating on narrative intelligence, credibility modeling, and validated backtesting.
+3. **YT Chatter build-out** - shipped the YouTube commentary engine, hybrid search, prediction verification, and WebSub ingestion first.
+4. **Carry** - the current multi-source product: commentary intelligence + social sentiment (TickerFlow) + smart-money tracking (HFI), under the "Hear what the market is saying" positioning, in invite-only beta.
 
 
 

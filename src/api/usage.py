@@ -1,4 +1,4 @@
-"""Usage analytics endpoints — client event ingest and personal usage summary."""
+"""Usage analytics endpoints - client event ingest and personal usage summary."""
 
 import logging
 from datetime import UTC, datetime, timedelta

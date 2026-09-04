@@ -328,7 +328,7 @@ class SearchResponse(BaseModel):
     # More distinct video groups available beyond the current limit
     has_more: bool = False
     query_intent: str = "factual_search"
-    # stocks | etfs — instrument class inferred for discovery results
+    # stocks | etfs - instrument class inferred for discovery results
     instrument_type: str = "stocks"
 
 

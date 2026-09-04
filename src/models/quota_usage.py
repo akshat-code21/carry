@@ -1,4 +1,4 @@
-"""QuotaUsage model — tracks monthly Adanos API budget consumption."""
+"""QuotaUsage model - tracks monthly Adanos API budget consumption."""
 
 from sqlalchemy import Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
