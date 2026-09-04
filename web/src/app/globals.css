@@ -414,6 +414,8 @@
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+  }
+
   /* Elevating card with a soft signal glow on hover (transform handled by motion) */
   .card-glow {
     transition:
