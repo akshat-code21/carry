@@ -2,24 +2,47 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, type HfiInvestor } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DataTable, type Column } from "@/components/DataTable";
 import {
   Plus,
   RefreshCw,
   Trash2,
   ExternalLink,
-  Clock,
   FileText,
-  AlertTriangle,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 
+function InvestorStat({
+  investorId,
+  kind,
+}: {
+  investorId: string;
+  kind: "content_items" | "reports" | "unread_alerts";
+}) {
+  const { data: stats } = useQuery({
+    queryKey: ["hfi-investor-stats", investorId],
+    queryFn: () => api.getHfiInvestorStats(investorId),
+  });
+  const value = stats?.[kind];
+  if (value == null) return <span className="text-ink-faint">—</span>;
+  const highlight = kind === "unread_alerts" && value > 0;
+  return (
+    <span className={`numeric text-small ${highlight ? "font-semibold text-warning" : "text-ink"}`}>
+      {value}
+    </span>
+  );
+}
+
 export default function InvestorsPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
 
@@ -32,6 +55,7 @@ export default function InvestorsPage() {
     mutationFn: (investorId: string) => api.syncHfiInvestor(investorId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hfi-investors"] });
+      queryClient.invalidateQueries({ queryKey: ["hfi-investor-stats"] });
     },
   });
 
@@ -56,7 +80,7 @@ export default function InvestorsPage() {
         title="Investors"
         description="Track hedge fund managers and their 13F filings"
       >
-        <Button onClick={() => setShowCreate(true)} className="gap-2 bg-signal text-black hover:bg-signal/90">
+        <Button onClick={() => setShowCreate(true)} className="gap-2">
           <Plus className="h-4 w-4" />
           Add Investor
         </Button>
@@ -78,151 +102,165 @@ export default function InvestorsPage() {
             <p className="text-body text-ink-secondary max-w-sm mb-6">
               Add a hedge fund manager to start tracking their 13F filings, portfolio changes, and investment theses.
             </p>
-            <Button onClick={() => setShowCreate(true)} className="gap-2 bg-signal text-black hover:bg-signal/90">
+            <Button onClick={() => setShowCreate(true)} className="gap-2">
               <Plus className="h-4 w-4" />
               Add Your First Investor
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {investors.map((investor) => (
-            <InvestorCard
-              key={investor.id}
-              investor={investor}
-              onSync={() => syncMutation.mutate(investor.id)}
-              onDelete={() => {
-                if (confirm(`Delete "${investor.name}"? This cannot be undone.`)) {
-                  deleteMutation.mutate(investor.id);
-                }
-              }}
-              isSyncing={syncMutation.isPending && syncMutation.variables === investor.id}
-            />
-          ))}
-        </div>
+        <DataTable
+          columns={investorColumns(
+            (id) => syncMutation.mutate(id),
+            (inv) => {
+              if (confirm(`Delete "${inv.name}"? This cannot be undone.`)) {
+                deleteMutation.mutate(inv.id);
+              }
+            },
+            (id) => syncMutation.isPending && syncMutation.variables === id
+          )}
+          data={investors}
+          keyExtractor={(inv) => inv.id}
+          onRowClick={(inv) => router.push(`/investors/${inv.id}`)}
+        />
       )}
     </div>
   );
 }
 
-function InvestorCard({
-  investor,
-  onSync,
-  onDelete,
-  isSyncing,
-}: {
-  investor: HfiInvestor;
-  onSync: () => void;
-  onDelete: () => void;
-  isSyncing: boolean;
-}) {
-  const { data: stats } = useQuery({
-    queryKey: ["hfi-investor-stats", investor.id],
-    queryFn: () => api.getHfiInvestorStats(investor.id),
-  });
-
-  return (
-    <Card className="group border-line bg-canvas hover:border-signal/30 transition-colors">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <CardTitle className="text-lg font-semibold text-ink truncate">
-              <Link href={`/investors/${investor.id}`} className="hover:text-signal hover:underline">
-                {investor.name}
-              </Link>
-            </CardTitle>
-            {investor.description && (
-              <p className="text-small text-ink-secondary mt-1 line-clamp-2">
-                {investor.description}
-              </p>
-            )}
-          </div>
-          <Badge
-            variant={investor.is_active ? "default" : "secondary"}
-            className={investor.is_active ? "bg-signal text-signal border-signal/30" : ""}
+function investorColumns(
+  onSync: (investorId: string) => void,
+  onDelete: (investor: HfiInvestor) => void,
+  isSyncing: (investorId: string) => boolean
+): Column<HfiInvestor>[] {
+  return [
+    {
+      key: "name",
+      header: "Investor",
+      render: (inv) => (
+        <div className="flex min-w-0 flex-col gap-0.5 py-0.5">
+          <Link
+            href={`/investors/${inv.id}`}
+            className="truncate text-small font-semibold text-ink hover:text-signal hover:underline"
+            onClick={(e) => e.stopPropagation()}
           >
-            {investor.is_active ? "Active" : "Inactive"}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* CIK */}
-        {investor.cik_number && (
-          <div className="flex items-center gap-2 text-small text-ink-secondary">
-            <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-            <span className="font-mono">CIK: {investor.cik_number}</span>
-            <a
-              href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${investor.cik_number}&type=13F-HR`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-signal hover:underline ml-auto text-micro"
-            >
-              SEC →
-            </a>
-          </div>
-        )}
-
-        {/* Stats row */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="text-center p-2 rounded-md bg-panel">
-            <p className="font-mono text-lg font-semibold text-ink">{stats?.content_items ?? "—"}</p>
-            <p className="text-micro text-ink-faint uppercase tracking-wider">Items</p>
-          </div>
-          <div className="text-center p-2 rounded-md bg-panel">
-            <p className="font-mono text-lg font-semibold text-ink">{stats?.reports ?? "—"}</p>
-            <p className="text-micro text-ink-faint uppercase tracking-wider">Reports</p>
-          </div>
-          <div className="text-center p-2 rounded-md bg-panel">
-            <p className="font-mono text-lg font-semibold text-signal">{stats?.unread_alerts ?? "—"}</p>
-            <p className="text-micro text-ink-faint uppercase tracking-wider">Alerts</p>
-          </div>
-        </div>
-
-        {/* Last synced */}
-        <div className="flex items-center gap-1.5 text-micro text-ink-faint">
-          <Clock className="h-3 w-3" />
-          {investor.last_synced_at
-            ? `Synced ${new Date(investor.last_synced_at).toLocaleDateString()}`
-            : "Never synced"}
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-2 pt-1">
-          <Link href={`/investors/${investor.id}`} className="flex-1">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full gap-1.5 text-small border-line text-ink hover:text-signal hover:border-signal/40"
-            >
-              View Holdings →
-            </Button>
+            {inv.name}
           </Link>
+          {inv.description && (
+            <span className="truncate text-caption text-ink-faint" title={inv.description}>
+              {inv.description}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      headerClassName: "w-24",
+      render: (inv) => (
+        <Badge variant={inv.is_active ? "default" : "secondary"} className="font-mono text-caption tracking-wider">
+          {inv.is_active ? "ACTIVE" : "INACTIVE"}
+        </Badge>
+      ),
+    },
+    {
+      key: "cik",
+      header: "CIK",
+      headerClassName: "w-28",
+      render: (inv) =>
+        inv.cik_number ? (
+          <a
+            href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${inv.cik_number}&type=13F-HR`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="numeric inline-flex items-center gap-1 text-caption text-ink-secondary hover:text-signal hover:underline"
+            onClick={(e) => e.stopPropagation()}
+            title="View 13F filings on SEC EDGAR"
+          >
+            {inv.cik_number}
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        ) : (
+          <span className="text-ink-faint">—</span>
+        ),
+    },
+    {
+      key: "content_items",
+      header: "Items",
+      numeric: true,
+      headerClassName: "w-14",
+      render: (inv) => <InvestorStat investorId={inv.id} kind="content_items" />,
+    },
+    {
+      key: "reports",
+      header: "Reports",
+      numeric: true,
+      headerClassName: "w-16",
+      render: (inv) => <InvestorStat investorId={inv.id} kind="reports" />,
+    },
+    {
+      key: "unread_alerts",
+      header: "Alerts",
+      numeric: true,
+      headerClassName: "w-14",
+      render: (inv) => <InvestorStat investorId={inv.id} kind="unread_alerts" />,
+    },
+    {
+      key: "last_synced_at",
+      header: "Synced",
+      numeric: true,
+      headerClassName: "w-24",
+      render: (inv) => (
+        <span className="numeric text-caption text-ink-faint">
+          {inv.last_synced_at
+            ? new Date(inv.last_synced_at).toLocaleDateString(undefined, {
+                month: "short",
+                day: "numeric",
+              })
+            : "never"}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      headerClassName: "w-20",
+      render: (inv) => (
+        <div className="flex items-center justify-end gap-0.5">
           <Button
             variant="ghost"
-            size="sm"
-            className="gap-1.5 text-small text-ink-secondary hover:text-ink"
-            onClick={onSync}
-            disabled={isSyncing}
+            size="icon-sm"
+            className="text-ink-faint hover:text-signal"
+            title={isSyncing(inv.id) ? "Syncing…" : "Sync 13F filings"}
+            disabled={isSyncing(inv.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSync(inv.id);
+            }}
           >
-            {isSyncing ? (
+            {isSyncing(inv.id) ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
               <RefreshCw className="h-3.5 w-3.5" />
             )}
-            {isSyncing ? "Syncing…" : "Sync"}
           </Button>
           <Button
             variant="ghost"
             size="icon-sm"
-            className="text-ink-faint hover:text-red-400"
-            onClick={onDelete}
+            className="text-ink-faint hover:text-bearish"
+            title="Delete investor"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(inv);
+            }}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
-      </CardContent>
-    </Card>
-  );
+      ),
+    },
+  ];
 }
 
 function CreateInvestorCard({ onClose }: { onClose: () => void }) {
@@ -252,7 +290,7 @@ function CreateInvestorCard({ onClose }: { onClose: () => void }) {
       <CardContent className="space-y-4">
         <div>
           <label className="block text-small font-medium text-ink-secondary mb-1.5">
-            Name <span className="text-red-400">*</span>
+            Name <span className="text-bearish">*</span>
           </label>
           <input
             type="text"
@@ -307,7 +345,7 @@ function CreateInvestorCard({ onClose }: { onClose: () => void }) {
           </Button>
         </div>
         {createMutation.isError && (
-          <div className="flex items-center gap-2 text-small text-red-400 mt-2">
+          <div className="flex items-center gap-2 text-small text-bearish mt-2">
             <AlertTriangle className="h-4 w-4" />
             <span>{(createMutation.error as Error)?.message || "Failed to create investor"}</span>
           </div>

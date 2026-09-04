@@ -255,6 +255,10 @@
   .label-overline {
     @apply font-mono text-caption font-medium uppercase tracking-[0.1em] text-ink-faint;
   }
+  /* Numeric data — monospaced, aligned digits (prices, %, counts, scores) */
+  .numeric {
+    @apply font-mono tabular-nums tracking-tight;
+  }
   /* Destination-shaped skeleton shimmer */
   .skeleton-shimmer {
     background: linear-gradient(
@@ -266,6 +270,13 @@
     background-size: 200% 100%;
     animation: yt-shimmer 1.6s ease-in-out infinite;
   }
+}
+
+/* Terminal numbers: every monospaced run renders tabular figures so columns
+   of prices/counts/dates stay aligned without per-spot opt-ins. */
+@utility font-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 @keyframes yt-shimmer {

@@ -62,10 +62,10 @@ function formatPercent(val: number | null | undefined): string {
 
 const changeConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   new_position: { label: "New", icon: Plus, color: "bg-green-500/20 text-green-400 border-green-500/30" },
-  increased: { label: "Increased", icon: TrendingUp, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
-  decreased: { label: "Decreased", icon: TrendingDown, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
-  closed: { label: "Closed", icon: X, color: "bg-red-500/20 text-red-400 border-red-500/30" },
-  unchanged: { label: "Unchanged", icon: Minus, color: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30" },
+  increased: { label: "Increased", icon: TrendingUp, color: "bg-signal/10 text-signal border-signal/30" },
+  decreased: { label: "Decreased", icon: TrendingDown, color: "bg-warning/10 text-warning border-warning/30" },
+  closed: { label: "Closed", icon: X, color: "bg-bearish/10 text-bearish border-bearish/30" },
+  unchanged: { label: "Unchanged", icon: Minus, color: "bg-ink/10 text-ink-secondary border-line" },
 };
 
 const sourceIcons: Record<string, React.ElementType> = {
@@ -294,7 +294,7 @@ export default function InvestorDetailPage() {
                 deleteMutation.mutate();
               }
             }}
-            className="text-ink-faint hover:text-red-400"
+            className="text-ink-faint hover:text-bearish"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -742,9 +742,9 @@ export default function InvestorDetailPage() {
                         item.processing_status === "completed"
                           ? "border-green-500/30 text-green-400 bg-green-500/10"
                           : item.processing_status === "processing"
-                          ? "border-blue-500/30 text-blue-400 bg-blue-500/10 animate-pulse"
+                          ? "border-signal/30 text-signal bg-signal/10 animate-pulse"
                           : item.processing_status === "failed"
-                          ? "border-red-500/30 text-red-400 bg-red-500/10"
+                          ? "border-bearish/30 text-bearish bg-bearish/10"
                           : "border-line text-ink-faint"
                       }`}
                     >
@@ -845,10 +845,10 @@ export default function InvestorDetailPage() {
                           variant="outline"
                           className={`text-micro uppercase ${
                             alert.severity === "critical"
-                              ? "bg-red-500/20 text-red-400 border-red-500/30"
+                              ? "bg-bearish/10 text-bearish border-bearish/30"
                               : alert.severity === "high"
-                              ? "bg-orange-500/20 text-orange-400 border-orange-500/30"
-                              : "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                              ? "bg-warning/10 text-warning border-warning/30"
+                              : "bg-signal/10 text-signal border-signal/30"
                           }`}
                         >
                           {alert.severity}
@@ -1043,7 +1043,7 @@ function SourcesTabContent({
                       variant="ghost"
                       size="icon-sm"
                       onClick={() => deleteSourceMutation.mutate(source.id)}
-                      className="text-ink-faint hover:text-red-400"
+                      className="text-ink-faint hover:text-bearish"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>

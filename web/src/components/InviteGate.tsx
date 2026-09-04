@@ -76,7 +76,7 @@ export function InviteGate({ email }: { email?: string | null }) {
           </Button>
         </div>
 
-        {error && <p className="mt-3 text-small text-red-500">{error}</p>}
+        {error && <p className="mt-3 text-small text-bearish">{error}</p>}
 
         <p className="mt-6 font-mono text-micro leading-relaxed text-ink-faint">
           Don&apos;t have a code? Ask the team for an invite — each code is

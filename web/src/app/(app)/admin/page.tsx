@@ -253,7 +253,7 @@ function InvitesSection() {
           </Button>
         </div>
         {create.isError && (
-          <p className="mt-2 text-small text-red-500">Failed to create invite.</p>
+          <p className="mt-2 text-small text-bearish">Failed to create invite.</p>
         )}
         <p className="mt-2 font-mono text-micro text-ink-faint">
           Invites grant regular-user access only — promote admins via Clerk
@@ -347,7 +347,7 @@ function InviteRow({
       </td>
       <td className="px-3 py-2 text-right">
         {!invite.revoked_at && status !== "fully used" && (
-          <Button variant="ghost" size="sm" onClick={onRevoke} className="font-mono text-micro text-ink-faint hover:text-red-400">
+          <Button variant="ghost" size="sm" onClick={onRevoke} className="font-mono text-micro text-ink-faint hover:text-bearish">
             Revoke
           </Button>
         )}

@@ -1,18 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, X, Tv } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { DataTable, type Column } from "@/components/DataTable";
 import { DashboardSkeleton } from "@/components/skeletons/LayoutSkeletons";
 import { useChannels, useBackfillChannel, useMe } from "@/lib/hooks";
 
+type ChannelRow = NonNullable<Awaited<ReturnType<typeof useChannels>>["data"]>[number];
+
 export default function ChannelsPage() {
+  const router = useRouter();
   const { data: channels = [], isLoading } = useChannels();
   const backfillMutation = useBackfillChannel();
   const { isAdmin } = useMe();
@@ -146,29 +150,55 @@ export default function ChannelsPage() {
           description="Add a channel above to begin backfilling and analyzing video transcripts."
         />
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {channels.map((ch) => (
-            <Card key={ch.id} className="flex flex-col justify-between">
-              <CardHeader>
-                <div className="flex items-start justify-between gap-2">
-                  <CardTitle className="line-clamp-1">{ch.title}</CardTitle>
-                  {typeof ch.video_count === "number" && (
-                    <Badge variant="secondary" className="font-mono text-micro shrink-0">
-                      {ch.video_count} video{ch.video_count === 1 ? "" : "s"}
-                    </Badge>
-                  )}
-                </div>
-                <CardDescription className="line-clamp-2">{ch.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Link href={`/channels/${ch.id}`}>
-                  <Button variant="outline" className="w-full">View Channel</Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <DataTable
+          columns={channelColumns}
+          data={channels}
+          keyExtractor={(ch) => ch.id}
+          onRowClick={(ch) => router.push(`/channels/${ch.id}`)}
+          emptyState={
+            <EmptyState
+              icon={<Tv className="h-6 w-6" />}
+              title="No channels tracked yet"
+              description="Add a channel above to begin backfilling and analyzing video transcripts."
+            />
+          }
+        />
       )}
     </div>
   );
 }
+
+const channelColumns: Column<ChannelRow>[] = [
+  {
+    key: "title",
+    header: "Channel",
+    render: (ch) => (
+      <div className="flex min-w-0 flex-col gap-0.5 py-0.5">
+        <Link
+          href={`/channels/${ch.id}`}
+          className="truncate text-small font-semibold text-ink hover:text-signal hover:underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {ch.title}
+        </Link>
+        {ch.description && (
+          <span className="truncate text-caption text-ink-faint" title={ch.description}>
+            {ch.description}
+          </span>
+        )}
+      </div>
+    ),
+  },
+  {
+    key: "video_count",
+    header: "Videos",
+    numeric: true,
+    headerClassName: "w-20",
+    render: (ch) =>
+      typeof ch.video_count === "number" ? (
+        <span className="numeric text-small text-ink">{ch.video_count}</span>
+      ) : (
+        <span className="text-ink-faint">—</span>
+      ),
+  },
+];
