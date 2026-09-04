@@ -231,6 +231,11 @@
   --sidebar-ring: var(--signal);
 }
 
+/* Landing page scope — restores Space Grotesk for marketing headings */
+.landing {
+  --font-app-display: var(--font-space-grotesk);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -409,6 +414,51 @@
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+  /* Elevating card with a soft signal glow on hover (transform handled by motion) */
+  .card-glow {
+    transition:
+      border-color 0.25s var(--ease-out),
+      box-shadow 0.25s var(--ease-out),
+      background-color 0.25s var(--ease-out);
+  }
+
+  .card-glow:hover {
+    border-color: color-mix(in oklch, var(--signal) 35%, var(--line));
+    box-shadow:
+      0 24px 60px -24px color-mix(in oklch, var(--signal) 40%, transparent),
+      0 0 0 1px color-mix(in oklch, var(--signal) 22%, transparent);
+  }
+
+  /* Primary CTA glow */
+  .btn-glow {
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, var(--signal) 60%, transparent),
+      0 12px 40px -12px color-mix(in oklch, var(--signal) 55%, transparent);
+  }
+
+  .btn-glow:hover {
+    box-shadow:
+      0 0 0 1px var(--signal),
+      0 16px 60px -12px color-mix(in oklch, var(--signal) 85%, transparent);
+  }
+
+  /* Slow breathing pulse for ambient glow orbs */
+  @keyframes lnd-pulse {
+
+    0%,
+    100% {
+      opacity: 0.55;
+      transform: scale(1);
+    }
+
+    50% {
+      opacity: 0.9;
+      transform: scale(1.06);
+    }
+  }
+
+  .animate-glow-pulse {
+    animation: lnd-pulse 7s ease-in-out infinite;
   }
 
   /* Vertical "live tape" shimmer for the hero preview */
