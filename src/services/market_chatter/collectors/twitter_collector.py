@@ -35,62 +35,113 @@ class TwitterCollector(BaseCollector):
 
     async def collect(self, symbol: str, period_days: int = 7) -> list[RawItem]:
         symbol = symbol.upper()
-        live_items = await asyncio.to_thread(self._fetch_live_tweets, symbol, period_days)
-        if live_items:
-            return live_items
+        now = datetime.now(UTC)
+        cutoff = now - timedelta(days=period_days)
+
+        queries = [
+            f"https://news.google.com/rss/search?q=%24{symbol}+site%3Ax.com&hl=en-US&gl=US&ceid=US:en",
+            f"https://news.google.com/rss/search?q=%23{symbol}+site%3Ax.com&hl=en-US&gl=US&ceid=US:en",
+            f"https://news.google.com/rss/search?q={symbol}+stock+site%3Ax.com&hl=en-US&gl=US&ceid=US:en",
+            f"https://news.google.com/rss/search?q={symbol}+trading+OR+breakout+OR+shares+site%3Ax.com&hl=en-US&gl=US&ceid=US:en",
+        ]
+
+        tasks = [
+            asyncio.to_thread(self._fetch_query, url, symbol, cutoff, now)
+            for url in queries
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        items: list[RawItem] = []
+        seen_ids: set[str] = set()
+        seen_hashes: set[str] = set()
+
+        for res in results:
+            if isinstance(res, Exception):
+                log.warning("Twitter/X RSS query failed for %s: %s", symbol, res)
+            elif isinstance(res, list):
+                for item in res:
+                    if item.id in seen_ids or item.content_hash in seen_hashes:
+                        continue
+                    seen_ids.add(item.id)
+                    seen_hashes.add(item.content_hash)
+                    items.append(item)
+
+        if items:
+            log.info("Fetched %d deduplicated FinTwit/X tweets for %s across %d queries", len(items), symbol, len(queries))
+            items.sort(key=lambda x: x.created_at, reverse=True)
+            return items
+
         log.info("Using Twitter/X fixture collector for symbol %s", symbol)
         return self._generate_fixtures(symbol, period_days)
 
-    def _fetch_live_tweets(self, symbol: str, period_days: int) -> list[RawItem]:
-        url = f"https://news.google.com/rss/search?q=%24{symbol}+site%3Ax.com"
+    def _fetch_query(
+        self,
+        url: str,
+        symbol: str,
+        cutoff: datetime,
+        now: datetime,
+    ) -> list[RawItem]:
         try:
             from curl_cffi import requests
 
             resp = requests.get(url, impersonate="chrome120", timeout=10)
-            if resp.status_code == 200:
-                root = ET.fromstring(resp.text)
-                items: list[RawItem] = []
-                now = datetime.now(UTC)
+            if resp.status_code != 200:
+                return []
 
-                for idx, item in enumerate(root.findall("channel/item")):
-                    title = item.findtext("title", "")
-                    link = item.findtext("link", "")
-                    pub_date_str = item.findtext("pubDate", "")
+            root = ET.fromstring(resp.text)
+            channel = root.find("channel")
+            if channel is None:
+                return []
 
-                    clean_text = title.replace(" - x.com", "").replace(" - Twitter", "").strip()
-                    if not clean_text:
-                        continue
+            items: list[RawItem] = []
+            for idx, item in enumerate(channel.findall("item")):
+                title = item.findtext("title", "")
+                link = item.findtext("link", "")
+                pub_date_str = item.findtext("pubDate", "")
 
-                    try:
-                        pub_dt = parsedate_to_datetime(pub_date_str).astimezone(UTC)
-                    except Exception:
-                        pub_dt = now - timedelta(hours=idx)
+                clean_text = title.replace(" - x.com", "").replace(" - Twitter", "").strip()
+                if not clean_text or not link:
+                    continue
 
-                    author = "fintwit_trader"
-                    if clean_text.startswith("@"):
-                        author = clean_text.split()[0].replace("@", "")
+                try:
+                    pub_dt = parsedate_to_datetime(pub_date_str)
+                    if pub_dt.tzinfo is None:
+                        pub_dt = pub_dt.replace(tzinfo=UTC)
+                    else:
+                        pub_dt = pub_dt.astimezone(UTC)
+                except Exception:
+                    pub_dt = now - timedelta(hours=idx)
 
-                    items.append(
-                        RawItem(
-                            id=f"twitter:{hashlib.md5(link.encode()).hexdigest()[:12]}",
-                            symbol=symbol,
-                            source=SourceName.X,
-                            text=clean_text,
-                            title=f"${symbol} Tweet / X Discussion",
-                            author=author,
-                            url=link,
-                            engagement_score=35 + (idx % 25),
-                            content_hash=compute_content_hash(clean_text, author),
-                            created_at=pub_dt,
-                            raw_metadata={"rss_link": link, "source": "x.com"},
-                        )
+                if pub_dt < cutoff:
+                    continue
+
+                author = "fintwit_trader"
+                if clean_text.startswith("@"):
+                    parts = clean_text.split()
+                    if parts:
+                        author = parts[0].replace("@", "").strip(":,.")
+
+                item_id = hashlib.md5(link.strip().encode()).hexdigest()[:12]
+
+                items.append(
+                    RawItem(
+                        id=f"twitter:{item_id}",
+                        symbol=symbol,
+                        source=SourceName.X,
+                        text=clean_text,
+                        title=f"${symbol} Tweet / X Discussion",
+                        author=author,
+                        url=link.strip(),
+                        engagement_score=35 + (idx % 25),
+                        content_hash=compute_content_hash(clean_text, author),
+                        created_at=pub_dt,
+                        raw_metadata={"rss_link": link.strip(), "source": "x.com"},
                     )
-                if items:
-                    log.info("Fetched %d real live FinTwit/X tweets for %s", len(items), symbol)
-                    return items
+                )
+            return items
         except Exception as exc:
-            log.warning("Live X/Twitter RSS fetch failed for %s: %s", symbol, exc)
-        return []
+            log.debug("Live X/Twitter RSS fetch query failed: %s", exc)
+            return []
 
     def _generate_fixtures(self, symbol: str, period_days: int) -> list[RawItem]:
         seed = int(hashlib.sha256(f"twitter:{symbol}".encode()).hexdigest()[:8], 16)

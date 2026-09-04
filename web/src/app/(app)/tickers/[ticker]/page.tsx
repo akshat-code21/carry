@@ -20,6 +20,7 @@ import { ErrorState } from "@/components/ErrorState";
 import { DetailSkeleton } from "@/components/skeletons/LayoutSkeletons";
 import { useTicker, useTickerSentiment, useTickerPriceHistory } from "@/lib/hooks";
 import { useChartColors } from "@/lib/useChartColors";
+import { cn } from "@/lib/utils";
 
 const PRICE_SERIES_OPTIONS: { label: string; type: TvChartSeriesType }[] = [
   { label: "Line", type: "line" },
@@ -353,7 +354,7 @@ export default function TickerPage() {
                             ? "destructive"
                             : "secondary"
                       }
-                      className="font-mono text-micro text-signal-foreground! capitalize"
+                      className={cn("font-mono text-micro text-signal-foreground! capitalize", `${dir === "bearish" ? "text-black!" : ""}`)}
                     >
                       {dir === "bullish" && <TrendingUp className="mr-1 h-3 w-3 inline" />}
                       {dir === "bearish" && <TrendingDown className="mr-1 h-3 w-3 inline" />}

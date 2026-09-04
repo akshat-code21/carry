@@ -775,7 +775,7 @@ export function TradingViewPriceChart({
                   >
                     B
                   </span>
-                  B (Bullish)
+                  Buy
                 </span>
               )}
               {hasBearish && (
@@ -786,7 +786,7 @@ export function TradingViewPriceChart({
                   >
                     S
                   </span>
-                  S (Bearish)
+                  Sell
                 </span>
               )}
             </>
