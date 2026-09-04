@@ -45,10 +45,7 @@ class TwitterCollector(BaseCollector):
             f"https://news.google.com/rss/search?q={symbol}+trading+OR+breakout+OR+shares+site%3Ax.com&hl=en-US&gl=US&ceid=US:en",
         ]
 
-        tasks = [
-            asyncio.to_thread(self._fetch_query, url, symbol, cutoff, now)
-            for url in queries
-        ]
+        tasks = [asyncio.to_thread(self._fetch_query, url, symbol, cutoff, now) for url in queries]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         items: list[RawItem] = []
@@ -67,7 +64,12 @@ class TwitterCollector(BaseCollector):
                     items.append(item)
 
         if items:
-            log.info("Fetched %d deduplicated FinTwit/X tweets for %s across %d queries", len(items), symbol, len(queries))
+            log.info(
+                "Fetched %d deduplicated FinTwit/X tweets for %s across %d queries",
+                len(items),
+                symbol,
+                len(queries),
+            )
             items.sort(key=lambda x: x.created_at, reverse=True)
             return items
 

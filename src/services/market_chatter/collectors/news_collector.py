@@ -76,7 +76,12 @@ class NewsCollector(BaseCollector):
                     items.append(item)
 
         if items:
-            log.info("Fetched %d deduplicated news articles for %s across %d feeds", len(items), symbol, len(feed_configs))
+            log.info(
+                "Fetched %d deduplicated news articles for %s across %d feeds",
+                len(items),
+                symbol,
+                len(feed_configs),
+            )
             # Sort newest first
             items.sort(key=lambda x: x.created_at, reverse=True)
             return items
@@ -96,8 +101,12 @@ class NewsCollector(BaseCollector):
             resp = await self._client.get(
                 url,
                 headers={
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Accept": "application/rss+xml, application/xml, text/xml, */*",
+                    "User-Agent": (
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/120.0.0.0 Safari/537.36"
+                    ),
+                    "Accept": ("application/rss+xml, application/xml, text/xml, */*"),
                 },
             )
             if resp.status_code != 200:

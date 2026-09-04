@@ -238,7 +238,6 @@ async def get_ticker_detail(
     return await _attach_social(detail, social_service)
 
 
-
 async def _get_etf_ticker_detail(
     etf_ticker: str,
     db: AsyncSession,

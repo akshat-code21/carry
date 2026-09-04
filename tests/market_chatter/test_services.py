@@ -55,7 +55,6 @@ async def test_partial_source_failure_returns_partial_result(tmp_path) -> None:
     from src.database import Base
     from src.services.market_chatter.cache import JsonCache
     from src.services.market_chatter.providers import FixturePriceProvider
-
     from tests.market_chatter.conftest import MARKET_CHATTER_TABLES
 
     settings = Settings(

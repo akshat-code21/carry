@@ -130,7 +130,8 @@ class FinBertService:
             import transformers.masking_utils
             from transformers import AutoModelForSequenceClassification
 
-            # Patch transformers masking for ONNX TorchScript tracing compatibility (transformers >= 5.6)
+            # Patch transformers masking for ONNX TorchScript
+            # tracing compatibility (transformers >= 5.6)
             def _patched_sdpa_mask(
                 batch_size,
                 q_length,
@@ -159,7 +160,8 @@ class FinBertService:
                     padding_mask, q_length, kv_length, kv_offset, local_size
                 ):
                     return None
-                if allow_is_bidirectional_skip and transformers.masking_utils._ignore_bidirectional_mask_sdpa(
+                mask_utils = transformers.masking_utils
+                if allow_is_bidirectional_skip and mask_utils._ignore_bidirectional_mask_sdpa(
                     padding_mask, kv_length, local_size
                 ):
                     return None
@@ -183,9 +185,9 @@ class FinBertService:
                     )
                     attention_mask = attention_mask.expand(batch_size, -1, q_length, kv_length)
                 else:
-                    attention_mask = transformers.masking_utils._vmap_expansion_sdpa(
-                        mask_function
-                    )(batch_arange, head_arange, q_arange, kv_arange)
+                    attention_mask = transformers.masking_utils._vmap_expansion_sdpa(mask_function)(
+                        batch_arange, head_arange, q_arange, kv_arange
+                    )
 
                 return attention_mask
 

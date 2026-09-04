@@ -45,19 +45,42 @@ LLM_TIMEOUT_SECONDS = 8.0
 MAX_KEY_POINTS = 4
 ANSWER_MODEL = "gpt-5.4-nano"
 
-ANSWER_SYSTEM_PROMPT = """You are a financial intelligence assistant synthesizing what financial creators, media channels, and analysts said on YouTube regarding the user's query, based on transcript excerpts.
-
-Rules:
-1. Answer ONLY from the provided transcript excerpts and aggregate coverage context. Never add outside knowledge, speculate, or hallucinate.
-2. COMPULSORY CHANNEL ATTRIBUTION: Every single claim, valuation metric, price target, thesis, or sentiment point MUST explicitly state the specific YouTube channel name that said it (e.g., "According to CNBC...", "Meet Kevin argues that...", "Bloomberg reported...", "Both Graham Stephan and Plain Bagel noted..."). Never make generic unattributed statements.
-3. NO META-LANGUAGE: Do NOT refer to "the clips", "the excerpts", "one segment", "the transcripts", or "the video commentary". Synthesize the commentary directly as spoken thoughts and analyses from the respective channels.
-4. NO BRACKETED CITATIONS: Do NOT output citation numbers, brackets, or UUIDs (such as [1], [2], or [uuid]) in the summary or key points.
-5. The summary must directly answer the user's query in 2-4 cohesive sentences with explicit channel attributions.
-6. Provide up to 4 key points as short standalone bullet points. Each bullet point MUST explicitly name the channel that made the point.
-7. If the excerpts do not contain enough relevant information to answer, set summary to a single sentence stating that monitored channels have not discussed this topic, and leave key_points empty.
-
-Return ONLY valid JSON:
-{"summary": "...", "key_points": ["..."], "cited_segment_ids": ["id1", "id2"]}"""
+ANSWER_SYSTEM_PROMPT = (
+    "You are a financial intelligence assistant synthesizing what "
+    "financial creators, media channels, and analysts said on YouTube "
+    "regarding the user's query, based on transcript excerpts.\n"
+    "\n"
+    "Rules:\n"
+    "1. Answer ONLY from the provided transcript excerpts and aggregate "
+    "coverage context. Never add outside knowledge, speculate, or "
+    "hallucinate.\n"
+    "2. COMPULSORY CHANNEL ATTRIBUTION: Every single claim, valuation "
+    "metric, price target, thesis, or sentiment point MUST explicitly "
+    "state the specific YouTube channel name that said it (e.g., "
+    '"According to CNBC...", "Meet Kevin argues that...", "Bloomberg '
+    'reported...", "Both Graham Stephan and Plain Bagel noted..."). '
+    "Never make generic unattributed statements.\n"
+    '3. NO META-LANGUAGE: Do NOT refer to "the clips", "the excerpts",'
+    ' "one segment", "the transcripts", or "the video commentary". '
+    "Synthesize the commentary directly as spoken thoughts and analyses "
+    "from the respective channels.\n"
+    "4. NO BRACKETED CITATIONS: Do NOT output citation numbers, "
+    "brackets, or UUIDs (such as [1], [2], or [uuid]) in the summary "
+    "or key points.\n"
+    "5. The summary must directly answer the user's query in 2-4 "
+    "cohesive sentences with explicit channel attributions.\n"
+    "6. Provide up to 4 key points as short standalone bullet points. "
+    "Each bullet point MUST explicitly name the channel that made the "
+    "point.\n"
+    "7. If the excerpts do not contain enough relevant information to "
+    "answer, set summary to a single sentence stating that monitored "
+    "channels have not discussed this topic, and leave key_points "
+    "empty.\n"
+    "\n"
+    "Return ONLY valid JSON:\n"
+    '{"summary": "...", "key_points": ["..."], '
+    '"cited_segment_ids": ["id1", "id2"]}'
+)
 
 # Per-process locks keyed by query hash - concurrent identical queries share
 # one synthesis instead of stampeding the LLM.
@@ -113,7 +136,8 @@ def build_social_prompt_block(snapshot_dict: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-# Matches bracketed UUID citations like "[28442ada-dea1-4b3b-8859-80c026260635]" or numbered markers like "[1]"
+# Matches bracketed UUID citations like
+# "[28442ada-dea1-4b3b-8859-80c026260635]" or numbered markers like "[1]"
 _CITATION_BRACKET_RE = re.compile(
     r"\[\s*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d+)\s*\]",
     re.IGNORECASE,

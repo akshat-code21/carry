@@ -8,6 +8,7 @@ from typing import Any
 
 try:
     from datasketch import MinHash, MinHashLSH
+
     HAS_DATASKETCH = True
 except ImportError:
     HAS_DATASKETCH = False
@@ -75,7 +76,11 @@ def agent_cleaner_node(state: PipelineGraphState) -> dict[str, Any]:
                 pass
         else:
             # Jaccard set similarity fallback
-            tok_set = tokens_or_minhash if isinstance(tokens_or_minhash, set) else set(cleaned_text.lower().split())
+            tok_set = (
+                tokens_or_minhash
+                if isinstance(tokens_or_minhash, set)
+                else set(cleaned_text.lower().split())
+            )
             is_duplicate = False
             for prev_set in seen_token_sets:
                 intersection = len(tok_set & prev_set)

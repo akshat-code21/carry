@@ -34,9 +34,7 @@ async def _build_test_engine(db_path: str) -> AsyncEngine:
     engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}", pool_pre_ping=True)
     tables = [Base.metadata.tables[name] for name in SQLITE_TABLE_NAMES]
     async with engine.begin() as conn:
-        await conn.run_sync(
-            lambda sync_conn: Base.metadata.create_all(sync_conn, tables=tables)
-        )
+        await conn.run_sync(lambda sync_conn: Base.metadata.create_all(sync_conn, tables=tables))
     return engine
 
 
@@ -216,4 +214,3 @@ async def test_social_coverage_stats_aggregates_by_source(session_factory):
 async def test_social_coverage_stats_empty_returns_none(session_factory):
     async with session_factory() as session:
         assert await social_coverage_stats(session, "ZZZZ", window_days=14) is None
-
