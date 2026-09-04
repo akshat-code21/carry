@@ -31,16 +31,16 @@ export const metadata: Metadata = {
 
 /**
  * Inline script that runs before React hydration to apply the persisted theme
- * (or default to "dark") — prevents flash-of-incorrect-theme.
+ * (or default to "light") — prevents flash-of-incorrect-theme.
  */
 const themeScript = `
 (function(){
   try {
-    var t = localStorage.getItem("theme") || "dark";
+    var t = localStorage.getItem("theme") || "light";
     if (t === "dark") document.documentElement.classList.add("dark");
     else document.documentElement.classList.remove("dark");
   } catch(e) {
-    document.documentElement.classList.add("dark");
+    document.documentElement.classList.remove("dark");
   }
 })();
 `;
@@ -60,12 +60,26 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="h-full bg-canvas">
-        {/* ClerkProvider lives inside <body> per Next.js 16 cache-components guidance */}
+        {/* ClerkProvider lives inside <body> per Next.js 16 cache-components guidance.
+            Variables resolve through the app token layer (globals.css), so Clerk
+            components follow light/dark automatically. */}
         <ClerkProvider
           appearance={{
             variables: {
-              colorPrimary: "#16a34a",
-              borderRadius: "0.5rem",
+              colorPrimary: "var(--signal)",
+              colorPrimaryForeground: "var(--signal-foreground)",
+              colorBackground: "var(--panel)",
+              colorForeground: "var(--ink)",
+              colorMuted: "var(--panel-raised)",
+              colorMutedForeground: "var(--ink-secondary)",
+              colorInput: "var(--line-strong)",
+              colorDanger: "var(--bearish)",
+              colorSuccess: "var(--bullish)",
+              colorWarning: "var(--warning)",
+              colorNeutral: "var(--ink-faint)",
+              borderRadius: "var(--radius)",
+              fontFamily: "var(--font-plex-sans)",
+              fontFamilyButtons: "var(--font-plex-sans)",
             },
           }}
         >
