@@ -786,7 +786,7 @@ export default function TickerFlowPage() {
         )}
 
         {viewMode === "overview" && !dashboardLoading && !dashboardData && (
-          <div className="mt-8 rounded-xl border border-tf-stroke bg-tf-panel p-8 text-center">
+          <div className="mt-8 rounded-md border border-tf-stroke bg-tf-panel p-8 text-center">
             <p className="text-sm font-semibold text-tf-ink">Social Chatter Overview Unavailable</p>
             <p className="mt-1 text-xs text-tf-muted">
               Ensure the Python backend service is running to fetch social chatter data across platforms.

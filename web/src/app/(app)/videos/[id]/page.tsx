@@ -61,7 +61,7 @@ function VideoPageContent() {
         />
       </div>
 
-      <div className="aspect-video w-full max-w-4xl overflow-hidden rounded-xl border bg-black shadow-sm">
+      <div className="aspect-video w-full max-w-4xl overflow-hidden rounded-md border bg-black">
         <iframe
           width="100%"
           height="100%"

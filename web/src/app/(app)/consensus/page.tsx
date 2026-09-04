@@ -405,7 +405,7 @@ export default function ConsensusPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 w-full max-w-lg bg-canvas border-l border-line shadow-2xl z-50 flex flex-col"
+              className="fixed top-0 right-0 bottom-0 w-full max-w-lg bg-canvas border-l border-line z-50 flex flex-col"
             >
               {/* Header */}
               <div className="p-6 border-b border-line flex items-start justify-between bg-panel/50">
@@ -434,7 +434,7 @@ export default function ConsensusPage() {
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
                 {/* Summary Cards */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-4 rounded-xl bg-panel/60 border border-line">
+                  <div className="p-4 rounded-md bg-panel/60 border border-line">
                     <span className="text-micro text-ink-secondary block font-medium uppercase tracking-wider">
                       Aggregated Value
                     </span>
@@ -442,7 +442,7 @@ export default function ConsensusPage() {
                       {selectedHolding.total_value_usd ? formatCurrency(selectedHolding.total_value_usd) : "—"}
                     </span>
                   </div>
-                  <div className="p-4 rounded-xl bg-panel/60 border border-line">
+                  <div className="p-4 rounded-md bg-panel/60 border border-line">
                     <span className="text-micro text-ink-secondary block font-medium uppercase tracking-wider">
                       Fund Breakdown
                     </span>
@@ -475,7 +475,7 @@ export default function ConsensusPage() {
                     {(selectedHolding.funds || []).map((f) => (
                       <div
                         key={f.investor_id}
-                        className="p-4 bg-panel/40 border border-line rounded-xl hover:border-signal/40 transition-all space-y-3"
+                        className="p-4 bg-panel/40 border border-line rounded-md hover:border-signal/40 transition-all space-y-3"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>

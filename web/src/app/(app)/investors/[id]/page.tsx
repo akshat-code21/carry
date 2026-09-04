@@ -415,7 +415,7 @@ export default function InvestorDetailPage() {
                     onClick={() => setHoldingsView("breakdown")}
                     className={`flex items-center gap-1.5 px-2.5 py-1 text-micro font-medium rounded-md transition-colors ${
                       holdingsView === "breakdown"
-                        ? "bg-panel text-ink shadow-sm"
+                        ? "bg-panel text-ink"
                         : "text-ink-secondary hover:text-ink"
                     }`}
                   >
@@ -426,7 +426,7 @@ export default function InvestorDetailPage() {
                     onClick={() => setHoldingsView("matrix")}
                     className={`flex items-center gap-1.5 px-2.5 py-1 text-micro font-medium rounded-md transition-colors ${
                       holdingsView === "matrix"
-                        ? "bg-panel text-ink shadow-sm"
+                        ? "bg-panel text-ink"
                         : "text-ink-secondary hover:text-ink"
                     }`}
                   >
@@ -447,7 +447,7 @@ export default function InvestorDetailPage() {
                   onClick={() => setSelectedQuarter("all")}
                   className={`px-2.5 py-1 rounded-md text-micro font-mono font-medium transition-colors shrink-0 ${
                     selectedQuarter === "all"
-                      ? "bg-signal text-black font-semibold shadow-sm"
+                      ? "bg-signal text-black font-semibold"
                       : "bg-surface border border-line text-ink-secondary hover:text-ink hover:border-line-hover"
                   }`}
                 >
@@ -462,7 +462,7 @@ export default function InvestorDetailPage() {
                       onClick={() => setSelectedQuarter(p)}
                       className={`px-2.5 py-1 rounded-md text-micro font-mono font-medium transition-colors shrink-0 flex items-center gap-1.5 ${
                         selectedQuarter === p
-                          ? "bg-signal text-black font-semibold shadow-sm"
+                          ? "bg-signal text-black font-semibold"
                           : "bg-surface border border-line text-ink-secondary hover:text-ink hover:border-line-hover"
                       }`}
                     >
