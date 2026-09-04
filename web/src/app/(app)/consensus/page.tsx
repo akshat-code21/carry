@@ -91,32 +91,32 @@ const getChangeBadge = (type: string, sharesCurrent?: number, sharesPrevious?: n
     case "increased":
       return (
         <span
-          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-xs"
+          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-black bg-bullish/10 text-bullish border border-bullish/30"
           title={`Buy / Increased ${pctStr ? `(${pctStr})` : ""}`}
         >
           <span>B</span>
-          {pctStr && <span className="font-mono text-[11px] font-bold text-emerald-300">{pctStr}</span>}
+          {pctStr && <span className="font-mono text-[11px] font-bold text-bullish">{pctStr}</span>}
         </span>
       );
     case "decreased":
     case "closed":
       return (
         <span
-          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-black bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-xs"
+          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-black bg-bearish/10 text-bearish border border-bearish/30"
           title={`Sell / Decreased ${pctStr ? `(${pctStr})` : ""}`}
         >
           <span>S</span>
-          {pctStr && <span className="font-mono text-[11px] font-bold text-rose-300">{pctStr}</span>}
+          {pctStr && <span className="font-mono text-[11px] font-bold text-bearish">{pctStr}</span>}
         </span>
       );
     default:
       return (
         <span
-          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-black bg-zinc-500/20 text-zinc-300 border border-zinc-500/40 shadow-xs"
+          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-black bg-ink/10 text-ink-secondary border border-line"
           title={`Neutral / Unchanged ${pctStr ? `(${pctStr})` : ""}`}
         >
           <span>N</span>
-          {pctStr && <span className="font-mono text-[11px] font-bold text-zinc-400">{pctStr}</span>}
+          {pctStr && <span className="font-mono text-[11px] font-bold text-ink-secondary">{pctStr}</span>}
         </span>
       );
   }
@@ -152,7 +152,7 @@ export default function ConsensusPage() {
   if (error || !data) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] text-center space-y-4">
-        <AlertCircle className="w-12 h-12 text-red-400" />
+        <AlertCircle className="w-12 h-12 text-bearish" />
         <h2 className="text-xl font-bold text-ink">Failed to Load Consensus</h2>
         <p className="text-ink-secondary">
           {error instanceof Error ? error.message : "Could not load consensus data."}
@@ -203,7 +203,7 @@ export default function ConsensusPage() {
         <Card className="border-line bg-canvas">
           <CardHeader className="pb-2">
             <CardTitle className="text-small font-medium text-ink-secondary flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-emerald-400" /> Top Buy Consensus
+              <TrendingUp className="w-4 h-4 text-bullish" /> Top Buy Consensus
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -214,7 +214,7 @@ export default function ConsensusPage() {
                     <span className="font-bold text-small truncate text-ink" title={h.company_name || ""}>
                       {h.company_name || h.ticker_symbol}
                     </span>
-                    <span className="text-micro text-emerald-400 font-semibold font-mono whitespace-nowrap">
+                    <span className="text-micro text-bullish font-semibold font-mono whitespace-nowrap">
                       +{h.funds_buying} funds
                     </span>
                   </div>
@@ -229,7 +229,7 @@ export default function ConsensusPage() {
         <Card className="border-line bg-canvas">
           <CardHeader className="pb-2">
             <CardTitle className="text-small font-medium text-ink-secondary flex items-center gap-2">
-              <TrendingDown className="w-4 h-4 text-rose-400" /> Top Sell Consensus
+              <TrendingDown className="w-4 h-4 text-bearish" /> Top Sell Consensus
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -240,7 +240,7 @@ export default function ConsensusPage() {
                     <span className="font-bold text-small truncate text-ink" title={h.company_name || ""}>
                       {h.company_name || h.ticker_symbol}
                     </span>
-                    <span className="text-micro text-rose-400 font-semibold font-mono whitespace-nowrap">
+                    <span className="text-micro text-bearish font-semibold font-mono whitespace-nowrap">
                       -{h.funds_selling} funds
                     </span>
                   </div>
@@ -333,21 +333,21 @@ export default function ConsensusPage() {
                         <div className="h-2 bg-panel rounded-full overflow-hidden flex w-full border border-line/40">
                           {buyRatio > 0 && (
                             <div
-                              className="bg-emerald-500 h-full transition-all"
+                              className="bg-bullish h-full transition-all"
                               style={{ width: `${buyRatio}%` }}
                               title={`Buy: ${buying}`}
                             />
                           )}
                           {neutralRatio > 0 && (
                             <div
-                              className="bg-zinc-500 h-full transition-all"
+                              className="bg-ink-faint h-full transition-all"
                               style={{ width: `${neutralRatio}%` }}
                               title={`Neutral: ${neutral}`}
                             />
                           )}
                           {sellRatio > 0 && (
                             <div
-                              className="bg-rose-500 h-full transition-all"
+                              className="bg-bearish h-full transition-all"
                               style={{ width: `${sellRatio}%` }}
                               title={`Sell: ${selling}`}
                             />
@@ -355,13 +355,13 @@ export default function ConsensusPage() {
                         </div>
                         {/* B, N, S Badges */}
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md font-bold text-micro bg-emerald-500/20 text-emerald-400 border border-emerald-500/35">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md font-bold text-micro bg-bullish/10 text-bullish border border-bullish/30">
                             <span className="font-extrabold">{buying}</span> B
                           </span>
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md font-bold text-micro bg-zinc-500/20 text-zinc-300 border border-zinc-500/35">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md font-bold text-micro bg-ink/10 text-ink-secondary border border-line">
                             <span className="font-extrabold">{neutral}</span> N
                           </span>
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md font-bold text-micro bg-rose-500/20 text-rose-400 border border-rose-500/35">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md font-bold text-micro bg-bearish/10 text-bearish border border-bearish/30">
                             <span className="font-extrabold">{selling}</span> S
                           </span>
                         </div>
@@ -447,10 +447,10 @@ export default function ConsensusPage() {
                       Fund Breakdown
                     </span>
                     <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                      <span className="text-micro font-extrabold px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                      <span className="text-micro font-extrabold px-2.5 py-0.5 rounded bg-bullish/10 text-bullish border border-bullish/30">
                         {selectedHolding.funds_buying || 0} B
                       </span>
-                      <span className="text-micro font-extrabold px-2.5 py-0.5 rounded bg-zinc-500/20 text-zinc-300 border border-zinc-500/40">
+                      <span className="text-micro font-extrabold px-2.5 py-0.5 rounded bg-ink/10 text-ink-secondary border border-line">
                         {Math.max(
                           0,
                           (selectedHolding.total_funds_holding || 0) -
@@ -458,7 +458,7 @@ export default function ConsensusPage() {
                         )}{" "}
                         N
                       </span>
-                      <span className="text-micro font-extrabold px-2.5 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/40">
+                      <span className="text-micro font-extrabold px-2.5 py-0.5 rounded bg-bearish/10 text-bearish border border-bearish/30">
                         {selectedHolding.funds_selling || 0} S
                       </span>
                     </div>

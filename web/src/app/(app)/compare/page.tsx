@@ -194,10 +194,10 @@ export default function ComparePage() {
 
                         const changeColors: Record<string, string> = {
                           new_position: "text-green-400",
-                          increased: "text-blue-400",
-                          decreased: "text-orange-400",
+                          increased: "text-signal",
+                          decreased: "text-warning",
                           unchanged: "text-ink-secondary",
-                          closed: "text-red-400",
+                          closed: "text-bearish",
                         };
                         const color = changeColors[cell.change_type] || "text-ink-secondary";
 

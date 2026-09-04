@@ -32,7 +32,6 @@ import {
 import { AnimatedCounter } from "@/components/market-chatter/AnimatedCounter";
 import { MCFooter } from "@/components/market-chatter/MCFooter";
 import { GlowCard } from "@/components/market-chatter/GlowCard";
-import { GradientText } from "@/components/market-chatter/GradientText";
 import { SectionLabel } from "@/components/market-chatter/SectionLabel";
 import { useTickerFlowDashboard } from "@/lib/hooks";
 import { useChartColors } from "@/lib/useChartColors";
@@ -142,7 +141,7 @@ function SourceIcon({ source }: { source: Source }) {
 function LoadingSkeleton() {
   return (
     <div className="mt-8 space-y-4" aria-label="Loading ticker data">
-      <div className="inline-flex items-center gap-2.5 rounded-full border border-tf-stroke bg-tf-panel/80 px-3.5 py-1.5 backdrop-blur-md shadow-sm">
+      <div className="inline-flex items-center gap-2.5 rounded-full border border-tf-stroke bg-tf-panel/80 px-3.5 py-1.5 backdrop-blur-md">
         <span className="relative flex h-2 w-2">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-tf-signal opacity-75" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-tf-signal" />
@@ -214,7 +213,7 @@ function ChartTooltip({
   const isBuy = pointData?.signal === "buy";
 
   return (
-    <div className="min-w-52 max-w-72 rounded-lg border border-tf-stroke-strong bg-tf-panel-raised p-3 shadow-2xl shadow-black/40">
+    <div className="min-w-52 max-w-72 rounded-lg border border-tf-stroke-strong bg-tf-panel-raised p-3 shadow-md">
       <div className="flex items-center justify-between border-b border-tf-stroke pb-2">
         <p className="font-mono text-micro uppercase tracking-[0.08em] text-tf-muted">
           {new Date(`${label}T00:00:00`).toLocaleDateString(undefined, {
@@ -645,7 +644,7 @@ export default function TickerFlowPage() {
                 id="tf-page-title"
                 className="mt-5 max-w-[720px] text-display font-medium leading-[0.98] tracking-[-0.065em] text-tf-ink sm:text-display-xl lg:text-5xl"
               >
-                Market <GradientText>attention</GradientText>,<br />
+                Market <span className="text-tf-ink">attention</span>,<br />
                 made legible.
               </h1>
             </div>
@@ -655,7 +654,7 @@ export default function TickerFlowPage() {
             </p>
           </div>
 
-          <div className="mt-10 rounded-lg border border-tf-stroke bg-tf-panel p-2 shadow-lg">
+          <div className="mt-10 rounded-lg border border-tf-stroke bg-tf-panel p-2">
             <form
               onSubmit={handleSubmit}
               className="flex items-center gap-2 max-sm:flex-wrap"
@@ -717,7 +716,7 @@ export default function TickerFlowPage() {
                   onClick={() => setViewMode("overview")}
                   className={cn(
                     "flex items-center gap-1.5 rounded px-2.5 py-1 text-caption font-medium text-tf-muted transition-colors",
-                    viewMode === "overview" && "bg-tf-panel-raised text-tf-ink shadow-sm",
+                    viewMode === "overview" && "bg-tf-panel-raised text-tf-ink",
                   )}
                 >
                   <LayoutDashboard className="h-3 w-3 text-tf-signal" />
@@ -734,7 +733,7 @@ export default function TickerFlowPage() {
                   }}
                   className={cn(
                     "flex items-center gap-1.5 rounded px-2.5 py-1 text-caption font-medium text-tf-muted transition-colors",
-                    viewMode === "detail" && "bg-tf-panel-raised text-tf-ink shadow-sm",
+                    viewMode === "detail" && "bg-tf-panel-raised text-tf-ink",
                   )}
                 >
                   <ChartIcon className="h-3 w-3 text-tf-price" />
@@ -892,7 +891,7 @@ export default function TickerFlowPage() {
                           className={cn(
                             "rounded px-2.5 py-1.5 text-caption font-medium text-tf-muted transition-colors hover:text-tf-ink",
                             source === value &&
-                            "bg-tf-panel-raised text-tf-ink shadow-sm shadow-black/20",
+                            "bg-tf-panel-raised text-tf-ink",
                           )}
                         >
                           {value === "x" ? "X" : sourceLabels[value]}

@@ -26,6 +26,16 @@ interface DataTableProps<T> {
   emptyState?: React.ReactNode;
   className?: string;
   tableLayout?: "auto" | "fixed";
+  /**
+   * Dense-table pattern: sticky table header inside the scroll container.
+   * Pair with a max-height via className (e.g. "max-h-[480px] overflow-y-auto").
+   */
+  stickyHeader?: boolean;
+  /**
+   * Dense-table pattern: keep the first (identity) column pinned during
+   * horizontal scroll on narrow viewports.
+   */
+  stickyFirstColumn?: boolean;
 }
 
 export function DataTable<T>({
@@ -36,21 +46,33 @@ export function DataTable<T>({
   emptyState,
   className,
   tableLayout = "fixed",
+  stickyHeader = false,
+  stickyFirstColumn = false,
 }: DataTableProps<T>) {
   if (data.length === 0 && emptyState) {
     return <>{emptyState}</>;
   }
 
+  const firstColStickyClasses =
+    "sticky left-0 z-10 bg-panel group-hover/row:bg-panel-raised";
+
   return (
     <div className={cn("w-full overflow-x-auto rounded-md border border-line bg-panel", className)}>
       <Table className={cn(tableLayout === "fixed" && "table-fixed")}>
         <TableHeader>
-          <TableRow className="bg-panel-raised hover:bg-panel-raised">
-            {columns.map((col) => (
+          <TableRow
+            className={cn(
+              "bg-panel-raised hover:bg-panel-raised",
+              stickyHeader && "[&_th]:sticky [&_th]:top-0 [&_th]:z-10"
+            )}
+          >
+            {columns.map((col, i) => (
               <TableHead
                 key={col.key}
                 className={cn(
                   col.numeric && "text-right",
+                  stickyFirstColumn && i === 0 && firstColStickyClasses,
+                  stickyHeader && "bg-panel-raised",
                   col.headerClassName
                 )}
               >
@@ -65,16 +87,17 @@ export function DataTable<T>({
               key={keyExtractor(row, idx)}
               onClick={() => onRowClick?.(row)}
               className={cn(
-                "transition-colors",
+                "transition-colors group/row",
                 onRowClick && "cursor-pointer hover:bg-panel-raised"
               )}
             >
-              {columns.map((col) => (
+              {columns.map((col, i) => (
                 <TableCell
                   key={col.key}
                   className={cn(
-                    "py-2 text-body text-ink",
+                    "py-1.5 text-body text-ink",
                     col.numeric && "text-right font-mono tabular-nums",
+                    stickyFirstColumn && i === 0 && firstColStickyClasses,
                     col.className
                   )}
                 >
