@@ -610,7 +610,7 @@ function SearchPageContent() {
                 skeleton={showAnswerSkeleton}
               />
             )}
-            {showCoverage && <CoverageSnapshotCard coverage={coverage} />}
+            {/* {showCoverage && <CoverageSnapshotCard coverage={coverage} />} */}
           </div>
         )}
 
