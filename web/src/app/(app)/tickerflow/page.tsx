@@ -738,7 +738,7 @@ export default function TickerFlowPage() {
                   }}
                   className={cn(
                     "text-base! flex items-center gap-1.5 rounded px-2.5 py-1 font-medium text-tf-muted transition-colors",
-                    viewMode === "detail" && "bg-tf-panel-raised text-tf-ink shadow-sm",
+                    viewMode === "detail" && "bg-tf-panel-raised text-tf-ink",
                   )}
                 >
                   <ChartIcon className="h-3.5 w-3.5" />
