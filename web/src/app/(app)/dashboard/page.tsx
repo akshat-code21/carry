@@ -26,7 +26,7 @@ export default function DashboardPage() {
       header: "Ticker",
       render: (t) => (
         <Link href={`/tickers/${t.ticker}`} className="font-mono font-semibold text-ink hover:text-signal hover:underline">
-          ${t.ticker}
+          {t.ticker}
         </Link>
       ),
     },
@@ -51,7 +51,7 @@ export default function DashboardPage() {
       render: (etf) => (
         <div className="flex flex-col min-w-0">
           <Link href={`/tickers/${etf.ticker}`} className="flex items-center gap-1.5 font-mono font-semibold text-ink hover:text-signal hover:underline">
-            ${etf.ticker}
+            {etf.ticker}
             <Badge variant="outline" className="border-info/30 bg-info/10 px-1 py-0 text-micro text-info">
               ETF
             </Badge>
