@@ -1,77 +1,107 @@
-# YT Chatter 📈
+# Carry (repo: `yt-chatter`) 📈
 
-> **Search Engine for Financial Market Commentary from YouTube**
+> **Hear what the market is saying.**
 
-YT Chatter is an end-to-end platform that ingests YouTube financial commentary, processes transcripts with LLMs to extract predictions, themes, and ticker mentions, and maps what was said against how stock prices actually performed in real market data.
+**Carry** is an end-to-end market-commentary intelligence platform. It ingests finance commentary from **YouTube, Reddit, X/Twitter, StockTwits, and news**, uses LLMs and NLP to extract **tickers, predictions, sentiment, and themes** timestamped to the second, and holds every call **accountable against real market outcomes** from `yfinance` price history.
 
----
+- **Product name:** Carry — live at `carry-fin.vercel.app` (frontend) and `carry-api.akshat21.me` (API)
+- **Repo name:** `yt-chatter` (YouTube-first origin); internal vocabulary also says "Market Chatter" / "TickerFlow"
+- **Status:** invite-only beta
 
-## 🌟 Key Features
+> ⚠️ **Naming note (important for context):** the repo, package, tables, and most docs say `yt-chatter` / `market-chatter` / `TickerFlow`; only user-facing surfaces say **Carry**. They are the same product. A renaming pass is planned but not yet done — when reading code, map: `yt-chatter` → Carry, `market-chatter`/`TickerFlow` → the social-sentiment engine, `HFI` → the smart-money (hedge-fund intelligence) engine.
 
-- **Automated Video & Transcript Ingestion**: Ingests YouTube channels, extracts captions via YouTube Data API v3 / `youtube-transcript-api`, with `yt-dlp` + Whisper fallback.
-- **LLM Structured Analysis**: Extracts claims, predictions, sentiment, explicit ticker mentions, and implicit thematic ties using Anthropic Claude & OpenAI models.
-- **Hierarchical Theme Taxonomy & Ticker Mapping**: Organizes market commentary by Sector → Industry → Theme → Ticker (e.g., Tech → Semiconductors → AI Chips → NVDA, AMD).
-- **Hybrid Search Engine**: Combines PostgreSQL full-text keyword search (`tsvector`) with semantic vector search (`pgvector` 384-dim embeddings).
-- **Market Performance Evaluation**: Matches video release dates against historical stock price movements using `yfinance` (1-day, 1-week, 1-month returns) to evaluate prediction accuracy.
-- **Interactive Next.js Dashboard**: Search interface, video breakdowns, prediction accuracy tracking, ticker performance charts (Recharts), and theme explorers.
-- **Automatic New-Video Detection (WebSub)**: Tracks every ingested channel via YouTube’s free PubSubHubbub hub; new uploads are discovered near real-time, processed through the pipeline, and surfaced in an in-app activity feed.
+This README is written to be a **complete project brief**: if you (a human or an AI agent) read only this file, you should understand what the product does, how every subsystem works, where the code lives, and how to run and extend it.
 
 ---
 
-## 🏗️ Architecture Overview
+## 1. Product Pillars (What Carry Does)
+
+### 1.1 Commentary Intelligence Engine (YouTube-first)
+- Monitors curated finance YouTube channels; detects new uploads **near real-time via WebSub** (Google's free PubSubHubbub hub — zero YouTube API quota for discovery).
+- Transcripts every video with **tiered fallbacks**: `youtube-transcript-api` → Supadata API → `yt-dlp` + local **faster-Whisper** ASR (`WHISPER_MODEL_SIZE`, default `tiny.en`).
+- Failed caption fetches are retried on a schedule (`TRANSCRIPT_RETRY_DELAYS_MINUTES=0,15,60,360,1440` — captions often lag behind publish).
+- An LLM pipeline (Claude / OpenAI) extracts structured JSON per video: **predictions** (direction, confidence, horizon), **sentiment**, **ticker mentions** (explicit cashtags + implicit thematic ties), and **theme assignments**.
+- Commentary maps into a seeded hierarchy: **Sector → Industry → Theme → Ticker** (e.g., Tech → Semiconductors → AI Chips → NVDA, AMD) from `data/theme_taxonomy.json`. An ETF mapping service (`data/etf_mappings.json`) prevents ETFs (SPY, XLF…) being misread as single-name stocks.
+
+### 1.2 Hybrid Search & AI Answers
+- **Hybrid retrieval** over transcript segments: Postgres FTS (`tsvector`) keyword search + `pgvector` semantic search (OpenAI `text-embedding-3-small`, **384-dim**), fused with **Reciprocal Rank Fusion (RRF, k=60)**, capped at `max_per_video=4` segments. Modes: `keyword | semantic | hybrid` (default).
+- **Query intent routing** (`services/query_router.py`): free heuristic classifier first; falls back to a small OpenAI model (T=0, ~100 tokens) only when heuristics are inconclusive. Intents route between stock-picks vs. sentiment-checks vs. factual questions vs. ETF discovery.
+- **AI answer summaries with mandatory attribution**: every synthesized claim names the creator who said it, with clickable clip citations (`search_answer` table, cached 24h). Search coverage snapshots are cached 6h.
+
+### 1.3 Predictions, Verified
+- Every prediction is logged at extraction time, then scored against what the market actually did — **1-day / 1-week / 1-month returns** from `yfinance` historical prices matched to the video publish date.
+- Daily refresh via Celery Beat. Users can see **who's consistently right — not just who's loud** (per-speaker accuracy via `speaker_tickers`, prediction ledger, accuracy charts sized by confidence).
+
+### 1.4 Social Sentiment Signal (TickerFlow / Market Chatter)
+- **Native raw ingestion** from Reddit (OAuth or public JSON fallback), StockTwits (symbol stream), Financial News (Google/Yahoo RSS), and Twitter/X cashtag chatter → `raw_content` table with **SHA-256 content-hash dedup** (idempotent re-runs).
+- Scores chatter with a **locally-hosted FinBERT ONNX model** (pre-loaded at API startup to avoid a ~4s cold-start penalty) plus LLM narrative extraction, via a **LangGraph multi-agent graph** (see §5.4).
+- Produces transparent, formula-driven scores: **RISS** (Retail Investor Sentiment Score), **SMS** (Social Mention Score), and composite **OCS = 0.70·RISS + 0.30·SMS**, normalized across sources. Universe: **S&P 100 by design** (budget control).
+- Provider selection via `SENTIMENT_PROVIDER` (`native_raw` default; `adanos`, `fixture` for dev/tests) and `PRICE_PROVIDER` (`yfinance_local`).
+
+### 1.5 Smart-Money Tracking (HFI — Hedge Fund Intelligence)
+- Track individual investors/funds; ingest their published content (websites, letters, **SEC filings** via adapter) into `hfi_source`.
+- A second **LangGraph pipeline** (`src/pipeline/hfi/`) runs: `normalizer → chunker → entity_extractor → thesis_extractor → embedder → portfolio_node → report_generator → alert_checker` (thesis step skipped for filings; reports only when triggered).
+- Extracts theses and **portfolio changes** (`portfolio_change`), generates investor **reports** and **alerts**, and aggregates a cross-investor **Smart Money Consensus** view.
+
+### 1.6 Platform: Auth, Analytics, Activity
+- **Clerk authentication** (email+password, Google OAuth, magic link) with an **invite-only signup gate**; session JWTs verified server-side on every request; role-based admin.
+- **Usage analytics**: every authenticated request instrumented (searches, entity views, page views, pipeline triggers, LLM token spend, per-request latency) with daily rollups and a retention policy.
+- **Activity feed**: idempotent `video_detected` / `video_processed` / `video_failed` events surfaced in a bell-icon feed.
+
+---
+
+## 2. Architecture Overview
 
 ```
-┌───────────────────────────────────────────────────────────┐
-│                   FRONTEND (Next.js 16)                   │
-│  Search UI  │  Video Browser  │  Prediction Dashboard     │
-│  (Keyword + Semantic)         │  (Table + Recharts)       │
-└────────────────────────┬──────────────────────────────────┘
-                         │ REST API (FastAPI)
-┌────────────────────────▼──────────────────────────────────┐
-│                   BACKEND (Python 3.12)                   │
-│  FastAPI Endpoints  │  Celery Task Worker  │  SQLAlchemy  │
-└────────────────────────┬──────────────────────────────────┘
-                         │
-┌────────────────────────▼──────────────────────────────────┐
-│                 PROCESSING PIPELINE                       │
-│  ┌────────────┐   ┌─────────────┐   ┌──────────────────┐  │
-│  │ YT Fetcher │ → │ Transcript  │ → │ LLM Analyzer     │  │
-│  └────────────┘   └─────────────┘   └────────┬─────────┘  │
-│                                              │            │
-│  ┌─────────────┐   ┌────────────┐   ┌────────▼─────────┐  │
-│  │ yfinance /  │ ← │ Embeddings │ ← │ Theme-Ticker     │  │
-│  │ Market Data │   │ (pgvector) │   │ Mapping Engine   │  │
-│  └──────┬──────┘   └────────────┘   └──────────────────┘  │
-└─────────┼─────────────────────────────────────────────────┘
-          │
-┌─────────▼─────────────────────────────────────────────────┐
-│              STORAGE (PostgreSQL 16 + Redis)              │
-│  - pgvector (Vector embeddings)                           │
-│  - Relational Schema (Videos, Predictions, Themes)        │
-│  - Redis 7 (Celery broker & Cache)                        │
-└───────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    FRONTEND (Next.js 16, bun)                    │
+│  Landing │ Search │ Dashboard │ Videos │ Channels │ Themes      │
+│  Tickerflow │ Investors │ Consensus │ Activity │ Usage │ Admin  │
+│  Clerk auth (invite gate) · React Query · Recharts · d3-hierarchy│
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ REST (JSON) — /api/* proxied via
+                           │ next.config.ts rewrite → API host
+┌──────────────────────────▼──────────────────────────────────────┐
+│                    BACKEND (Python 3.12)                         │
+│  FastAPI (uvicorn) · Clerk JWT verification · AnalyticsMiddleware│
+│  Routers: search, videos, predictions, tickers, themes,          │
+│  channels, dashboard, market_chatter (/api/v1), hfi_*, websub,   │
+│  activity, usage, admin, pipeline, auth                          │
+└───────────┬──────────────────────────────────┬──────────────────┘
+            │                                  │
+┌───────────▼───────────────────┐  ┌───────────▼──────────────────┐
+│      PROCESSING PIPELINES     │  │          STORAGE             │
+│ 1. YouTube ingestion (WebSub) │  │ PostgreSQL 16 + pgvector     │
+│ 2. LLM structured analysis    │  │  (Cloud SQL in prod)         │
+│ 3. Theme/ticker/ETF mapping   │  │ Redis 7 (Celery broker,      │
+│ 4. Embeddings (384-dim)       │  │  TickerFlow + JsonCache)     │
+│ 5. Market outcome tracking    │  │ FinBERT ONNX + faster-Whisper│
+│ 6. TickerFlow LangGraph graph │  │  run locally on the API host │
+│ 7. HFI LangGraph pipeline     │  └──────────────────────────────┘
+└───────────────────────────────┘
 ```
+
+**Production topology:** a single GCP VM (`e2-medium`, `asia-southeast1`) runs all backend Docker containers (`api`, `worker`, `beat`, nginx with Let's Encrypt TLS); Postgres on **GCP Cloud SQL**; Redis on **Aiven**; frontend on **Vercel**. GitHub Actions (`.github/workflows/deploy.yml`) automates deploys.
 
 ---
 
-## 🛠️ Tech Stack
+## 3. Tech Stack
 
 | Layer | Technologies |
 |---|---|
-| **Authentication** | Clerk (email+password, Google OAuth, magic link) with invite-only signup; `clerk-backend-api` JWT verification on FastAPI |
-| **Backend Framework** | Python 3.12, FastAPI, Uvicorn, Pydantic v2 |
-| **Task Queue & Async** | Celery, Redis 7, `asyncio` |
-| **Database & ORM** | PostgreSQL 16 with `pgvector`, SQLAlchemy 2.0 (Async), AsyncPG, Alembic |
-| **Backend Package Manager** | `uv` (Fast Python package resolver and installer) |
-| **AI / LLM / NLP** | Anthropic API (`claude-sonnet`), OpenAI API (`gpt-4o`, `text-embedding-3-small`) |
-| **Data Scraping & APIs** | `youtube-transcript-api`, `google-api-python-client`, `yt-dlp`, `yfinance`, `fredapi` |
-| **Frontend Framework** | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Recharts, Lucide Icons |
-| **Frontend Runtime & Package Manager** | `bun` |
-| **Dev Tooling** | Docker, Docker Compose, `Makefile`, `ruff` (linter/formatter), `pytest` |
+| **Backend** | Python 3.12, FastAPI, Uvicorn, Pydantic v2 + pydantic-settings, `uv` package manager |
+| **Database** | PostgreSQL 16 + `pgvector`, SQLAlchemy 2.0 (async), AsyncPG, Alembic, psycopg2 (sync) |
+| **Task queue** | Celery + Redis 7 (broker & result backend), Celery Beat schedules |
+| **LLMs** | Anthropic `claude-sonnet-4` (claim extraction), OpenAI `gpt-4o` (chat), `text-embedding-3-small` (embeddings, 384-dim), small OpenAI model for query routing, `gpt-4o-mini` for channel classification |
+| **NLP / ML** | LangGraph (multi-agent graphs), LangChain core/splitters/postgres, FinBERT ONNX (`onnxruntime` + `transformers`), faster-Whisper (ASR fallback), `datasketch` (MinHash LSH dedup) |
+| **Data sources** | YouTube Data API v3, `youtube-transcript-api`, Supadata (fallback), `yt-dlp`, `yfinance`, `fredapi`, Reddit/StockTwits/Twitter/news collectors, `curl-cffi`, `twikit` |
+| **Auth** | Clerk (`@clerk/nextjs` frontend, `clerk-backend-api` JWT verification on FastAPI), invite-only gate |
+| **Frontend** | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4 (OKLCH design tokens), TanStack React Query, Recharts, `d3-hierarchy` (theme circle-pack), `lightweight-charts`, framer-motion, lucide icons, shadcn-style primitives, `bun` |
+| **Infra & tooling** | Docker + Docker Compose (dev & prod variants), nginx, GitHub Actions, Makefile, `ruff`, `pytest`, structlog |
 
 ---
 
-## 📋 Prerequisites
+## 4. Prerequisites
 
 Ensure you have the following installed on your local system before getting started:
 
@@ -82,7 +112,7 @@ Ensure you have the following installed on your local system before getting star
 
 ---
 
-## 🚀 Quick Start Guide (Local Development)
+## 5. Quick Start Guide (Local Development)
 
 Follow these steps to set up the project locally for development and contributions.
 
@@ -90,7 +120,7 @@ Follow these steps to set up the project locally for development and contributio
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/yt-chatter.git
+git clone https://github.com/akshat-code21/yt_chatter.git
 cd yt-chatter
 
 # Create environment configuration file from template
@@ -102,6 +132,10 @@ Open `.env` and fill in your API keys:
 - `OPENAI_API_KEY`: OpenAI API Key (used for vector embeddings and chat)
 - `ANTHROPIC_API_KEY`: Anthropic Claude API Key (used for structured LLM claim extraction)
 - `FRED_API_KEY`: *(Optional)* Federal Reserve Economic Data API key
+- `CLERK_SECRET_KEY`: Clerk secret key — **required**, every API route is authenticated (see §15)
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`: set in `web/.env.local` for the frontend
+
+Optional: `PUBLIC_BASE_URL` + `WEBSUB_SECRET` (WebSub push discovery, §14), `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET` (TickerFlow OAuth mode).
 
 ---
 
@@ -169,7 +203,7 @@ bun dev
 
 ---
 
-## 🐳 Alternative: Full Stack Docker Setup
+## 6. Alternative: Full-Stack Docker Setup
 
 If you prefer running the entire stack (API, Worker, Postgres, Redis) in Docker containers:
 
@@ -183,7 +217,7 @@ make down
 
 ---
 
-## 🛠️ Developer Command Reference (`Makefile`)
+## 7. Developer Command Reference (`Makefile`)
 
 The project includes a `Makefile` with convenience shortcuts for common development tasks:
 
@@ -198,7 +232,12 @@ The project includes a `Makefile` with convenience shortcuts for common developm
 | `make run` | Launch FastAPI app locally with hot reloading (`http://localhost:8000`) |
 | `make worker` | Launch Celery task worker for background video processing |
 | `make beat` | Launch Celery Beat scheduler (WebSub renewals, RSS fallback, daily performance) |
+| `make invite email=...` | Create a single-use invite code for the signup gate |
+| `make promote-admin email=...` | Promote an existing user to admin |
+| `make sync-users` | Reconcile app users with Clerk (delete stale rows; `dry-run=1` to preview) |
+| `make provision-users csv=users.csv` | Bulk-provision pilot users from a CSV with generated credentials |
 | `make subscribe-websub` | Queue WebSub subscribe for all channels (needs `PUBLIC_BASE_URL`) |
+| `make simulate-websub channel=<ID> video=<ID>` | Fake a "channel just uploaded" hub push (`mode=full` or `discovery_only`) |
 | `make test` | Run test suite via `pytest` |
 | `make lint` | Run code quality & formatting checks via `ruff` |
 | `make format` | Automatically fix formatting issues via `ruff format` |
@@ -207,54 +246,173 @@ The project includes a `Makefile` with convenience shortcuts for common developm
 
 ---
 
-## 📂 Project Structure
+## 8. Repository Layout
 
 ```text
 yt-chatter/
-├── alembic/                  # Database migration scripts & configuration
-│   └── versions/             # Migration files
-├── data/                     # Seed datasets & taxonomy configuration
-│   └── theme_taxonomy.json   # Sector -> Industry -> Theme hierarchy
-├── src/                      # Core backend Python package
-│   ├── api/                  # FastAPI routers (search, videos, predictions, themes, etc.)
-│   ├── models/               # SQLAlchemy ORM models (Video, Prediction, Theme, etc.)
-│   ├── pipeline/             # Data ingestion, LLM analysis, embeddings, market tracking
-│   ├── schemas/              # Pydantic validation schemas
-│   ├── services/             # Core business logic & integrations (YouTube, LLM, Market Data)
-│   ├── tasks/                # Celery background tasks
-│   ├── config.py             # App environment variables & pydantic-settings
-│   ├── database.py           # Async SQLAlchemy engine & session factory
-│   └── main.py               # FastAPI application entrypoint
-├── tests/                    # Backend unit and integration test suite
-├── web/                      # Frontend Next.js application
-│   ├── src/
-│   │   ├── app/              # Next.js App Router pages (channels, themes, tickers, videos)
-│   │   ├── components/       # React components & UI primitives (shadcn/ui)
-│   │   └── lib/              # API client & utility functions
-│   ├── bun.lock              # Bun lockfile
-│   └── package.json          # Node dependencies & scripts
-├── docker-compose.yml        # Multi-container orchestrator (Postgres, Redis, API, Worker)
-├── Dockerfile                # Production Dockerfile for Python app
-├── Makefile                  # Developer shortcut commands
-├── pyproject.toml            # Python dependencies and tool configs (ruff, pytest)
-└── README.md                 # Project documentation
+├── alembic/                  # Alembic migrations (001–008 core + HFI, TickerFlow, raw_content)
+│   └── versions/
+├── data/                     # Seed/static data
+│   ├── theme_taxonomy.json   # Sector → Industry → Theme → Ticker hierarchy
+│   ├── etf_mappings.json     # Theme → representative ETF mappings
+│   └── models/               # FinBERT ONNX model artifacts
+├── deploy/                   # Production deploy helpers (nginx.conf, setup-ec2.sh)
+├── docs/                     # Architecture & product docs (deep dives, plans, audits)
+├── scripts/                  # Ops utilities (invites, WebSub sim, FinBERT export, user sync…)
+├── src/                      # Backend Python package
+│   ├── main.py               # FastAPI entrypoint (lifespan: TickerFlow init, FinBERT preload)
+│   ├── config.py             # pydantic-settings env config
+│   ├── database.py           # Async SQLAlchemy engine/session factory
+│   ├── api/                  # Routers (see API Surface section)
+│   ├── auth/                 # Clerk JWT verification, user service, invite redemption
+│   ├── analytics/            # Request middleware + daily rollup service
+│   ├── models/               # SQLAlchemy ORM models (~28 tables across all engines)
+│   ├── schemas/              # Pydantic schemas (agent pipeline, HFI, market chatter)
+│   ├── pipeline/             # YouTube pipeline: ingestion, analysis, theme_mapping,
+│   │   │                     #   embeddings, market_tracking
+│   │   ├── graph.py          # TickerFlow LangGraph graph assembly
+│   │   ├── agents/           # TickerFlow LangGraph agent nodes
+│   │   └── hfi/              # HFI LangGraph graph (nodes/, prompts/)
+│   ├── services/             # Business logic: search*, query_router, llm, finbert,
+│   │   │                     #   market_data, performance, websub, youtube…
+│   │   ├── market_chatter/   # TickerFlow collectors/providers/cache/universe
+│   │   └── hfi/              # HFI investor/source/portfolio/alert services, SEC adapter
+│   └── tasks/                # Celery tasks (pipeline_tasks, hfi_jobs, analytics_tasks)
+├── tests/                    # pytest suite (+ tests/market_chatter/)
+├── web/                      # Frontend Next.js 16 app (bun-managed)
+│   └── src/
+│       ├── app/              # App Router: landing page, sign-in/sign-up, (app)/ route group
+│       ├── components/       # AppShell, Sidebar, CommandPalette, DataTable, landing/,
+│       │                     # market-chatter/, themes/, ui/ primitives, skeletons/
+│       └── lib/              # Typed API client (api.ts), hooks, analytics helpers
+├── docker-compose.yml        # Dev: postgres, redis, api, worker, beat
+├── docker-compose.prod.yml   # Prod: api, worker, beat (uses .env.prod)
+├── Dockerfile                # Backend image (uv + uvicorn/celery)
+├── Makefile                  # Developer commands
+├── pyproject.toml            # Python deps + ruff/pytest config
+└── README.md
 ```
 
 ---
 
-## ⚡ Data Pipeline Workflow
+## 9. Subsystem Deep Dive
 
-When a video is processed by the pipeline:
+### 9.1 YouTube commentary engine (`src/pipeline/`)
+Five stages per video, orchestrated as Celery tasks (`tasks/pipeline_tasks.py`): ingestion → LLM analysis → theme/ticker/ETF mapping → embeddings → market tracking (detailed in §12). New-upload discovery is push-based via **WebSub** (see §14).
 
-1. **Ingestion (`src/pipeline/ingestion.py`)**: Fetches metadata via YouTube Data API v3 and retrieves transcript segments with timestamps.
-2. **Analysis (`src/pipeline/analysis.py`)**: Batches transcripts and sends them to Claude / OpenAI to extract structured themes, predictions, sentiment, and ticker mentions.
-3. **Theme & Ticker Mapping (`src/pipeline/theme_mapping.py`)**: Links extracted claims to the hierarchical theme taxonomy and maps implicit stock tickers.
-4. **Embedding Generation (`src/pipeline/embeddings.py`)**: Embeds text segments into 384-dimensional vectors stored in PostgreSQL `pgvector`.
-5. **Market Tracking (`src/pipeline/market_tracking.py`)**: Queries `yfinance` for historical prices post-publish date to evaluate return accuracy.
+### 9.2 Search engine (`services/search_service.py`, `query_router.py`, `search_answer_service.py`, `search_coverage_service.py`)
+- Hybrid FTS + `pgvector` retrieval fused with RRF (k=60); per-video cap of 4 segments; modes `keyword | semantic | hybrid`.
+- Query intent routing: heuristics first (free), small OpenAI model as fallback.
+- AI answers with mandatory creator attribution + clip citations (cached 24h); coverage snapshots (cached 6h). See `docs/search_scenarios.md`.
+
+### 9.3 TickerFlow / Market Chatter (`services/market_chatter/`, `pipeline/agents/`)
+- **Collectors** (`collectors/`): `RedditCollector` (OAuth, public-JSON fallback), `StockTwitsCollector` (symbol stream), `NewsCollector` (Google/Yahoo News RSS), `TwitterCollector` (cashtag chatter) — all return Pydantic `RawItem` objects.
+- **`RawIngestionService`** runs collectors concurrently (`asyncio.gather`) and upserts to `raw_content` with SHA-256 content-hash dedup (idempotent re-runs).
+- **`NativeRawProvider`** computes daily mention buckets / buzz / net sentiment and invokes the LangGraph agent pipeline for FinBERT + LLM narrative scoring.
+- **`CollectionService`** is initialized at API startup (lifespan) with a Redis `JsonCache`; universe management in `universe.py` (S&P 100); runs tracked in `collection_run`.
+- Architecture docs: `docs/native_raw_ingestion_architecture.md`, `docs/langgraph_multi_agent_pipeline.md`.
+
+### 9.4 HFI — Hedge Fund Intelligence (`services/hfi/`, `pipeline/hfi/`, `api/hfi_*.py`)
+- **Sources:** `ingestion/sec_adapter.py` (SEC filings) + `base_adapter.py` (websites/letters) with `content_hasher.py` dedup; vector storage via `services/hfi/vector_store.py` (`langchain-postgres`).
+- **Graph:** `pipeline/hfi/pipeline.py` — normalizer → chunker → entity extraction → thesis extraction (skipped for filings) → embedder → portfolio changes → conditional report generation → alert checking.
+- **Services:** `investor_service`, `source_service`, `portfolio_service`, `alert_service`; Celery jobs in `tasks/hfi_jobs.py`.
+- UI: `/investors`, `/investors/[id]`, plus the cross-investor **Consensus** page.
+
+### 9.5 Auth, analytics & activity (cross-cutting)
+- **Auth** (`src/auth/`): Clerk session JWTs verified via `clerk-backend-api` (JWKS by default; optional static PEM), `azp` authorized-party checks, invite-only signup, `require_admin` gating. First signup is auto-promoted admin; extra bootstrap admins via `ADMIN_CLERK_USER_IDS`.
+- **Analytics** (`src/analytics/`): `AnalyticsMiddleware` logs every authenticated request (latency, user attribution); daily rollups + retention cleanup via Celery Beat; `/usage` (personal) and `/admin` (platform metrics + invite management).
+- **Activity feed** (`services/activity_service.py`): idempotent `(event_type, youtube_video_id)` events powering the bell-icon feed.
 
 ---
 
-## 🔔 Automatic channel monitoring (WebSub)
+## 10. API Surface (FastAPI)
+
+All user-facing routers require an authenticated Clerk session (exceptions noted). Swagger docs at `/docs` on the API host.
+
+| Prefix | Purpose |
+|---|---|
+| `/api/search`, `/api/search/answer`, `/api/search/coverage` | Hybrid search, AI answers, coverage |
+| `/api/videos`, `/api/channels` | Video & channel browsing |
+| `/api/predictions` | Prediction ledger + accuracy views |
+| `/api/tickers` | YouTube-derived ticker stats, sentiment, performance |
+| `/api/themes` | Theme taxonomy & narratives |
+| `/api/dashboard` | Overview summary aggregates |
+| `/api/v1/tickers/{symbol}` (+ `/refresh`, `/health`) | TickerFlow social sentiment |
+| `/api/hfi/investors`, `/api/hfi/reports`, `/api/hfi/alerts`, `/api/hfi/analytics` | Smart-money tracking |
+| `/api/websub` | Hub callback (HMAC-verified, public), subscribe, simulate (admin-gated) |
+| `/api/activity` | Notification feed |
+| `/api/usage`, `/api/admin` | Personal analytics; admin ops |
+| `/api/pipeline` | On-demand processing triggers (self-guards: auth + admin) |
+| `/api/auth` (auth router) | Session sync, invite redemption |
+| `/`, `/health` | Public infrastructure probes |
+
+---
+
+## 11. Background Jobs (Celery Beat)
+
+| Schedule (UTC) | Task | Purpose |
+|---|---|---|
+| every 6h at :30 | `pipeline.renew_websub_leases` | Renew WebSub subscriptions before lease expiry |
+| daily 06:00 | `pipeline.update_performance` | Re-grade predictions against latest prices |
+| daily 01:00 | `analytics.aggregate_platform_daily` | Finalize previous day's analytics rollups |
+| daily 03:30 | `analytics.retention_cleanup` | Prune raw analytics rows per retention policy |
+| every `DISCOVERY_FALLBACK_POLL_HOURS` at :15 | `pipeline.poll_channels_for_new_videos` | RSS fallback if WebSub misses (0 disables) |
+
+Worker runs with `prefetch=1` (one task at a time, respecting API rate limits); HFI jobs live in `tasks/hfi_jobs.py`.
+
+---
+
+## 12. Data Pipeline Workflow
+
+### YouTube commentary pipeline (per video, Celery-orchestrated)
+1. **Ingestion (`src/pipeline/ingestion.py`)** — fetch metadata via YouTube Data API v3; retrieve timestamped transcript segments. Transcript acquisition is tiered: `youtube-transcript-api` (free, primary) → Supadata (fallback) → `yt-dlp` + local faster-Whisper ASR (last resort). Failed fetches are retried per `TRANSCRIPT_RETRY_DELAYS_MINUTES`.
+2. **LLM analysis (`src/pipeline/analysis.py`)** — transcripts are batched and sent to Claude/OpenAI which return structured JSON: predictions (direction, confidence, horizon), sentiment, ticker mentions (explicit cashtags + implicit thematic ties), and theme assignments.
+3. **Theme & ticker mapping (`src/pipeline/theme_mapping.py`)** — links claims to the seeded taxonomy; resolves implicit ticker references; `services/etf_mapping_service.py` resolves themes to representative ETFs and prevents ETFs (SPY, XLF, …) being misread as single-name stocks.
+4. **Embeddings (`src/pipeline/embeddings.py`)** — transcript segments embedded with OpenAI `text-embedding-3-small` (384-dim) into `pgvector` for semantic search.
+5. **Market tracking (`src/pipeline/market_tracking.py`)** — `yfinance` historical prices matched against each prediction's publish date to compute realized 1-day / 1-week / 1-month returns, grading accuracy (daily refresh via Celery Beat).
+
+### TickerFlow social-sentiment graph (`src/pipeline/agents/`, `src/pipeline/graph.py`)
+A compiled **LangGraph** state-graph (`PipelineGraphState` with `Annotated` reducers `operator.add` / `operator.or_` for safe parallel-branch merging):
+
+```
+START → Agent 2: Validation (length / lookback window / cashtag relevance)
+      → Agent 3: Cleaner + MinHash LSH dedup (datasketch, Jaccard 0.85)
+      → ┌ Agent 4: FinBERT ONNX inference (ProsusAI/finbert, softmax → bull/bear/neutral)
+        └ Agent 5: LLM narrative extraction (catalyst themes, key quotes)  [parallel]
+      → Agent 8/9: Scoring & aggregation (RISS, SMS, OCS, trend, driver cards)
+      → END
+```
+
+- **RISS** = engagement-weighted (√-scaled) average of FinBERT sentiment probabilities × 100.
+- **SMS** = mention volume relative to baseline benchmark.
+- **OCS** = `0.70·RISS + 0.30·SMS`; trend is `rising` (≥65), `falling` (≤40), else `stable`.
+- Invoked by `NativeRawProvider` (`services/market_chatter/providers.py`) which powers `/api/v1/tickers/{symbol}` and the `/tickerflow` UI.
+
+### HFI smart-money graph (`src/pipeline/hfi/pipeline.py`)
+```
+START → normalizer → chunker → entity_extractor → thesis_extractor
+      → embedder → portfolio_node → report_generator → alert_checker → END
+```
+Conditional edges: thesis extraction is skipped for `content_type == "filing"`; report generation runs only when `report_triggered` is set. Chunks are 4000/400-char LangChain splits; embeddings go to a `langchain-postgres` vector store.
+
+---
+
+## 13. Data Model (key tables)
+
+| Domain | Tables |
+|---|---|
+| YouTube core | `channels`, `videos`, `transcript_segments` (with embeddings), `predictions`, `performance`, `themes`, `speaker_tickers` (unique speaker+ticker aggregation), `extracted_mentions` |
+| Taxonomy | seeded from `data/theme_taxonomy.json` (Sector → Industry → Theme → Ticker) |
+| Social / TickerFlow | `collection_runs`, `content_item`, `raw_content`, `price_bars`, `quota_usage`, `source_snapshot`, `ticker_daily_metric`, `ticker_cache` |
+| HFI | `investors`, `hfi_source`, `hfi_report`, `hfi_alert`, `portfolio_change` |
+| Search | `search_answer` |
+| Platform | `users`, `activity_event`, analytics rollups, invite tables (migration `006`) |
+
+Migrations are Alembic: `001`–`008` (core, FinBERT columns, channel type, WebSub/activity, auth & analytics, search answers, performance indexes) plus `add_hfi_tables`, `add_tickerflow_tables`, `add_raw_content_table`, and a portfolio-ticker nullability fix.
+
+---
+
+## 14. Automatic channel monitoring (WebSub)
 
 Once a channel is backfilled, future uploads are discovered automatically via **YouTube WebSub** (Google’s free PubSubHubbub hub at `pubsubhubbub.appspot.com`). No YouTube API quota is used for the push itself.
 
@@ -325,7 +483,7 @@ See `.env.example` for `WEBSUB_*`, `DISCOVERY_FALLBACK_POLL_HOURS`, and `TRANSCR
 
 ---
 
-## 🔐 Authentication & Usage Analytics
+## 15. Authentication & Usage Analytics
 
 The API is fully authenticated (Clerk session JWTs) with an **invite-only
 signup gate**. All user activity - searches, entity views, page views,
@@ -346,22 +504,89 @@ make invite email=friend@example.com   # prints a single-use code
 
 ---
 
-## 🧪 Testing & Code Quality
+## 16. Environment Variables
 
-Before opening a pull request, please run the test suite and verify code quality checks:
+All configuration flows through `src/config.py` (pydantic-settings) reading `.env`. See `.env.example` for the full annotated template. Key groups:
+
+| Group | Variables |
+|---|---|
+| **Storage** | `DATABASE_URL` (asyncpg), `DATABASE_URL_SYNC`, `REDIS_URL` |
+| **APIs & LLMs** | `YOUTUBE_API_KEY`, `ANTHROPIC_API_KEY` + `ANTHROPIC_MODEL`, `OPENAI_API_KEY` + `OPENAI_MODEL`, `FRED_API_KEY` (optional), `SUPADATA_API_KEY` (transcript fallback) |
+| **Embeddings** | `EMBEDDING_MODEL` (`text-embedding-3-small`), `EMBEDDING_DIMENSIONS` (384) |
+| **WebSub discovery** | `PUBLIC_BASE_URL` (empty disables WebSub; RSS poll fallback still works), `WEBSUB_HUB_URL`, `WEBSUB_SECRET`, `WEBSUB_LEASE_SECONDS`, `WEBSUB_RENEW_MARGIN_HOURS`, `DISCOVERY_FALLBACK_POLL_HOURS` |
+| **Transcripts** | `TRANSCRIPT_RETRY_DELAYS_MINUTES` (`0,15,60,360,1440`), `WHISPER_MODEL_SIZE` (`tiny.en` default) |
+| **Clerk auth** | `CLERK_SECRET_KEY` (required), `CLERK_JWT_KEY` (optional static PEM — leave empty; JWKS is rotation-safe), `CLERK_AUTHORIZED_PARTIES` (azp origins), `ADMIN_CLERK_USER_IDS` |
+| **Usage analytics** | `ANALYTICS_ENABLED` (true), `ANALYTICS_RETENTION_DAYS` (180; rollups kept forever) |
+| **TickerFlow** | `SENTIMENT_PROVIDER` (`native_raw`\|`adanos`\|`fixture`), `PRICE_PROVIDER` (`yfinance_local`\|`fixture`), `ADANOS_*`, `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET` (blank = public JSON), `TWITTER_*`, `PILOT_WATCHLIST` (`AAPL,NVDA`), `ENABLE_WATCHLIST_WORKER` |
+| **Frontend (web/.env.local)** | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_API_URL` (API host for the `/api` rewrite) |
+| **Misc** | `APP_ENV`, `LOG_LEVEL`, `API_CORS_ORIGINS` |
+
+---
+
+## 17. Deployment
+
+**Dev:** `make up` runs the full stack in Docker (`postgres`, `redis`, `api`, `worker`, `beat`); `make down` stops it. Source dirs are volume-mounted for hot reload.
+
+**Prod:** GitHub Actions (`.github/workflows/deploy.yml`) deploys to a single GCP VM (`e2-medium`):
+- Docker Compose (`docker-compose.prod.yml`, uses `.env.prod`) runs `api`, `worker`, `beat` behind **nginx** with Let's Encrypt TLS (`deploy/nginx.conf`, `deploy/setup-ec2.sh`).
+- **PostgreSQL** on GCP Cloud SQL; **Redis** on Aiven; **frontend** on Vercel (API requests proxied via the Next.js rewrite to `carry-api.akshat21.me`).
+- Health check: `GET /health` reports environment, configured API keys, and TickerFlow provider status.
+- Cost profile & LLM economics documented in `COSTING.md` (Cloud SQL dominates; ≈$625–790/mo total at beta scale).
+
+---
+
+## 18. Testing & Code Quality
+
+Before opening a pull request, run the test suite and verify code quality checks:
 
 ```bash
-# Run backend test suite
+# Run backend test suite (pytest; includes tests/market_chatter/)
 make test
 
-# Check linting and formatting
+# Run just the LangGraph agent pipeline tests
+uv run pytest tests/test_langgraph_pipeline.py
+
+# Check linting and formatting (ruff)
 make lint
 
 # Auto-format Python code
 make format
 
-# Check frontend linting
+# Check frontend linting (eslint)
 cd web && bun run lint
 ```
 
+Backend tests cover ticker extraction, FinBERT service, the LangGraph agent pipeline, search grouping/answers/coverage, WebSub, auth, analytics, ETF mapping, social context, instrument-type routing, YouTube transcript handling, and the `market_chatter` collector/provider suite. Run manually-triggered pipeline work with `make process-video id=<ID>` and `make backfill channel=<ID>`.
+
 ---
+
+## 19. Documentation Map
+
+Deeper docs live in `docs/` — useful when this README isn't enough:
+
+| Document | Contents |
+|---|---|
+| `docs/carry_deep_dive.md` + `docs/carry_high_level_summary.md` | The most complete architecture + product brief (engineer's map) |
+| `docs/langgraph_multi_agent_pipeline.md` | TickerFlow agent graph mechanics, state reducers, scoring formulas |
+| `docs/native_raw_ingestion_architecture.md` | Collector architecture, `RawItem` contract, dedup strategy |
+| `docs/search_scenarios.md` | Search engine behavior across query types |
+| `docs/authentication.md` | Clerk setup, invites, admin bootstrap |
+| `docs/data_collection_*.md` | Data-source strategy (native vs. OSS vs. Adanos) |
+| `COSTING.md` | Infra & LLM cost model |
+| `plan_1.md` / `plan_2.md`, `docs/Initial_Plan.md` | Original build plans & product lineage |
+
+---
+
+## 20. Notes for AI Coding Agents
+
+If you are an AI assistant working in this repo:
+
+1. **Naming:** repo/package = `yt-chatter`; product = **Carry**. `market-chatter`/`TickerFlow` = social sentiment; `HFI` = smart money. Don't rename things casually — a renaming pass is pending.
+2. **Next.js 16 has breaking changes** from older Next versions — read `web/AGENTS.md` and the bundled docs in `web/node_modules/next/dist/docs/` before writing frontend code.
+3. **Config:** add new settings to `src/config.py` (`Settings`) and document them in `.env.example`. Never hardcode keys.
+4. **Migrations:** generate with `make migration msg="..."`, then review the autogenerated file; apply with `make migrate`.
+5. **Tests:** add/adjust pytest coverage for backend changes (`make test`); keep `ruff` clean (`make lint`). Frontend changes need `bun run lint` passing.
+6. **Conventions:** async SQLAlchemy everywhere in request paths; Celery tasks for background work; Pydantic schemas at API boundaries; typed API client in `web/src/lib/api.ts`.
+7. **Provider pattern:** TickerFlow sentiment/price providers are selected via `SENTIMENT_PROVIDER`/`PRICE_PROVIDER` — `fixture` providers exist for deterministic tests; keep the `MarketSentimentProvider` protocol intact.
+8. **Lineage context:** product evolved SentimentAI blueprint → YT Chatter → Carry. Current positioning: "Hear what the market is saying", invite-only beta.
+
