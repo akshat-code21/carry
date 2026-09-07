@@ -1,4 +1,4 @@
-# Carry (repo: `yt-chatter`) 📈
+# Carry 📈
 
 > **Hear what the market is saying.**
 
