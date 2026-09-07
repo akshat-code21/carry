@@ -5,7 +5,7 @@
 **Carry** is an end-to-end market-commentary intelligence platform. It ingests finance commentary from **YouTube, Reddit, X/Twitter, StockTwits, and news**, uses LLMs and NLP to extract **tickers, predictions, sentiment, and themes** timestamped to the second, and holds every call **accountable against real market outcomes** from `yfinance` price history.
 
 - **Product name:** Carry — live at `carry-fin.vercel.app` (frontend) and `carry-api.akshat21.me` (API)
-- **Repo name:** `yt-chatter` (YouTube-first origin); internal vocabulary also says "Market Chatter" / "TickerFlow"
+- **Repo name:** `carry` (YouTube-first origin); internal vocabulary also says "Market Chatter" / "TickerFlow"
 - **Status:** invite-only beta
 
 > ⚠️ **Naming note (important for context):** the repo, package, tables, and most docs say `yt-chatter` / `market-chatter` / `TickerFlow`; only user-facing surfaces say **Carry**. They are the same product. A renaming pass is planned but not yet done — when reading code, map: `yt-chatter` → Carry, `market-chatter`/`TickerFlow` → the social-sentiment engine, `HFI` → the smart-money (hedge-fund intelligence) engine.
