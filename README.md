@@ -5,10 +5,10 @@
 **Carry** is an end-to-end market-commentary intelligence platform. It ingests finance commentary from **YouTube, Reddit, X/Twitter, StockTwits, and news**, uses LLMs and NLP to extract **tickers, predictions, sentiment, and themes** timestamped to the second, and holds every call **accountable against real market outcomes** from `yfinance` price history.
 
 - **Product name:** Carry — live at `carry-fin.vercel.app` (frontend) and `carry-api.akshat21.me` (API)
-- **Repo name:** `carry` (YouTube-first origin); internal vocabulary also says "Market Chatter" / "TickerFlow"
-- **Status:** invite-only beta
+- **Repo:** [`akshat-code21/carry`](https://github.com/akshat-code21/carry) — the Python package is still named `yt-chatter` (YouTube-first origin); internal vocabulary also says "Market Chatter" / "TickerFlow"
+- **Status:** public beta — **open signup** (the invite-only gate was retired in migration `009_open_signup`)
 
-> ⚠️ **Naming note (important for context):** the repo, package, tables, and most docs say `yt-chatter` / `market-chatter` / `TickerFlow`; only user-facing surfaces say **Carry**. They are the same product. A renaming pass is planned but not yet done — when reading code, map: `yt-chatter` → Carry, `market-chatter`/`TickerFlow` → the social-sentiment engine, `HFI` → the smart-money (hedge-fund intelligence) engine.
+> ⚠️ **Naming note (important for context):** the Python package, database, tables, prod deploy path (`/opt/yt-chatter`) and most docs say `yt-chatter` / `market-chatter` / `TickerFlow`; only user-facing surfaces say **Carry**. They are the same product. A renaming pass is planned but not yet done — when reading code, map: `yt-chatter` → Carry, `market-chatter`/`TickerFlow` → the social-sentiment engine, `HFI` → the smart-money (hedge-fund intelligence) engine.
 
 This README is written to be a **complete project brief**: if you (a human or an AI agent) read only this file, you should understand what the product does, how every subsystem works, where the code lives, and how to run and extend it.
 
@@ -44,7 +44,7 @@ This README is written to be a **complete project brief**: if you (a human or an
 - Extracts theses and **portfolio changes** (`portfolio_change`), generates investor **reports** and **alerts**, and aggregates a cross-investor **Smart Money Consensus** view.
 
 ### 1.6 Platform: Auth, Analytics, Activity
-- **Clerk authentication** (email+password, Google OAuth, magic link) with an **invite-only signup gate**; session JWTs verified server-side on every request; role-based admin.
+- **Clerk authentication** (email+password, Google OAuth, magic link) with **open signup** — new accounts are active immediately; session JWTs verified server-side on every request; role-based admin.
 - **Usage analytics**: every authenticated request instrumented (searches, entity views, page views, pipeline triggers, LLM token spend, per-request latency) with daily rollups and a retention policy.
 - **Activity feed**: idempotent `video_detected` / `video_processed` / `video_failed` events surfaced in a bell-icon feed.
 
@@ -56,8 +56,9 @@ This README is written to be a **complete project brief**: if you (a human or an
 ┌─────────────────────────────────────────────────────────────────┐
 │                    FRONTEND (Next.js 16, bun)                    │
 │  Landing │ Search │ Dashboard │ Videos │ Channels │ Themes      │
-│  Tickerflow │ Investors │ Consensus │ Activity │ Usage │ Admin  │
-│  Clerk auth (invite gate) · React Query · Recharts · d3-hierarchy│
+│  Tickers │ Tickerflow │ Investors │ Consensus │ Compare │ Activity│
+│  Usage │ Admin                                                  │
+│  Clerk auth (open signup) · React Query · Recharts · d3-hierarchy│
 └──────────────────────────┬──────────────────────────────────────┘
                            │ REST (JSON) — /api/* proxied via
                            │ next.config.ts rewrite → API host
@@ -95,8 +96,8 @@ This README is written to be a **complete project brief**: if you (a human or an
 | **LLMs** | Anthropic `claude-sonnet-4` (claim extraction), OpenAI `gpt-4o` (chat), `text-embedding-3-small` (embeddings, 384-dim), small OpenAI model for query routing, `gpt-4o-mini` for channel classification |
 | **NLP / ML** | LangGraph (multi-agent graphs), LangChain core/splitters/postgres, FinBERT ONNX (`onnxruntime` + `transformers`), faster-Whisper (ASR fallback), `datasketch` (MinHash LSH dedup) |
 | **Data sources** | YouTube Data API v3, `youtube-transcript-api`, Supadata (fallback), `yt-dlp`, `yfinance`, `fredapi`, Reddit/StockTwits/Twitter/news collectors, `curl-cffi`, `twikit` |
-| **Auth** | Clerk (`@clerk/nextjs` frontend, `clerk-backend-api` JWT verification on FastAPI), invite-only gate |
-| **Frontend** | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4 (OKLCH design tokens), TanStack React Query, Recharts, `d3-hierarchy` (theme circle-pack), `lightweight-charts`, framer-motion, lucide icons, shadcn-style primitives, `bun` |
+| **Auth** | Clerk (`@clerk/nextjs` frontend, `clerk-backend-api` JWT verification on FastAPI), open signup |
+| **Frontend** | Next.js 16.2 (App Router), React 19.2, TypeScript, Tailwind CSS v4 (OKLCH design tokens), TanStack React Query, Recharts, `d3-hierarchy` (theme circle-pack), `lightweight-charts`, framer-motion, lucide icons, shadcn-style primitives, `bun` |
 | **Infra & tooling** | Docker + Docker Compose (dev & prod variants), nginx, GitHub Actions, Makefile, `ruff`, `pytest`, structlog |
 
 ---
@@ -109,6 +110,8 @@ Ensure you have the following installed on your local system before getting star
 2. **`uv`**: High-performance Python package manager ([Installation Guide](https://docs.astral.sh/uv/getting-started/installation/))
 3. **`bun`**: All-in-one JavaScript runtime & package manager ([Installation Guide](https://bun.sh/))
 4. **Docker & Docker Compose**: For running PostgreSQL (`pgvector`) and Redis containers
+5. **A Clerk application** ([clerk.com](https://clerk.com)): every API route requires a Clerk session, so you need its keys even locally
+6. **API keys**: YouTube Data API v3, OpenAI, Anthropic (Supadata, FRED and Reddit are optional)
 
 ---
 
@@ -120,8 +123,8 @@ Follow these steps to set up the project locally for development and contributio
 
 ```bash
 # Clone the repository
-git clone https://github.com/akshat-code21/yt_chatter.git
-cd yt-chatter
+git clone https://github.com/akshat-code21/carry.git
+cd carry
 
 # Create environment configuration file from template
 cp .env.example .env
@@ -133,7 +136,7 @@ Open `.env` and fill in your API keys:
 - `ANTHROPIC_API_KEY`: Anthropic Claude API Key (used for structured LLM claim extraction)
 - `FRED_API_KEY`: *(Optional)* Federal Reserve Economic Data API key
 - `CLERK_SECRET_KEY`: Clerk secret key — **required**, every API route is authenticated (see §15)
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`: set in `web/.env.local` for the frontend
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `NEXT_PUBLIC_API_URL`: set in `web/.env.local` for the frontend
 
 Optional: `PUBLIC_BASE_URL` + `WEBSUB_SECRET` (WebSub push discovery, §14), `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET` (TickerFlow OAuth mode).
 
@@ -155,8 +158,8 @@ make up-db
 Install backend dependencies using `uv`, run database migrations, and seed the theme taxonomy:
 
 ```bash
-# Install Python dependencies into virtual environment
-uv sync
+# Install Python dependencies (+ dev extras: pytest, ruff) into the virtual environment
+uv sync --extra dev
 
 # Run database migrations with Alembic
 make migrate
@@ -164,6 +167,15 @@ make migrate
 # Seed initial theme taxonomy (data/theme_taxonomy.json)
 make seed
 ```
+
+**FinBERT model (TickerFlow sentiment):** the ONNX model is not committed — `data/models/finbert/` is git-ignored. Export it once with:
+
+```bash
+uv pip install torch "optimum[exporters]"   # only needed for the export step
+uv run python scripts/export_finbert_onnx.py
+```
+
+The API pre-loads it at startup; if it's missing you'll see a `FinBERT pre-load failed` warning and social-sentiment scoring will fail until it's exported.
 
 ---
 
@@ -181,6 +193,12 @@ In a **separate terminal**, start the Celery worker process:
 
 ```bash
 make worker
+```
+
+Optionally, in a third terminal, run the scheduler (WebSub renewals, performance re-grading, analytics rollups):
+
+```bash
+make beat
 ```
 
 ---
@@ -205,7 +223,7 @@ bun dev
 
 ## 6. Alternative: Full-Stack Docker Setup
 
-If you prefer running the entire stack (API, Worker, Postgres, Redis) in Docker containers:
+If you prefer running the entire backend stack (Postgres, Redis, API, Worker, Beat) in Docker containers:
 
 ```bash
 # Build and launch all services in detached mode
@@ -214,6 +232,8 @@ make up
 # Stop all services
 make down
 ```
+
+You still need to run `make migrate` / `make seed` (or the equivalent inside the `api` container) and start the frontend with `bun dev`.
 
 ---
 
@@ -232,13 +252,13 @@ The project includes a `Makefile` with convenience shortcuts for common developm
 | `make run` | Launch FastAPI app locally with hot reloading (`http://localhost:8000`) |
 | `make worker` | Launch Celery task worker for background video processing |
 | `make beat` | Launch Celery Beat scheduler (WebSub renewals, RSS fallback, daily performance) |
-| `make invite email=...` | Create a single-use invite code for the signup gate |
+| `make invite email=...` | *(Legacy)* Create an invite code — no longer required since signup is open |
 | `make promote-admin email=...` | Promote an existing user to admin |
 | `make sync-users` | Reconcile app users with Clerk (delete stale rows; `dry-run=1` to preview) |
 | `make provision-users csv=users.csv` | Bulk-provision pilot users from a CSV with generated credentials |
 | `make subscribe-websub` | Queue WebSub subscribe for all channels (needs `PUBLIC_BASE_URL`) |
 | `make simulate-websub channel=<ID> video=<ID>` | Fake a "channel just uploaded" hub push (`mode=full` or `discovery_only`) |
-| `make test` | Run test suite via `pytest` |
+| `make test` | Run test suite via `pytest -v` (needs `uv sync --extra dev`) |
 | `make lint` | Run code quality & formatting checks via `ruff` |
 | `make format` | Automatically fix formatting issues via `ruff format` |
 | `make process-video id=<ID>` | Process a single YouTube video ID through the ingestion pipeline |
@@ -249,13 +269,14 @@ The project includes a `Makefile` with convenience shortcuts for common developm
 ## 8. Repository Layout
 
 ```text
-yt-chatter/
-├── alembic/                  # Alembic migrations (001–008 core + HFI, TickerFlow, raw_content)
+carry/
+├── alembic/                  # Alembic migrations (001–009 core + HFI, TickerFlow, raw_content)
 │   └── versions/
 ├── data/                     # Seed/static data
 │   ├── theme_taxonomy.json   # Sector → Industry → Theme → Ticker hierarchy
 │   ├── etf_mappings.json     # Theme → representative ETF mappings
-│   └── models/               # FinBERT ONNX model artifacts
+│   └── models/finbert/       # FinBERT ONNX model (git-ignored; generated by scripts/export_finbert_onnx.py)
+├── .github/workflows/        # deploy.yml — ruff checks, then SSH deploy to the GCP VM
 ├── deploy/                   # Production deploy helpers (nginx.conf, setup-ec2.sh)
 ├── docs/                     # Architecture & product docs (deep dives, plans, audits)
 ├── scripts/                  # Ops utilities (invites, WebSub sim, FinBERT export, user sync…)
@@ -264,7 +285,7 @@ yt-chatter/
 │   ├── config.py             # pydantic-settings env config
 │   ├── database.py           # Async SQLAlchemy engine/session factory
 │   ├── api/                  # Routers (see API Surface section)
-│   ├── auth/                 # Clerk JWT verification, user service, invite redemption
+│   ├── auth/                 # Clerk JWT verification, JIT user provisioning, admin gates
 │   ├── analytics/            # Request middleware + daily rollup service
 │   ├── models/               # SQLAlchemy ORM models (~28 tables across all engines)
 │   ├── schemas/              # Pydantic schemas (agent pipeline, HFI, market chatter)
@@ -282,6 +303,8 @@ yt-chatter/
 ├── web/                      # Frontend Next.js 16 app (bun-managed)
 │   └── src/
 │       ├── app/              # App Router: landing page, sign-in/sign-up, (app)/ route group
+│       │                     #   (search, dashboard, channels, videos, themes, tickers,
+│       │                     #    tickerflow, investors, consensus, compare, activity, usage, admin)
 │       ├── components/       # AppShell, Sidebar, CommandPalette, DataTable, landing/,
 │       │                     # market-chatter/, themes/, ui/ primitives, skeletons/
 │       └── lib/              # Typed API client (api.ts), hooks, analytics helpers
@@ -316,11 +339,11 @@ Five stages per video, orchestrated as Celery tasks (`tasks/pipeline_tasks.py`):
 - **Sources:** `ingestion/sec_adapter.py` (SEC filings) + `base_adapter.py` (websites/letters) with `content_hasher.py` dedup; vector storage via `services/hfi/vector_store.py` (`langchain-postgres`).
 - **Graph:** `pipeline/hfi/pipeline.py` — normalizer → chunker → entity extraction → thesis extraction (skipped for filings) → embedder → portfolio changes → conditional report generation → alert checking.
 - **Services:** `investor_service`, `source_service`, `portfolio_service`, `alert_service`; Celery jobs in `tasks/hfi_jobs.py`.
-- UI: `/investors`, `/investors/[id]`, plus the cross-investor **Consensus** page.
+- UI: `/investors`, `/investors/[id]`, the cross-investor **Consensus** page, and a side-by-side investor **Compare** page (`/compare`, built but currently hidden from the sidebar).
 
 ### 9.5 Auth, analytics & activity (cross-cutting)
-- **Auth** (`src/auth/`): Clerk session JWTs verified via `clerk-backend-api` (JWKS by default; optional static PEM), `azp` authorized-party checks, invite-only signup, `require_admin` gating. First signup is auto-promoted admin; extra bootstrap admins via `ADMIN_CLERK_USER_IDS`.
-- **Analytics** (`src/analytics/`): `AnalyticsMiddleware` logs every authenticated request (latency, user attribution); daily rollups + retention cleanup via Celery Beat; `/usage` (personal) and `/admin` (platform metrics + invite management).
+- **Auth** (`src/auth/`): Clerk session JWTs verified via `clerk-backend-api` (JWKS by default; optional static PEM), `azp` authorized-party checks, `require_admin` gating. Users are provisioned just-in-time on first request as **active** regular users (open signup); legacy `pending_invite` rows are auto-activated. Admins are granted via Clerk public metadata (`role`), `ADMIN_CLERK_USER_IDS`, or `make promote-admin`.
+- **Analytics** (`src/analytics/`): `AnalyticsMiddleware` logs every authenticated request (latency, user attribution); daily rollups + retention cleanup via Celery Beat; `/usage` (personal) and `/admin` (platform metrics; legacy invite management still present).
 - **Activity feed** (`services/activity_service.py`): idempotent `(event_type, youtube_video_id)` events powering the bell-icon feed.
 
 ---
@@ -334,16 +357,16 @@ All user-facing routers require an authenticated Clerk session (exceptions noted
 | `/api/search`, `/api/search/answer`, `/api/search/coverage` | Hybrid search, AI answers, coverage |
 | `/api/videos`, `/api/channels` | Video & channel browsing |
 | `/api/predictions` | Prediction ledger + accuracy views |
-| `/api/tickers` | YouTube-derived ticker stats, sentiment, performance |
+| `/api/tickers`, `/api/tickers/top-etfs`, `/api/tickers/{ticker}` | YouTube-derived ticker stats, sentiment, performance |
 | `/api/themes` | Theme taxonomy & narratives |
 | `/api/dashboard` | Overview summary aggregates |
-| `/api/v1/tickers/{symbol}` (+ `/refresh`, `/health`) | TickerFlow social sentiment |
+| `/api/v1/tickers/{symbol}` (+ `POST /refresh`), `/api/v1/tickerflow/dashboard`, `/api/v1/health` | TickerFlow social sentiment |
 | `/api/hfi/investors`, `/api/hfi/reports`, `/api/hfi/alerts`, `/api/hfi/analytics` | Smart-money tracking |
 | `/api/websub` | Hub callback (HMAC-verified, public), subscribe, simulate (admin-gated) |
 | `/api/activity` | Notification feed |
 | `/api/usage`, `/api/admin` | Personal analytics; admin ops |
 | `/api/pipeline` | On-demand processing triggers (self-guards: auth + admin) |
-| `/api/auth` (auth router) | Session sync, invite redemption |
+| `/api/auth/me` | Current user profile, role & status (invite-redeem endpoint kept as a legacy no-op) |
 | `/`, `/health` | Public infrastructure probes |
 
 ---
@@ -406,9 +429,9 @@ Conditional edges: thesis extraction is skipped for `content_type == "filing"`; 
 | Social / TickerFlow | `collection_runs`, `content_item`, `raw_content`, `price_bars`, `quota_usage`, `source_snapshot`, `ticker_daily_metric`, `ticker_cache` |
 | HFI | `investors`, `hfi_source`, `hfi_report`, `hfi_alert`, `portfolio_change` |
 | Search | `search_answer` |
-| Platform | `users`, `activity_event`, analytics rollups, invite tables (migration `006`) |
+| Platform | `users`, `activity_event`, analytics rollups, legacy invite tables (migration `006`) |
 
-Migrations are Alembic: `001`–`008` (core, FinBERT columns, channel type, WebSub/activity, auth & analytics, search answers, performance indexes) plus `add_hfi_tables`, `add_tickerflow_tables`, `add_raw_content_table`, and a portfolio-ticker nullability fix.
+Migrations are Alembic: `001`–`009` (core, FinBERT columns, channel type, WebSub/activity, speaker-ticker aggregation, auth & analytics, search answers, performance indexes, open signup) plus `add_hfi_tables`, `add_tickerflow_tables`, `add_raw_content_table`, and a portfolio-ticker nullability fix.
 
 ---
 
@@ -485,22 +508,25 @@ See `.env.example` for `WEBSUB_*`, `DISCOVERY_FALLBACK_POLL_HOURS`, and `TRANSCR
 
 ## 15. Authentication & Usage Analytics
 
-The API is fully authenticated (Clerk session JWTs) with an **invite-only
-signup gate**. All user activity - searches, entity views, page views,
+The API is fully authenticated (Clerk session JWTs) with **open signup**:
+anyone can create an account and gets access immediately. All user activity - searches, entity views, page views,
 pipeline triggers, LLM token spend, per-request latency - is tracked in the
 app's own Postgres with daily rollups and a retention policy. Personal usage
-is visible at `/usage`; admins manage invites and platform metrics at
-`/admin`.
+is visible at `/usage`; admins see platform metrics at `/admin`.
 
 Setup: create a Clerk app, fill `CLERK_*` vars in `.env` and
 `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` in `web/.env.local`, then run
 `make migrate`. Full guide: **[docs/authentication.md](docs/authentication.md)**.
 
-Quick invite creation:
+Admin & user management:
 
 ```bash
-make invite email=friend@example.com   # prints a single-use code
+make promote-admin email=you@example.com      # grant admin to an existing user
+make sync-users dry-run=1                     # preview reconciliation with Clerk
+make provision-users csv=users.csv            # bulk-create accounts with credentials
 ```
+
+> The invite system (`make invite`, `/api/auth/redeem-invite`, invite tables) is retired but kept for backward compatibility — it's no longer required to sign up.
 
 ---
 
@@ -527,7 +553,7 @@ All configuration flows through `src/config.py` (pydantic-settings) reading `.en
 
 **Dev:** `make up` runs the full stack in Docker (`postgres`, `redis`, `api`, `worker`, `beat`); `make down` stops it. Source dirs are volume-mounted for hot reload.
 
-**Prod:** GitHub Actions (`.github/workflows/deploy.yml`) deploys to a single GCP VM (`e2-medium`):
+**Prod:** GitHub Actions (`.github/workflows/deploy.yml`) deploys to a single GCP VM (`e2-medium`). It triggers on pushes to `master` that touch backend paths (`src/`, `alembic/`, `Dockerfile`, `docker-compose.prod.yml`, `pyproject.toml`, `uv.lock`) or manually; it runs `ruff check` + `ruff format --check`, then SSHes in, pulls, rebuilds the containers, and runs `alembic upgrade head`:
 - Docker Compose (`docker-compose.prod.yml`, uses `.env.prod`) runs `api`, `worker`, `beat` behind **nginx** with Let's Encrypt TLS (`deploy/nginx.conf`, `deploy/setup-ec2.sh`).
 - **PostgreSQL** on GCP Cloud SQL; **Redis** on Aiven; **frontend** on Vercel (API requests proxied via the Next.js rewrite to `carry-api.akshat21.me`).
 - Health check: `GET /health` reports environment, configured API keys, and TickerFlow provider status.
@@ -556,6 +582,8 @@ make format
 cd web && bun run lint
 ```
 
+> CI only runs `ruff` before deploying — it doesn't run `pytest`, so run `make test` locally before pushing.
+
 Backend tests cover ticker extraction, FinBERT service, the LangGraph agent pipeline, search grouping/answers/coverage, WebSub, auth, analytics, ETF mapping, social context, instrument-type routing, YouTube transcript handling, and the `market_chatter` collector/provider suite. Run manually-triggered pipeline work with `make process-video id=<ID>` and `make backfill channel=<ID>`.
 
 ---
@@ -567,10 +595,13 @@ Deeper docs live in `docs/` — useful when this README isn't enough:
 | Document | Contents |
 |---|---|
 | `docs/carry_deep_dive.md` + `docs/carry_high_level_summary.md` | The most complete architecture + product brief (engineer's map) |
+| `docs/carry_deep_dive_product.md`, `docs/competitve_analysis.md` | Product positioning & competitive landscape |
 | `docs/langgraph_multi_agent_pipeline.md` | TickerFlow agent graph mechanics, state reducers, scoring formulas |
 | `docs/native_raw_ingestion_architecture.md` | Collector architecture, `RawItem` contract, dedup strategy |
 | `docs/search_scenarios.md` | Search engine behavior across query types |
-| `docs/authentication.md` | Clerk setup, invites, admin bootstrap |
+| `docs/authentication.md` | Clerk setup, admin bootstrap (invite sections are now legacy) |
+| `docs/prod-latency-audit-2026-08-27.md` | Production latency audit & fixes |
+| `docs/substack_integration.md`, `docs/artifact_generation.md` | Planned/experimental features |
 | `docs/data_collection_*.md` | Data-source strategy (native vs. OSS vs. Adanos) |
 | `COSTING.md` | Infra & LLM cost model |
 | `plan_1.md` / `plan_2.md`, `docs/Initial_Plan.md` | Original build plans & product lineage |
@@ -581,12 +612,13 @@ Deeper docs live in `docs/` — useful when this README isn't enough:
 
 If you are an AI assistant working in this repo:
 
-1. **Naming:** repo/package = `yt-chatter`; product = **Carry**. `market-chatter`/`TickerFlow` = social sentiment; `HFI` = smart money. Don't rename things casually — a renaming pass is pending.
+1. **Naming:** repo = `carry`, Python package/DB = `yt-chatter`; product = **Carry**. `market-chatter`/`TickerFlow` = social sentiment; `HFI` = smart money. Don't rename things casually — a renaming pass is pending.
 2. **Next.js 16 has breaking changes** from older Next versions — read `web/AGENTS.md` and the bundled docs in `web/node_modules/next/dist/docs/` before writing frontend code.
 3. **Config:** add new settings to `src/config.py` (`Settings`) and document them in `.env.example`. Never hardcode keys.
 4. **Migrations:** generate with `make migration msg="..."`, then review the autogenerated file; apply with `make migrate`.
 5. **Tests:** add/adjust pytest coverage for backend changes (`make test`); keep `ruff` clean (`make lint`). Frontend changes need `bun run lint` passing.
 6. **Conventions:** async SQLAlchemy everywhere in request paths; Celery tasks for background work; Pydantic schemas at API boundaries; typed API client in `web/src/lib/api.ts`.
 7. **Provider pattern:** TickerFlow sentiment/price providers are selected via `SENTIMENT_PROVIDER`/`PRICE_PROVIDER` — `fixture` providers exist for deterministic tests; keep the `MarketSentimentProvider` protocol intact.
-8. **Lineage context:** product evolved SentimentAI blueprint → YT Chatter → Carry. Current positioning: "Hear what the market is saying", invite-only beta.
+8. **Lineage context:** product evolved SentimentAI blueprint → YT Chatter → Carry. Current positioning: "Hear what the market is saying", open-signup public beta.
+9. **Auth:** don't reintroduce invite gating. `UserStatus.PENDING_INVITE`, `InviteRequiredError`, `useMe().inviteRequired` (always `false`) and the invite endpoints remain only for backward compatibility.
 
