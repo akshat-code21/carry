@@ -1,12 +1,57 @@
 services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: yt-chatter-postgres
+    environment:
+      POSTGRES_USER: yt_chatter
+      POSTGRES_PASSWORD: Akshat_2106_Carry_2026
+      POSTGRES_DB: yt_chatter
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yt_chatter -d yt_chatter"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    # Tune Postgres for 8GB RAM VM (allocate ~2GB to Postgres)
+    command: >
+      postgres
+      -c shared_buffers=512MB
+      -c effective_cache_size=1536MB
+      -c work_mem=16MB
+      -c maintenance_work_mem=128MB
+      -c max_connections=100
+
+  redis:
+    image: redis:7-alpine
+    container_name: yt-chatter-redis
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   api:
     build: .
     container_name: yt-chatter-api
     env_file: .env.prod
+    environment:
+      DATABASE_URL: postgresql+asyncpg://yt_chatter:Akshat_2106_Carry_2026@postgres:5432/yt_chatter
+      DATABASE_URL_SYNC: postgresql://yt_chatter:Akshat_2106_Carry_2026@postgres:5432/yt_chatter
+      REDIS_URL: redis://redis:6379/0
     ports:
       - "8000:8000"
     volumes:
       - ./data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
@@ -19,8 +64,17 @@ services:
     container_name: yt-chatter-worker
     command: celery -A src.tasks worker --loglevel=info --concurrency=1
     env_file: .env.prod
+    environment:
+      DATABASE_URL: postgresql+asyncpg://yt_chatter:Akshat_2106_Carry_2026@postgres:5432/yt_chatter
+      DATABASE_URL_SYNC: postgresql://yt_chatter:Akshat_2106_Carry_2026@postgres:5432/yt_chatter
+      REDIS_URL: redis://redis:6379/0
     volumes:
       - ./data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
   beat:
@@ -28,9 +82,17 @@ services:
     container_name: yt-chatter-beat
     command: celery -A src.tasks beat --loglevel=info
     env_file: .env.prod
+    environment:
+      DATABASE_URL: postgresql+asyncpg://yt_chatter:Akshat_2106_Carry_2026@postgres:5432/yt_chatter
+      DATABASE_URL_SYNC: postgresql://yt_chatter:Akshat_2106_Carry_2026@postgres:5432/yt_chatter
+      REDIS_URL: redis://redis:6379/0
     volumes:
       - ./data:/app/data
     depends_on:
       worker:
         condition: service_started
     restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
